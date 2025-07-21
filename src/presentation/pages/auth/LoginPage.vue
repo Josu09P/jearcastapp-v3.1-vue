@@ -5,12 +5,13 @@
         <div class="col-md-6 col-lg-5">
           <div class="card shadow-sm text-white">
             <div class="card-body">
-              <h2 class="card-title text-center mb-4">
-                <img src="@/assets/img/logo-v3.png" alt="Logo" width="80"
-                  style="filter: brightness(0) invert(1); margin-bottom: 10px;" />
-                <br />
-                Iniciar sesión
+              <h2 class="card-title text-center">
+                <router-link to="/"> <img src="@/assets/img/logo-v3.png" alt="Logo" width="80"
+                    style="filter: brightness(0) invert(1); margin-bottom: 10px;" />
+                  <br />
+                </router-link>
               </h2>
+              <h2 class="card-tile text-center">Iniciar sesión</h2><br />
               <form @submit.prevent="handleLogin">
                 <div class="mb-3">
                   <label for="email" class="form-label">Correo electrónico</label>
@@ -33,8 +34,11 @@
                 <router-link to="/auth/register" class="text-primary">Regístrate aquí</router-link>
               </div>
               <div class="text-center mt-3">
-                ¿Olvidaste tu contraseña?<br>
+                ¿Olvidaste tu contraseña?<br />
                 <router-link to="/auth/forgot-password" class="text-primary">Recuperala aquí</router-link>
+              </div><br />
+              <div class="text-center">
+                <router-link to="/" class=" text-primary">Home</router-link>
               </div>
               <p v-if="errorMessage" class="text-danger text-center mt-2">
                 {{ errorMessage }}
