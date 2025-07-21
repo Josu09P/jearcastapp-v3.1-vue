@@ -91,6 +91,8 @@ const query = ref('')
 const results = ref<any[]>([])
 const searchPerformed = ref(false)
 const props = defineProps<{ visible: boolean }>()
+const addingFavoritesMap = ref<Record<string, boolean>>({})
+const isProcessing = ref(false)
 
 const emit = defineEmits<{
     (e: 'close'): void
@@ -167,7 +169,10 @@ const saveToRecentlyPlayed = (video: any) => {
 }
 
 const addToFavorites = async (video: any) => {
-    if (!userStore.id) return
+    if (!userStore.id || addingFavoritesMap.value[video.videoId]) return
+
+    // Marcar como "en proceso"
+    addingFavoritesMap.value[video.videoId] = true
     const result = await addFavoriteMusic({
         user_id: userStore.id,
         video_id: video.videoId,
@@ -191,22 +196,16 @@ const openPlaylistModal = (video: any) => {
 
 // ADD NEW SONG 100%
 const addToPlaylist = async () => {
+    if (isProcessing.value) return
     if (!userStore.id || !selectedVideo.value || !selectedPlaylistId.value) {
         return showToast('Faltan datos para agregar a la playlist')
     }
 
-    Toastify({
-        text: 'Añadiendo a la playlist...',
-        duration: 1500,
-        gravity: 'top',
-        position: 'right',
-        className: 'toast-glass',
-        stopOnFocus: false
-    }).showToast()
+    isProcessing.value = true
+    showToast('Añadiendo a la playlist...')
 
     try {
         const exists = await songExistsInPlaylist(selectedPlaylistId.value, selectedVideo.value.videoId)
-
         if (exists) {
             return showToast('La canción ya está en esta playlist')
         }
@@ -221,27 +220,40 @@ const addToPlaylist = async () => {
         showPlaylistModal.value = false
     } catch (error) {
         showToast('Error al agregar a la playlist')
+    } finally {
+        isProcessing.value = false
     }
 }
 
+
 // CREATE NEW PLAYLIST 100%
 const createNewPlaylist = async () => {
+    if (isProcessing.value) return
     if (!newPlaylistName.value || !userStore.id) return showToast('Nombre no válido')
 
-    const playlistData: PlaylistModel = {
-        name: newPlaylistName.value.trim(),
-        user_id: userStore.id
+    isProcessing.value = true
+    showToast('Creando playlist...')
+
+    try {
+        const playlistData: PlaylistModel = {
+            name: newPlaylistName.value.trim(),
+            user_id: userStore.id
+        }
+
+        const playlistId = await createOrGetPlaylist(playlistData)
+        await addSongToPlaylistService(playlistId, {
+            video_id: selectedVideo.value.videoId,
+            video_title: selectedVideo.value.title,
+            video_thumbnail: selectedVideo.value.thumbnail
+        })
+
+        showToast('Canción añadida a la nueva playlist')
+        showPlaylistModal.value = false
+    } catch (error) {
+        showToast('Error al crear la playlist')
+    } finally {
+        isProcessing.value = false
     }
-
-    const playlistId = await createOrGetPlaylist(playlistData)
-    await addSongToPlaylistService(playlistId, {
-        video_id: selectedVideo.value.videoId,
-        video_title: selectedVideo.value.title,
-        video_thumbnail: selectedVideo.value.thumbnail
-    })
-
-    showToast('Canción añadida a la nueva playlist')
-    showPlaylistModal.value = false
 }
 </script>
 

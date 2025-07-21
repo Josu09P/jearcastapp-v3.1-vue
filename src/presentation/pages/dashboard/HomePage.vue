@@ -11,7 +11,7 @@
                             <span class="badge bg-danger fs-6">{{ totalFavorites }}</span>
                         </div>
                         <img src="https://cdn-icons-png.flaticon.com/512/833/833472.png" alt="Favoritos"
-                            class="img-fluid mx-auto"
+                            class="img-fluid mx-auto float-animation"
                             style="max-height: 80px; filter: drop-shadow(0 0 6px white); margin-bottom: 20px; margin-top: 20px;" />
                     </div>
                 </div>
@@ -24,7 +24,7 @@
                             <span class="badge bg-primary fs-6">{{ totalPlaylists }}</span>
                         </div>
                         <img src="https://cdn-icons-png.flaticon.com/512/984/984451.png" alt="Playlist"
-                            class="img-fluid mx-auto"
+                            class="img-fluid mx-auto float-animation"
                             style="max-height: 95px; filter: drop-shadow(0 0 6px white); margin-bottom: 20px; margin-top: 20px;" />
                     </div>
                 </div>
@@ -37,7 +37,7 @@
                             <span class="badge bg-warning text-dark fs-6">{{ totalRecommended }}</span>
                         </div>
                         <img src="https://cdn-icons-png.flaticon.com/512/2909/2909734.png" alt="Recomendados"
-                            class="img-fluid mx-auto"
+                            class="img-fluid mx-auto float-animation"
                             style="max-height: 80px; filter: drop-shadow(0 0 6px white); margin-bottom: 20px; margin-top: 20px;" />
 
                     </div>
@@ -46,19 +46,17 @@
 
             <!-- Historial de reproducción -->
             <div class="row g-4 mt-4">
-                <!-- Historial -->
                 <div class="col-md-9">
                     <div class="card glass-card text-white p-4 shadow" style="max-height: 450px;">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <!-- Título a la izquierda -->
                             <h5 class="mb-0 text-white">
                                 <i class="bi bi-clock-history me-2"></i> Tus reproducciones
                             </h5>
-
-                            <!-- Botones agrupados a la derecha -->
                             <div class="d-flex gap-2">
-                                <button @click="refreshRecentlyPlayed" class="btn btn-sm btn-outline-light">
-                                    <i class="bi bi-arrow-clockwise"></i>
+                                <button @click="refreshRecentlyPlayed" :disabled="loading"
+                                    class="btn btn-sm btn-outline-light me-2 d-flex align-items-center justify-content-center">
+                                    <i
+                                        :class="['bi', 'me-0', loading ? 'bi-arrow-repeat spin-animation' : 'bi-arrow-clockwise']"></i>
                                 </button>
                                 <button @click="clearRecentlyPlayed" class="btn btn-sm btn-outline-light">
                                     <i class="bi bi-trash3-fill"></i>
@@ -182,15 +180,18 @@ const totalFavorites = ref(0)
 const totalPlaylists = ref(0)
 const totalRecommended = ref(0)
 const recentlyPlayed = ref<any[]>([])
+const isProcessing = ref(false)
 const emit = defineEmits<{
     (e: 'close'): void
     (e: 'openPlaylistModal', video: any): void
 }>()
 const playlists = ref<PlaylistModel[]>([])
+const loading = ref(false)
 const selectedPlaylistId = ref('')
 const newPlaylistName = ref('')
 const showPlaylistModal = ref(false)
 const selectedVideo = ref<any | null>(null)
+const addingFavoritesMap = ref<Record<string, boolean>>({})
 const playVideo = (index: number) => {
     if (!recentlyPlayed.value.length) return
 
@@ -200,7 +201,6 @@ const playVideo = (index: number) => {
         video_thumbnail: video.video_thumbnail
     }))
 
-    // Seteamos la playlist completa y comenzamos en el índice deseado
     playerStore.setPlaylist(playlist, index)
 }
 
@@ -243,7 +243,6 @@ const clearRecentlyPlayed = async () => {
     }
 }
 
-
 const showToast = (text: string) => {
     StartToastifyInstance({
         text,
@@ -256,9 +255,14 @@ const showToast = (text: string) => {
 
 // REFRESH
 const refreshRecentlyPlayed = () => {
-    const stored = localStorage.getItem('recentlyPlayed')
-    recentlyPlayed.value = stored ? JSON.parse(stored) : []
-    showToast('Historial actualizado')
+    loading.value = true
+
+    setTimeout(() => {
+        const stored = localStorage.getItem('recentlyPlayed')
+        recentlyPlayed.value = stored ? JSON.parse(stored) : []
+        showToast('Historial actualizado')
+        loading.value = false
+    }, 1000) // simulamos un tiempo para que se vea el giro
 }
 
 const refreshPlaylists = async () => {
@@ -269,7 +273,9 @@ const refreshPlaylists = async () => {
 
 
 const addToFavorites = async (video: any) => {
-    if (!userStore.id) return
+    if (!userStore.id || addingFavoritesMap.value[video.videoId]) return
+    // Marcar como "en proceso"
+    addingFavoritesMap.value[video.videoId] = true
 
     // Aseguramos compatibilidad con diferentes estructuras
     const videoId = video.video_id || video.videoId
@@ -320,18 +326,13 @@ onMounted(async () => {
 
 // ADD NEW SONG 100%
 const addToPlaylist = async () => {
+    if (isProcessing.value) return
     if (!userStore.id || !selectedVideo.value || !selectedPlaylistId.value) {
         return showToast('Faltan datos para agregar a la playlist')
     }
 
-    Toastify({
-        text: 'Añadiendo a la playlist...',
-        duration: 1500,
-        gravity: 'top',
-        position: 'right',
-        className: 'toast-glass',
-        stopOnFocus: false
-    }).showToast()
+    isProcessing.value = true
+    showToast('Añadiendo a la playlist...')
 
     try {
         const exists = await songExistsInPlaylist(selectedPlaylistId.value, selectedVideo.value.video_id)
@@ -351,31 +352,78 @@ const addToPlaylist = async () => {
         showPlaylistModal.value = false
     } catch (error) {
         showToast('Error al agregar a la playlist')
+    } finally {
+        isProcessing.value = false
     }
+
 }
 
 // CREATE NEW PLAYLIST 100%
 const createNewPlaylist = async () => {
+    if (isProcessing.value) return
     if (!newPlaylistName.value || !userStore.id) return showToast('Nombre no válido')
 
-    const playlistData: PlaylistModel = {
-        name: newPlaylistName.value.trim(),
-        user_id: userStore.id
+    isProcessing.value = true
+    showToast('Creando playlist...')
+
+    try {
+        const playlistData: PlaylistModel = {
+            name: newPlaylistName.value.trim(),
+            user_id: userStore.id
+        }
+
+        const playlistId = await createOrGetPlaylist(playlistData)
+        await addSongToPlaylistService(playlistId, {
+            video_id: selectedVideo.value.videoId,
+            video_title: selectedVideo.value.title,
+            video_thumbnail: selectedVideo.value.thumbnail
+        })
+
+        showToast('Canción añadida a la nueva playlist')
+        showPlaylistModal.value = false
+    } catch (error) {
+        showToast('Error al agregar a la playlist')
+    } finally {
+        isProcessing.value = false
     }
 
-    const playlistId = await createOrGetPlaylist(playlistData)
-    await addSongToPlaylistService(playlistId, {
-        video_id: selectedVideo.value.videoId,
-        video_title: selectedVideo.value.title,
-        video_thumbnail: selectedVideo.value.thumbnail
-    })
-
-    showToast('Canción añadida a la nueva playlist')
-    showPlaylistModal.value = false
 }
 </script>
 
 <style scoped>
+.spin-animation {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes float {
+    0% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-8px);
+    }
+
+    100% {
+        transform: translateY(0px);
+    }
+}
+
+.float-animation {
+    animation: float 3s ease-in-out infinite;
+}
+
+
 .glass-card {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);

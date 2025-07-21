@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import DashboardLayout from '@/presentation/layouts/DashboardLayout.vue'
 import type { FavoriteMusicModel } from '@/domain/models/FavoriteMusicModel'
 import { getFavoritesByUser } from '@/domain/usecases/favorites/GetFavoritesByUser'
@@ -116,7 +116,8 @@ onMounted(() => {
                         <i :class="sortOption === 'recent' ? 'bi bi-clock-history' : 'bi bi-sort-alpha-down'" />
                         {{ sortOption === 'recent' ? 'Recientes' : 'A-Z' }}
                     </button>
-                    <button @click="() => reloadFavorites()" :disabled="loading" class="btn btn-outline-light btn-sm">
+                    <button @click="() => reloadFavorites(true)" :disabled="loading"
+                        class="btn btn-outline-light btn-sm">
                         <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
                         <i v-else class="bi bi-arrow-clockwise me-1"></i>
                         Recargar
