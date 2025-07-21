@@ -26,7 +26,10 @@ const toggleSidebar = () => {
 
 <style scoped>
 .container-all {
-  padding: 10px 10px !important;
+  padding-top: 42px;
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+  padding-bottom: 10px !important;
   background: var(--main-bg-color);
   background-image: url("@/assets/img/bg-hero.png");
   background-repeat: no-repeat;

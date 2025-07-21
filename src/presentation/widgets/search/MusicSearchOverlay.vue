@@ -277,8 +277,8 @@ const createNewPlaylist = async () => {
     max-width: 300px;
     background-color: rgba(255, 255, 255, 0.1);
     color: white;
-    border: none;
-    border-radius: 12px;
+    border-radius: 1.3rem;
+    height: 40px;
     padding: 10px 14px;
     backdrop-filter: blur(4px);
 }
@@ -309,7 +309,8 @@ const createNewPlaylist = async () => {
 
 .search-input::placeholder {
     color: white;
-    font-size: 13px;
+    font-size: 14px;
+    border: none;
 }
 
 .modal-backdrop {
@@ -337,16 +338,7 @@ const createNewPlaylist = async () => {
 
 input::placeholder {
     color: #cccccc;
-    /* o el color que desees */
-    border: 2px solid #ffffff !important;
     opacity: 1;
-    /* opcional: asegura que no esté opaco */
-}
-
-input.form-control {
-    border: 1px solid #a8a8a8;
-    border-radius: 1.4rem !important;
-    height: 40px;
 }
 
 .button-74 {

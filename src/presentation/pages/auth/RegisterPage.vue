@@ -1,70 +1,41 @@
 <template>
-  <div
-    class="d-flex align-items-center justify-content-center auth-register">
+  <div class="d-flex align-items-center justify-content-center auth-register">
     <div class="container">
       <div class="row justify-content-center">
         <div class="col-md-6 col-lg-5">
           <div class="card shadow-sm text-white">
             <div class="card-body">
               <h3 class="card-title text-center mb-4">
-                <img
-                  src="@/assets/img/logo-v3.png"
-                  alt="Logo"
-                  width="80"
-                  style="filter: brightness(0) invert(1); margin-bottom: 10px;"
-                />
+                <img src="@/assets/img/logo-v3.png" alt="Logo" width="80"
+                  style="filter: brightness(0) invert(1); margin-bottom: 10px;" />
                 <br />
                 Crear cuenta
               </h3>
               <form @submit.prevent="handleSubmit">
                 <div class="mb-3">
                   <label for="name" class="form-label">Nombre completo</label>
-                  <input
-                    v-model="form.name"
-                    type="text"
-                    class="form-control"
-                    placeholder="Ingresa tu nombre"
-                    required
-                  />
+                  <input v-model="form.name" type="text" class="form-control" placeholder="Ingresa tu nombre"
+                    required />
                 </div>
                 <div class="mb-3">
                   <label for="email" class="form-label">Correo electrónico</label>
-                  <input
-                    v-model="form.email"
-                    type="email"
-                    class="form-control"
-                    placeholder="Correo asociado a Google"
-                    required
-                  />
+                  <input v-model="form.email" type="email" class="form-control" placeholder="Correo asociado a Google"
+                    required />
                 </div>
                 <div class="mb-3">
                   <label for="password" class="form-label">Contraseña</label>
-                  <input
-                    v-model="form.password"
-                    type="password"
-                    class="form-control"
-                    placeholder="Mínimo 6 caracteres"
-                    required
-                  />
+                  <input v-model="form.password" type="password" class="form-control" placeholder="Mínimo 6 caracteres"
+                    required />
                 </div>
                 <div class="mb-3">
                   <label for="confirmPassword" class="form-label">Confirmar contraseña</label>
-                  <input
-                    v-model="form.confirmPassword"
-                    type="password"
-                    class="form-control"
-                    placeholder="Repite tu contraseña"
-                    required
-                  />
+                  <input v-model="form.confirmPassword" type="password" class="form-control"
+                    placeholder="Repite tu contraseña" required />
                 </div>
                 <div class="mb-3">
                   <label for="apikeyYoutube" class="form-label">API Key de YouTube</label>
-                  <input
-                    v-model="form.apikeyYoutube"
-                    type="text"
-                    class="form-control"
-                    placeholder="Tu API Key de YouTube"
-                  />
+                  <input v-model="form.apikeyYoutube" type="text" class="form-control"
+                    placeholder="Tu API Key de YouTube" />
                   <div class="form-text text-light">
                     Esta clave será usada para realizar búsquedas de videos.
                   </div>
@@ -180,7 +151,9 @@ const handleSubmit = async () => {
   background-position: center;
   background-repeat: no-repeat;
   background-color: #102c4a;
+  padding-top: 43px;
 }
+
 .card {
   padding: 20px;
   background-color: #5c616544;

@@ -6,7 +6,7 @@
       </button>
       <h4 class="mb-0 ms-3 d-flex align-items-center">
         <div class="d-flex align-items-center me-3">
-          <img src="@/assets/img/logo-v3.png" width="90" alt="Logo" style="filter: brightness(0) invert(1); margin: "
+          <img src="@/assets/img/logo-v3.png" width="90" alt="Logo" style="filter: brightness(0) invert(1);"
             class="me-4" />
           <button class="toggle-sidebar ms-3 d-none d-md-block" @click="toggleSidebar"
             style=" border: none; border-radius: 10px; padding: 5px;">
@@ -18,7 +18,6 @@
       <div class="mx-auto d-none d-lg-block" style="width: 20%;">
         <form class="d-flex" @submit.prevent="showSearch = true">
           <button class="btn btn-outline-light rounded-pill px-3" type="submit">Buscar
-
             <i class="bi bi-search" style="margin-left: 10px;"></i>
           </button>
         </form>
@@ -47,7 +46,6 @@ import MusicSearchOverlay from './search/MusicSearchOverlay.vue'
 const showSearch = ref(false)
 
 const openPlaylistModal = (video: any) => {
-  // puedes emitir hacia App.vue o usar un store para abrir el modal
   console.log('Agregar a playlist:', video)
 }
 const router = useRouter()

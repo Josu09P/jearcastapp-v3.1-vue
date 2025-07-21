@@ -57,7 +57,7 @@ const menuItems = [
   background-color: rgba(178, 178, 178, 0.05);
   border: 0.5px solid rgba(255, 255, 255, 0.1);
   border-radius: 1.3rem;
-  min-height: 98vh;
+  min-height: 94vh;
   margin-bottom: 100px !important;
 }
 
