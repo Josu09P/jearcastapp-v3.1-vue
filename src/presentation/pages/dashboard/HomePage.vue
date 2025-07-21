@@ -49,14 +49,21 @@
                 <!-- Historial -->
                 <div class="col-md-9">
                     <div class="card glass-card text-white p-4 shadow" style="max-height: 450px;">
-                        <!-- Encabezado con botón al lado -->
                         <div class="d-flex justify-content-between align-items-center mb-3">
+                            <!-- Título a la izquierda -->
                             <h5 class="mb-0 text-white">
                                 <i class="bi bi-clock-history me-2"></i> Tus reproducciones
                             </h5>
-                            <button @click="clearRecentlyPlayed" class="btn btn-sm btn-outline-light">
-                                <i class="bi bi-trash3-fill"></i>
-                            </button>
+
+                            <!-- Botones agrupados a la derecha -->
+                            <div class="d-flex gap-2">
+                                <button @click="refreshRecentlyPlayed" class="btn btn-sm btn-outline-light">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                                <button @click="clearRecentlyPlayed" class="btn btn-sm btn-outline-light">
+                                    <i class="bi bi-trash3-fill"></i>
+                                </button>
+                            </div>
                         </div>
 
                         <p class="text-truncate mb-3" style="font-size: 13px;">
@@ -247,6 +254,13 @@ const showToast = (text: string) => {
     }).showToast()
 }
 
+// REFRESH
+const refreshRecentlyPlayed = () => {
+    const stored = localStorage.getItem('recentlyPlayed')
+    recentlyPlayed.value = stored ? JSON.parse(stored) : []
+    showToast('Historial actualizado')
+}
+
 const refreshPlaylists = async () => {
     if (!userStore.id) return
     playlists.value = await getPlaylistsByUser(userStore.id)
@@ -256,11 +270,17 @@ const refreshPlaylists = async () => {
 
 const addToFavorites = async (video: any) => {
     if (!userStore.id) return
+
+    // Aseguramos compatibilidad con diferentes estructuras
+    const videoId = video.video_id || video.videoId
+    const videoTitle = video.video_title || video.title
+    const videoThumbnail = video.video_thumbnail || video.thumbnail
+
     const result = await addFavoriteMusic({
         user_id: userStore.id,
-        video_id: video.videoId,
-        video_title: video.title,
-        video_thumbnail: video.thumbnail
+        video_id: videoId,
+        video_title: videoTitle,
+        video_thumbnail: videoThumbnail
     })
 
     Toastify({
@@ -271,6 +291,7 @@ const addToFavorites = async (video: any) => {
         className: 'toast-glass'
     }).showToast()
 }
+
 
 const openPlaylistModal = (video: any) => {
     selectedVideo.value = video
