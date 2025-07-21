@@ -2,7 +2,7 @@
 
 ## 📌 Descripción general
 
-**Jear Cast** es una aplicación de escritorio desarrollada con el objetivo de brindar a los usuarios una experiencia moderna y limpia para escuchar música desde YouTube, similar a plataformas como Spotify. Utiliza la **API de YouTube** mediante una clave personal (**API Key**) proporcionada por el usuario, siguiendo el enfoque del conocido reproductor **Headset**.
+**JearCastApp** es una aplicación de escritorio desarrollada con el objetivo de brindar a los usuarios una experiencia moderna y limpia para escuchar música desde YouTube, similar a plataformas como Spotify. Utiliza la **API de YouTube** mediante una clave personal (**API Key**) proporcionada por el usuario, siguiendo el enfoque del conocido reproductor **Headset**.
 
 Este proyecto está pensado especialmente para **usuarios de Linux**, ofreciendo una interfaz fluida, un sistema de favoritos y playlists personalizados, autenticación de usuarios y funciones sociales. Además, será un proyecto de **código abierto distribuido libremente a la comunidad**.
 
@@ -12,7 +12,7 @@ Este proyecto está pensado especialmente para **usuarios de Linux**, ofreciendo
 
 | Categoría        | Tecnologías                 | Descripción                                                                 |
 |------------------|-----------------------------|-----------------------------------------------------------------------------|
-| **Frontend**     | Astro                      | Framework moderno basado en Node.js que permite trabajar con TypeScript, JavaScript, Bootstrap, HTML y CSS para crear interfaces eficientes y optimizadas. |
+| **Frontend**     | VUE.JS                      | Framework moderno basado en Node.js que permite trabajar con TypeScript, JavaScript, Bootstrap, HTML y CSS para crear interfaces eficientes y optimizadas. |
 | **Backend/App**  | Electron + Node.js         | Empaquetado de la aplicación como software de escritorio multiplataforma.  |
 | **Autenticación**| Firebase Authentication     | Registro e inicio de sesión mediante correo electrónico y contraseña.       |
 | **Base de datos**| Firebase Firestore Database | Almacenamiento de usuario y sus claves API, playlists, favoritos y configuraciones personalizadas. |
@@ -21,7 +21,7 @@ Este proyecto está pensado especialmente para **usuarios de Linux**, ofreciendo
 
 ## 🎨 Diseño y Experiencia de Usuario
 
-Para agilizar el desarrollo y mantener una estructura visual coherente, se utiliza el framework **Astro** en combinación con **Bootstrap** y **TailwindCSS**. Esto permite construir una interfaz **moderna, ligera y responsive**.
+Para agilizar el desarrollo y mantener una estructura visual coherente, se utiliza el framework **VUE** en combinación con **Bootstrap**. Esto permite construir una interfaz **moderna, ligera y responsive**.
 
 ---
 
@@ -76,4 +76,4 @@ Para agilizar el desarrollo y mantener una estructura visual coherente, se utili
 
 - Este proyecto será totalmente **open source** y estará disponible gratuitamente para la comunidad.
 - Se invita a **desarrolladores, músicos y entusiastas de Linux** a colaborar o mejorar el sistema.
-- **Repositorio:** [Josu09P](https://github.com/Josu09P)
+- **Repositorio:** [Josu09P]([https://github.com/Josu09P](https://github.com/Josu09P/jearcastapp-v3.1-vue))
