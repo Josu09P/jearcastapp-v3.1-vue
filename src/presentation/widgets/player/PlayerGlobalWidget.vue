@@ -346,6 +346,18 @@ onBeforeUnmount(() => {
     margin-top: 8px;
 }
 
+.title {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal;
+    word-wrap: break-word;
+    max-width: 100%;
+}
+
+
 .thumbnail {
     width: 100%;
     height: 100%;
