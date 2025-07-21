@@ -49,12 +49,22 @@
                 <!-- Historial -->
                 <div class="col-md-9">
                     <div class="card glass-card text-white p-4 shadow" style="max-height: 450px;">
-                        <h5 class="mb-3"><i class="bi bi-clock-history me-2"></i>Tus reproducciones</h5>
+                        <!-- Encabezado con botón al lado -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0 text-white">
+                                <i class="bi bi-clock-history me-2"></i> Tus reproducciones
+                            </h5>
+                            <button @click="clearRecentlyPlayed" class="btn btn-sm btn-outline-light">
+                                <i class="bi bi-trash3-fill"></i>
+                            </button>
+                        </div>
+
                         <p class="text-truncate mb-3" style="font-size: 13px;">
                             Aquí aparecerán las últimas músicas reproducidas desde el buscador.
                             <br />
                             <span style="font-size: 10px;">
-                                <i class="bi bi-exclamation-triangle me-2"></i> Cuando cierres sesión los datos se
+                                <i class="bi bi-exclamation-triangle me-2"></i> Cuando cierres sesión los datos de tu
+                                navegación se
                                 perderán.
                             </span>
                         </p>
@@ -91,7 +101,7 @@
                             </div>
                         </div>
 
-                        <div v-else class="text-center text-muted mt-3">
+                        <div v-else class="text-center text-light mt-1" style="font-size: 13px;">
                             <i class="bi bi-music-note-beamed"></i> No hay reproducciones recientes aún.
                         </div>
                     </div>
@@ -157,6 +167,7 @@ import { addFavoriteMusic } from '@/domain/usecases/favorites/AddFavoriteMusic'
 import { songExistsInPlaylist } from '@/domain/usecases/playlists/SongExistsInPlaylist'
 import { addSongToPlaylistService } from '@/data/services/firestore/PlaylistsFirestore'
 import { createOrGetPlaylist } from '@/domain/usecases/playlists/CreateOrGetPlaylist'
+import Swal from 'sweetalert2'
 
 const playerStore = usePlayerStore()
 const userStore = useUserStore()
@@ -185,6 +196,46 @@ const playVideo = (index: number) => {
     // Seteamos la playlist completa y comenzamos en el índice deseado
     playerStore.setPlaylist(playlist, index)
 }
+
+const clearRecentlyPlayed = async () => {
+    const result = await Swal.fire({
+        title: '¿Eliminar historial?',
+        text: 'Esta acción no se puede deshacer.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+        customClass: {
+            popup: 'glass-modal',
+            title: 'text-white',
+            htmlContainer: 'text-white',
+            confirmButton: 'btn btn-danger me-2',
+            cancelButton: 'btn btn-secondary'
+        },
+        buttonsStyling: false
+    })
+
+    if (result.isConfirmed) {
+        try {
+            localStorage.removeItem('recentlyPlayed')
+            recentlyPlayed.value = []
+            Toastify({
+                text: 'Historial eliminado',
+                gravity: 'top',
+                position: 'right',
+                backgroundColor: '#dc3545'
+            }).showToast()
+        } catch (error) {
+            Toastify({
+                text: 'Error al eliminar el historial',
+                gravity: 'top',
+                position: 'right',
+                backgroundColor: '#ffc107'
+            }).showToast()
+        }
+    }
+}
+
 
 const showToast = (text: string) => {
     StartToastifyInstance({

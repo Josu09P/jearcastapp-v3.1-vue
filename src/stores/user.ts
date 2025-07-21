@@ -35,7 +35,9 @@ export const useUserStore = defineStore('user', {
       this.apikeyYoutube = ''
       this.create_at = null
       localStorage.removeItem('userJearCastInfo')
-      localStorage.removeItem('search_history')
+      localStorage.removeItem('recentlyPlayed')
+      localStorage.removeItem('jearcast_selectedPlaylistId')
+      localStorage.removeItem('lastRecommendedPlaylistId')
     },
   },
 })
