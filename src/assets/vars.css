@@ -1,0 +1,18 @@
+/*=================================================
+VAR -> COLORS GLOBALS
+===================================================*/
+:root {
+    --main-bg-color: #000;
+    --main-bg-gradient: none;
+    --primary-bg: rgba(255, 255, 255, 0.169);
+    --hover-bg: rgba(15, 23, 79, 0.545);
+    --overlay-bg: rgba(1, 14, 36, 0.87);
+    --overlay-block-bg: rgb(0, 0, 0);
+    --player-bg: rgba(94, 109, 122, 0.824);
+    --bootstrap-green: #198754;
+    --button-bg: rgba(23, 23, 23, 0.1);
+    --button-hover-bg: rgba(0, 0, 0, 0.252);
+    --text-color: #ffffff;
+    --text-secondary: #c2c2c2;
+    --main-bg-color: #102c4a;
+}
