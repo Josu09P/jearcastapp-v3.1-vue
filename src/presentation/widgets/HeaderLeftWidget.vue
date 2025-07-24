@@ -7,7 +7,7 @@
         aria-label="Close"></button>
     </div>
 
-    <!-- Steel Music -->
+    <!-- Logo -->
     <div class="brand-box mx-3 my-2 text-center">
       <span class="fs-5 fw-bold" style="color: white;">Steel Music</span>
     </div>
@@ -23,11 +23,10 @@
         </ul>
       </nav>
     </div>
-
-    <!-- Footer fijo abajo -->
+    <!--FOOTER-->
     <div class="container-footer">
-      <footer class="text-center text-light py-2 ">
-        © 2025 JearCastApp
+      <footer class="text-center text-light py-2">
+        © 2025 EasyPantry
       </footer>
     </div>
   </div>
@@ -109,6 +108,6 @@ footer {
   background-color: rgba(255, 255, 255, 0.05);
   border: 0.5px solid rgba(255, 255, 255, 0.1);
   padding: 5px;
-  font-family: 13px !important;
+  font-size: 13px !important;
 }
 </style>

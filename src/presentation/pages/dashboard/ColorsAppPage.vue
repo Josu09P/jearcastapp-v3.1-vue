@@ -1,7 +1,7 @@
 <template>
     <DashboardLayout>
         <div class="theme-selector">
-            <h4 class="mb-3 text-white">Selecciona el color de tu App</h4>
+            <h4 class="mb-3 text-white">Colores</h4>
             <div class="color-options">
                 <button v-for="color in presetColors" :key="color.preview" :style="{ background: color.preview }"
                     class="color-button" :class="{ selected: color.value === currentThemeColor }"
@@ -131,7 +131,7 @@ const presetColors: ThemeColor[] = [
 
 /* Botón de input con fondo multicolor */
 .rainbow-button {
-    background: linear-gradient(90deg, red, orange, yellow, violet, indigo, blue, green, white, black, pink, gray);
+    background: conic-gradient(90deg, red, orange, yellow, violet, indigo, blue, green, white, black, pink, gray);
 }
 
 /* Estiliza el input para que no sobresalga visualmente */

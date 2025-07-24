@@ -1,7 +1,7 @@
 <template>
     <div class="custom-navbar">
         <div class="left-section">
-            <img src="@/assets/img/logo-v4.png" alt="App Icon" class="app-icon" />
+            <img src="@/assets/img/logo-v3-icon.png" alt="App Icon" class="app-icon" />
             <span class="app-title">V.1.1</span>
         </div>
 
@@ -62,10 +62,9 @@ function closeWindow() {
 }
 
 .app-icon {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 18px;
     object-fit: contain;
-    filter: brightness(0) invert(1);
 }
 
 .app-title {
