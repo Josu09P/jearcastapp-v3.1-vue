@@ -15,9 +15,9 @@
         </div>
       </h4>
       <!--BUSCADOR AQUI-->
-      <div class="mx-auto d-none d-lg-block" style="width: 20%;">
+      <div class="mx-auto d-none d-lg-block" style="width: 20%; margin-top: 0; margin-bottom: 0;">
         <form class="d-flex" @submit.prevent="showSearch = true">
-          <button class="btn btn-outline-light rounded-pill px-3" type="submit">Buscar
+          <button class="btn btn-outline-light rounded-pill px-3" type="submit" style="font-size: 15px;">Buscar
             <i class="bi bi-search" style="margin-left: 10px;"></i>
           </button>
         </form>

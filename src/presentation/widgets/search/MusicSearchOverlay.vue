@@ -6,8 +6,8 @@
                     <input v-model="query" type="text" class="form-control search-input" placeholder="Buscar música..."
                         autofocus />
                     <div class="d-flex gap-2">
-                        <button type="submit" class="button-74">Buscar</button>
-                        <button type="button" class="button-74" @click="close">Cerrar</button>
+                        <button type="submit" class="btn btn-outline-light  btn-search">Buscar</button>
+                        <button type="button" class="btn btn-outline-light btn-search" @click="close">Cerrar</button>
                     </div>
                 </div>
             </form>
@@ -50,7 +50,7 @@
         <div v-if="showPlaylistModal" class="modal-backdrop" @click.self="showPlaylistModal = false">
             <div class="search-modal-content">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="text-white mb-0">Agregar a playlist</h5>
+                    <h5 class="text-white mb-0">Agregar o crear playlist</h5>
                     <button class="btn btn-outline-light" @click="refreshPlaylists" style="border-radius: 10px;"><i
                             class="bi bi-arrow-clockwise"></i></button>
                 </div>
@@ -60,13 +60,15 @@
                         <option disabled value="">Selecciona una playlist</option>
                         <option v-for="p in playlists" :key="p.id" :value="p.id">{{ p.name }}</option>
                     </select>
-                    <button class="button-74 w-100 mb-3" @click="addToPlaylist">Agregar a la playlist</button>
+                    <button class="btn btn-outline-light btn-search w-100 mb-3" @click="addToPlaylist">Agregar a la
+                        playlist</button>
                 </div>
 
                 <div>
                     <input v-model="newPlaylistName" type="text" class="form-control mb-2"
                         placeholder="Nueva playlist..." />
-                    <button class="button-74 w-100" @click="createNewPlaylist">Crear y agregar</button>
+                    <button class="btn btn-outline-light btn-search w-100" @click="createNewPlaylist">Crear y
+                        agregar</button>
                 </div>
             </div>
         </div>
@@ -295,21 +297,9 @@ const createNewPlaylist = async () => {
     backdrop-filter: blur(4px);
 }
 
-.button-74 {
-    background-color: rgba(255, 255, 255, 0.2);
-    border: none;
-    color: white;
-    padding: 8px 18px;
-    border-radius: 10px;
-    font-size: 0.9rem;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(6px);
-}
-
-.button-74:hover {
-    background-color: rgba(255, 255, 255, 0.35);
-    color: black;
-    cursor: pointer;
+.btn-search {
+    border-radius: 1.0rem;
+    font-size: 15px;
 }
 
 .video-card-custom {
@@ -320,8 +310,9 @@ const createNewPlaylist = async () => {
 }
 
 .search-input::placeholder {
-    color: white;
+    color: rgb(142, 142, 142);
     font-size: 14px;
+    text-align: center;
     border: none;
 }
 
