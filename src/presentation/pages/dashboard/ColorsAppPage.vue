@@ -9,11 +9,12 @@
                     <span v-if="color.value === currentThemeColor">✔️</span>
                 </button>
 
-                <!-- Botón input con fondo arcoíris -->
-                <label class="color-button rainbow-button" :class="{ selected: isCustomColorSelected }">
-                    <input type="color" v-model="customColor" @input="changeColor(customColor)" />
+                <button class="color-button palette-img-button" @click="openColorPicker"
+                    :class="{ selected: isCustomColorSelected }">
+                    <img src="@/assets/img/colors-svgrepo-com.svg" alt="Custom color" />
+                    <input ref="colorInput" type="color" v-model="customColor" @input="changeColor(customColor)" />
                     <span v-if="isCustomColorSelected">✔️</span>
-                </label>
+                </button>
             </div>
         </div>
     </DashboardLayout>
@@ -23,13 +24,17 @@
 import { ref, computed } from 'vue'
 import { useTheme } from '@/utils/userTheme'
 import DashboardLayout from '@/presentation/layouts/DashboardLayout.vue'
-
+const colorInput = ref<HTMLInputElement | null>(null)
 const { applyTheme, currentThemeColor } = useTheme()
 const customColor = ref(currentThemeColor.value)
 
 function changeColor(color: string) {
     applyTheme(color)
 }
+function openColorPicker() {
+    (colorInput.value as HTMLInputElement)?.click()
+}
+
 
 const isCustomColorSelected = computed(() => {
     return !presetColors.some((c) => c.value === currentThemeColor.value)
@@ -129,16 +134,26 @@ const presetColors: ThemeColor[] = [
     box-shadow: 0 0 10px white;
 }
 
-/* Botón de input con fondo multicolor */
-.rainbow-button {
-    background: conic-gradient(90deg, red, orange, yellow, violet, indigo, blue, green, white, black, pink, gray);
+.palette-img-button {
+    background: transparent;
+    padding: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* Estiliza el input para que no sobresalga visualmente */
-.rainbow-button input[type="color"] {
+.palette-img-button img {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+}
+
+
+.palette-img-button input[type="color"] {
+    position: absolute;
+    inset: 0;
     opacity: 0;
-    width: 100%;
-    height: 100%;
     cursor: pointer;
 }
 </style>
