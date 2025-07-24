@@ -50,9 +50,14 @@
         <div v-if="showPlaylistModal" class="modal-backdrop" @click.self="showPlaylistModal = false">
             <div class="search-modal-content">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="text-white mb-0">Agregar o crear playlist</h5>
-                    <button class="btn btn-outline-light" @click="refreshPlaylists" style="border-radius: 10px;"><i
-                            class="bi bi-arrow-clockwise"></i></button>
+                    <h5 class="text-white mb-0">Agregar / Crear Playlist</h5>
+                    <button class="btn btn-outline-light d-flex align-items-center justify-content-center"
+                        @click="refreshPlaylists" :disabled="loading"
+                        style="border-radius: 1rem; height: 36px; padding: 0 10px;">
+                        <i :class="['bi', 'me-0', loadingPlaylists ? 'bi-arrow-repeat spin-animation' : 'bi-arrow-clockwise']"
+                            style="font-size: 16px; vertical-align: middle; line-height: 1;"></i>
+
+                    </button>
                 </div>
 
                 <div v-if="playlists.length > 0" class="mb-3">
@@ -95,12 +100,13 @@ const searchPerformed = ref(false)
 const props = defineProps<{ visible: boolean }>()
 const addingFavoritesMap = ref<Record<string, boolean>>({})
 const isProcessing = ref(false)
-
+const loading = ref(false)
 const emit = defineEmits<{
     (e: 'close'): void
     (e: 'openPlaylistModal', video: any): void
 }>()
 const close = () => emit('close')
+const loadingPlaylists = ref(false)
 const userStore = useUserStore()
 const playerStore = usePlayerStore()
 const playlists = ref<PlaylistModel[]>([])
@@ -121,8 +127,14 @@ const showToast = (text: string) => {
 
 const refreshPlaylists = async () => {
     if (!userStore.id) return
+    loadingPlaylists.value = true
+
     playlists.value = await getPlaylistsByUser(userStore.id)
     showToast('Playlists actualizadas')
+
+    setTimeout(() => {
+        loadingPlaylists.value = false
+    }, 1000)
 }
 
 onMounted(async () => {
@@ -260,6 +272,34 @@ const createNewPlaylist = async () => {
 </script>
 
 <style scoped>
+.spin-animation {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes float {
+    0% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-8px);
+    }
+
+    100% {
+        transform: translateY(0px);
+    }
+}
+
 .search-overlay {
     position: fixed;
     top: 0;
@@ -342,41 +382,5 @@ const createNewPlaylist = async () => {
 input::placeholder {
     color: #cccccc;
     opacity: 1;
-}
-
-.button-74 {
-    background-color: #d9d9d98d;
-    border: 2px solid #422800;
-    border-radius: 20px;
-    box-shadow: #422800 2px 2px 0 0;
-    color: white;
-    cursor: pointer;
-    display: inline-block;
-    font-weight: 600;
-    font-size: 14px;
-    padding: 0 14px;
-    line-height: 36px;
-    text-align: center;
-    text-decoration: none;
-    user-select: none;
-    -webkit-user-select: none;
-    touch-action: manipulation;
-    transition: all 0.1s ease-in-out;
-}
-
-.button-74:hover {
-    background-color: #836a6ad4;
-}
-
-.button-74:active {
-    box-shadow: #422800 1px 1px 0 0;
-    transform: translate(1px, 1px);
-}
-
-@media (min-width: 768px) {
-    .button-74 {
-        min-width: 90px;
-        padding: 0 18px;
-    }
 }
 </style>

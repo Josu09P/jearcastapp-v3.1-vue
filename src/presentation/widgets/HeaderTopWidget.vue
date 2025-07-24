@@ -17,8 +17,10 @@
       <!--BUSCADOR AQUI-->
       <div class="mx-auto d-none d-lg-block" style="width: 20%; margin-top: 0; margin-bottom: 0;">
         <form class="d-flex" @submit.prevent="showSearch = true">
-          <button class="btn btn-outline-light rounded-pill px-3" type="submit" style="font-size: 15px;">Buscar
-            <i class="bi bi-search" style="margin-left: 10px;"></i>
+          <button class="btn btn-outline-light rounded-pill px-3 d-flex align-items-center" type="submit"
+            style="font-size: 15px;">
+            <span>Buscar</span>
+            <i class="bi bi-search ms-2" style="font-size: 13px; vertical-align: middle;"></i>
           </button>
         </form>
 
@@ -94,5 +96,10 @@ nav.navbar {
   -webkit-backdrop-filter: blur(6px);
   border: 0.5px solid rgba(255, 255, 255, 0.1);
   border-radius: 1.3rem;
+}
+
+.bi-search {
+
+  width: 13px;
 }
 </style>

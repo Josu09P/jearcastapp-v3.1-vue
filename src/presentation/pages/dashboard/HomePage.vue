@@ -54,11 +54,13 @@
                             </h5>
                             <div class="d-flex gap-2">
                                 <button @click="refreshRecentlyPlayed" :disabled="loading"
-                                    class="btn btn-sm btn-outline-light me-2 d-flex align-items-center justify-content-center">
+                                    class="btn btn-sm btn-outline-light me-2 d-flex align-items-center justify-content-center"
+                                    style="border-radius: .50rem;">
                                     <i
                                         :class="['bi', 'me-0', loading ? 'bi-arrow-repeat spin-animation' : 'bi-arrow-clockwise']"></i>
                                 </button>
-                                <button @click="clearRecentlyPlayed" class="btn btn-sm btn-outline-light">
+                                <button @click="clearRecentlyPlayed" class="btn btn-sm btn-outline-light"
+                                    style="border-radius: .50rem;">
                                     <i class="bi bi-trash3-fill"></i>
                                 </button>
                             </div>
@@ -133,9 +135,15 @@
             <div v-if="showPlaylistModal" class="modal-backdrop" @click.self="showPlaylistModal = false">
                 <div class="search-modal-content">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="text-white mb-0">Agregar a playlist</h5>
-                        <button class="btn btn-outline-light" @click="refreshPlaylists" style="border-radius: 10px;"><i
-                                class="bi bi-arrow-clockwise"></i></button>
+                        <h5 class="text-white mb-0">Agregar / Crear Playlist</h5>
+                        <button class="btn btn-outline-light d-flex align-items-center justify-content-center"
+                            @click="refreshPlaylists" :disabled="loading"
+                            style="border-radius: 1rem; height: 36px; padding: 0 10px;">
+                            <i :class="['bi', 'me-0', loadingPlaylists ? 'bi-arrow-repeat spin-animation' : 'bi-arrow-clockwise']"
+                                style="font-size: 16px; vertical-align: middle; line-height: 1;"></i>
+
+                        </button>
+
                     </div>
 
                     <div v-if="playlists.length > 0" class="mb-3">
@@ -143,13 +151,14 @@
                             <option disabled value="">Selecciona una playlist</option>
                             <option v-for="p in playlists" :key="p.id" :value="p.id">{{ p.name }}</option>
                         </select>
-                        <button class="button-74 w-100 mb-3" @click="addToPlaylist">Agregar a la playlist</button>
+                        <button class="btn btn-outline-light btn-search w-100 mb-3" @click="addToPlaylist">Agregar a la
+                            playlist</button>
                     </div>
-
                     <div>
                         <input v-model="newPlaylistName" type="text" class="form-control mb-2"
                             placeholder="Nueva playlist..." />
-                        <button class="button-74 w-100" @click="createNewPlaylist">Crear y agregar</button>
+                        <button class="btn btn-outline-light btn-search w-100" @click="createNewPlaylist">Crear y
+                            agregar</button>
                     </div>
                 </div>
             </div>
@@ -192,6 +201,9 @@ const newPlaylistName = ref('')
 const showPlaylistModal = ref(false)
 const selectedVideo = ref<any | null>(null)
 const addingFavoritesMap = ref<Record<string, boolean>>({})
+const loadingPlaylists = ref(false)
+
+
 const playVideo = (index: number) => {
     if (!recentlyPlayed.value.length) return
 
@@ -267,10 +279,15 @@ const refreshRecentlyPlayed = () => {
 
 const refreshPlaylists = async () => {
     if (!userStore.id) return
+    loadingPlaylists.value = true
+
     playlists.value = await getPlaylistsByUser(userStore.id)
     showToast('Playlists actualizadas')
-}
 
+    setTimeout(() => {
+        loadingPlaylists.value = false
+    }, 1000)
+}
 
 const addToFavorites = async (video: any) => {
     if (!userStore.id || addingFavoritesMap.value[video.videoId]) return
@@ -423,14 +440,6 @@ const createNewPlaylist = async () => {
     animation: float 3s ease-in-out infinite;
 }
 
-
-.glass-card {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 1rem;
-    backdrop-filter: blur(8px);
-}
-
 .modal-backdrop {
     position: fixed;
     top: 0;
@@ -454,53 +463,15 @@ const createNewPlaylist = async () => {
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
-input::placeholder {
-    color: #cccccc;
-    /* o el color que desees */
-    border: 2px solid #ffffff !important;
-    opacity: 1;
-    /* opcional: asegura que no esté opaco */
+.btn-search {
+    border-radius: 1.0rem;
+    font-size: 15px;
 }
 
-input.form-control {
-    border: 1px solid #a8a8a8;
-    border-radius: 1.4rem !important;
-    height: 40px;
-}
-
-.button-74 {
-    background-color: #d9d9d98d;
-    border: 2px solid #422800;
-    border-radius: 20px;
-    box-shadow: #422800 2px 2px 0 0;
-    color: white;
-    cursor: pointer;
-    display: inline-block;
-    font-weight: 600;
-    font-size: 14px;
-    padding: 0 14px;
-    line-height: 36px;
-    text-align: center;
-    text-decoration: none;
-    user-select: none;
-    -webkit-user-select: none;
-    touch-action: manipulation;
-    transition: all 0.1s ease-in-out;
-}
-
-.button-74:hover {
-    background-color: #836a6ad4;
-}
-
-.button-74:active {
-    box-shadow: #422800 1px 1px 0 0;
-    transform: translate(1px, 1px);
-}
-
-@media (min-width: 768px) {
-    .button-74 {
-        min-width: 90px;
-        padding: 0 18px;
-    }
+.glass-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    backdrop-filter: blur(8px);
 }
 </style>
