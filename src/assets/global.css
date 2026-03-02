@@ -1,7 +1,7 @@
 @import './vars.css';
 
 /*==============================================
- DESGUISE SCROLLBAR FIREFOX AND OTHERS BROWSER
+    GLOBAL & SCROLLBAR RESET
 ================================================*/
 ::-webkit-scrollbar {
   width: 0px;
@@ -12,21 +12,26 @@ body {
   scrollbar-width: none;
   overflow-y: scroll;
   -ms-overflow-style: none;
+  border: none !important;
 }
 
-/*============================================
-    DASHBOARDLAYOUT STYLES
-==============================================*/
 .container-all {
-  background: var(--main-bg-gradient), var(--main-bg-color);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   overflow-x: hidden;
   width: 100%;
   height: 100vh;
 }
 
+.container-all {
+  padding-top: 38px;
+  padding-left: 6px !important;
+  padding-right: 6px !important;
+  padding-bottom: 6px !important;
+  background: var(--main-bg-color);
+}
+
 /* =========================================
-    SWEETALERT DESING BLUR 
+    UI COMPONENTS (GLASSMORPHISM)
 ========================================= */
 .swal2-popup.glass-modal {
   background: rgba(255, 255, 255, 0.07);
@@ -37,9 +42,6 @@ body {
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
 }
 
-/*=========================================
-    ALERT DE TOASTIFY
-===========================================*/
 .toast-glass {
   background: rgba(255, 255, 255, 0.07) !important;
   color: white !important;
@@ -51,103 +53,118 @@ body {
 }
 
 /* ======================================
-      CONTENEDOR CON SCROLL FAVORITOS
+    4. FILAS ESTILO SPOTIFY (Premium)
 ====================================== */
-.container-scroll-wrapper-all {
-  max-height: 650px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  background-color: rgba(255, 255, 255, 0.03);
+.song-row {
+  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  /* Evita saltos visuales */
+}
+
+.song-row:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
   border: 1px solid rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  scrollbar-width: thin;
-  scrollbar-color: var(--button-bg) transparent;
 }
 
-/* Personaliza scrollbar para navegadores webkit */
-.container-scroll-wrapper-all::-webkit-scrollbar {
-  width: 8px;
+/* Manejo del índice y Play Icon */
+.index-col {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 500;
+  min-width: 45px;
 }
 
-.container-scroll-wrapper-all::-webkit-scrollbar-thumb {
-  background-color: var(--button-bg);
-  border-radius: 4px;
+.play-icon {
+  display: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: #fff;
 }
 
-/* ======================================
-            TARJETAS DE VIDEO 
-====================================== */
-.video-card-custom {
-  background-color: var(--primary-bg) !important;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  color: var(--text-color) !important;
-  transition: all 0.3s ease;
+.song-row:hover .number {
+  display: none;
 }
 
-.video-card-custom:hover {
-  transform: scale(1.01);
-  background-color: var(--hover-bg);
-}
-
-.video-card-custom button {
-  background-color: var(--button-bg);
-  border: none;
-  color: var(--text-secondary);
-  transition: background-color 0.2s ease;
-}
-
-.video-card-custom button:hover {
-  background-color: var(--button-hover-bg);
-}
-
-small.date-container {
-  font-size: 12px;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  background-color: #42424272;
-  border-radius: 1.3rem;
-  max-width: 100%;
-  margin-left: 20px !important;
-  width: 80px;
+.song-row:hover .play-icon {
+  display: block;
 }
 
 /* ======================================
-            COLUMNA RESPONSIVA 
+    5. BOTONES & ACCIONES
 ====================================== */
+.remove-btn {
+  width: 38px;
+  height: 38px;
+  background: transparent;
+  border: none !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #b3b3b3 !important;
+  transition: all 0.2s ease;
+  opacity: 0.4;
+  /* Sutil por defecto */
+}
+
+/* Solo se resalta el botón de borrar al pasar por la fila */
+.song-row:hover .remove-btn {
+  opacity: 1;
+}
+
+.remove-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: scale(1.15);
+  color: #ff4d4d !important;
+  /* Rojo vibrante al apuntar */
+}
+
+/* ======================================
+    6. UTILIDADES DE TEXTO
+====================================== */
+.text-truncate {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.text-secondary {
+  color: #b3b3b3 !important;
+}
+
+.title-page {
+  letter-spacing: -0.5px;
+  font-weight: 700;
+}
+
+/* ======================================
+    7. RESPONSIVE DESIGN
+====================================== */
+@media (max-width: 768px) {
+  .index-col {
+    display: none;
+    /* Ganamos espacio en móviles */
+  }
+
+  .song-row {
+    padding: 12px 8px;
+  }
+
+  .container-fluid {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}
+
+/* Ajuste para pantallas ultra anchas */
 @media (min-width: 1400px) {
-  .col-xl-1-5-custom {
-    flex: 0 0 auto;
-    width: 12.5%;
-    /* 100 / 8 = 12.5% */
-  }
-}
-
-@media (max-width: 1199px) {
-  .col-xl-1-5-custom {
-    width: 16.6667%;
-    /* 6 columnas */
-  }
-}
-
-@media (max-width: 991px) {
-  .col-xl-1-5-custom {
-    width: 25%;
-    /* 4 columnas */
-  }
-}
-
-@media (max-width: 767px) {
-  .col-xl-1-5-custom {
-    width: 50%;
-    /* 2 columnas */
-  }
-}
-
-@media (max-width: 575px) {
-  .col-xl-1-5-custom {
-    width: 100%;
-    /* 1 columna */
+  .song-row h6 {
+    font-size: 1rem;
+    /* Un poco más grande en 4K/2K */
   }
 }

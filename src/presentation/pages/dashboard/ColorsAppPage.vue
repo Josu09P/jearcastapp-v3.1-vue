@@ -72,7 +72,7 @@ const presetColors: ThemeColor[] = [
     { type: 'solid', value: '#362202', preview: '#362202' },
     { type: 'solid', value: '#3d000f', preview: '#3d000f' },
     { type: 'solid', value: '#4c1036', preview: '#4c1036' },
-    { type: 'solid', value: '#1b1b1b', preview: '#1b1b1b' },
+    { type: 'solid', value: '#1ed760', preview: '#1ed760' },
     { type: 'gradient', value: '#3f0d12', preview: 'linear-gradient(135deg, #3f0d12, #a71d31)' },
     { type: 'gradient', value: '#1f1c2c', preview: 'linear-gradient(135deg, #1f1c2c, #928dab)' },
     { type: 'gradient', value: '#232526', preview: 'linear-gradient(135deg, #232526, #414345)' },

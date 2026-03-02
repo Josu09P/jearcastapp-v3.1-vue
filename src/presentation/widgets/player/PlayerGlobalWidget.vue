@@ -39,14 +39,17 @@
                 <button @click="prev" class="control-button">
                     <i class="bi bi-skip-backward-fill"></i>
                 </button>
-                <button @click="play" class="control-button play">
-                    <i class="bi bi-play-fill"></i>
+                <!-- Botón único de reproducción/pausa -->
+                <button @click="togglePlayPause" class="control-button play-pause">
+                    <i :class="isPlaying ? 'bi bi-pause-fill' : 'bi bi-play-fill'"></i>
                 </button>
-                <button @click="pause" class="control-button pause">
-                    <i class="bi bi-pause-fill"></i>
-                </button>
+
                 <button @click="next" class="control-button">
                     <i class="bi bi-skip-forward-fill"></i>
+                </button>
+                <button @click="toggleShuffle" class="control-button"
+                    :class="{ 'active-shuffle': playerStore.isShuffling }" title="Reproducción Aleatoria">
+                    <i class="bi bi-shuffle"></i>
                 </button>
             </div>
 
@@ -71,7 +74,7 @@ let lottieInstance: any = null
 let progressInterval: any = null
 const currentTime = ref(0)
 const duration = ref(0)
-
+const isPlaying = ref(playerStore.isPlaying) // sincronizado con el store
 const currentTimeFormatted = computed(() => formatTime(currentTime.value))
 const durationFormatted = computed(() => formatTime(duration.value))
 
@@ -160,6 +163,24 @@ declare namespace YT {
     }
 }
 
+const togglePlayPause = () => {
+    if (ytPlayer?.getPlayerState() === window.YT.PlayerState.PLAYING) {
+        ytPlayer.pauseVideo()
+        playerStore.pause()
+        isPlaying.value = false
+    } else {
+        if (ytPlayer) {
+            ytPlayer.playVideo()
+        }
+        playerStore.play()
+        isPlaying.value = true
+    }
+}
+
+// Mantener sincronización con el store si cambia desde otro lado
+watch(() => playerStore.isPlaying, (val) => {
+    isPlaying.value = val
+})
 const toggleExpand = () => {
     isExpanded.value = !isExpanded.value
 
@@ -305,134 +326,54 @@ const pause = () => {
     playerStore.pause()
 }
 
+const toggleShuffle = () => {
+    playerStore.toggleShuffle()
+}
+
 const next = () => playerStore.next()
 const prev = () => playerStore.prev()
+
+function handleKeyPress(e: KeyboardEvent) {
+    const target = e.target as HTMLElement;
+
+    // 1. Si el usuario está escribiendo, ignoramos el evento por completo
+    if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+    ) {
+        return;
+    }
+
+    // 2. Si presiona Espacio
+    if (e.code === "Space") {
+        // Evitamos que el espacio active el botón que tenga el foco (el error que sentías)
+        // y que la página haga scroll.
+        e.preventDefault();
+
+        // Quitamos el foco del elemento actual para que el siguiente "Espacio" 
+        // no intente pulsar el mismo botón otra vez.
+        if (target) target.blur();
+
+        const state = ytPlayer?.getPlayerState();
+        if (state === window.YT.PlayerState.PLAYING) {
+            pause();
+        } else {
+            play();
+        }
+    }
+}
+window.addEventListener("keydown", handleKeyPress)
 
 onBeforeUnmount(() => {
     stopDrag()
     clearIntervals()
     lottieInstance?.destroy()
     clearInterval(progressInterval)
+    window.addEventListener("keydown", handleKeyPress);
 })
 </script>
 
 <style scoped>
-.floating-player {
-    position: fixed;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    background-color: rgba(65, 65, 65, 0.568);
-    border: 0.5px solid rgba(255, 255, 255, 0.1);
-    border-radius: 1.3rem;
-    color: white;
-    padding: 10px;
-    z-index: 2000;
-    height: auto;
-    width: 280px;
-    cursor: grab;
-    user-select: none;
-    box-shadow: 0 0 10px rgba(194, 194, 194, 0.4);
-}
-
-.player-header {
-    font-weight: bold;
-    font-size: 14px;
-}
-
-.iframe-container {
-    position: relative;
-    width: 100%;
-    height: auto;
-    margin-top: 8px;
-}
-
-.title {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: normal;
-    word-wrap: break-word;
-    max-width: 100%;
-}
-
-
-.thumbnail {
-    width: 100%;
-    height: 100%;
-    border-radius: 8px;
-    overflow: hidden;
-    position: relative;
-}
-
-.iframe-element {
-    width: 100%;
-    height: 100%;
-    z-index: 0;
-    position: absolute;
-}
-
-.iframe-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    bottom: 0;
-    backdrop-filter: blur(12px);
-    background-color: rgba(0, 0, 0, 0.4);
-    z-index: 2;
-    pointer-events: none;
-}
-
-.iframe-click-guard {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.001);
-    /* invisible pero clickeable */
-    z-index: 3;
-    transition: opacity 0.3s ease;
-    user-select: none;
-    touch-action: none;
-}
-
-.controls {
-    display: flex;
-    justify-content: space-around;
-    margin-top: 10px;
-}
-
-.control-button {
-    background: #f0f0f3;
-    border: none;
-    border-radius: 50%;
-    width: 38px;
-    height: 38px;
-    box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.1),
-        -4px -4px 12px rgba(255, 255, 255, 0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #333;
-    font-size: 20px;
-    transition: all 0.2s ease;
-}
-
-.control-button:hover {
-    box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.1),
-        inset -2px -2px 5px rgba(255, 255, 255, 0.7);
-    transform: scale(1.05);
-}
-
-.controls {
-    display: flex;
-    justify-content: space-between;
-    padding: 0 20px;
-    margin-top: 16px;
-    gap: 10px;
-}
+@import '@/assets/css/player-styles.css';
 </style>

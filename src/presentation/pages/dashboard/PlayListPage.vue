@@ -156,10 +156,12 @@ onMounted(async () => {
                         <div class="card h-100 flex-row shadow-sm p-2 align-items-center video-card-custom">
                             <img :src="song.video_thumbnail" :alt="song.video_title" class="rounded-start me-3"
                                 style="width: 120px; height: 80px; object-fit: cover" />
+
                             <div class="flex-grow-1 d-flex flex-column justify-content-between" style="min-width: 0;">
                                 <h6 class="card-title text-truncate mb-1" :title="song.video_title"
                                     style="font-size: 0.85rem;">{{ song.video_title }}</h6>
-                                <div class="d-flex justify-content-start gap-2" style="margin: 10px 0 0 20px">
+
+                                <div class="d-flex justify-content-start gap-2 mt-2">
                                     <button @click="playSong(index)" class="btn btn-sm">
                                         <i class="bi bi-play-circle"></i>
                                     </button>

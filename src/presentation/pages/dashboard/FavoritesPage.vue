@@ -30,10 +30,7 @@ const getUserId = (): string | null => {
 function sortFavorites() {
     if (sortOption.value === 'recent') {
         sortedFavorites.value = [...favorites.value].sort((a, b) => {
-            return (
-                (b.created_at?.toDate()?.getTime() || 0) -
-                (a.created_at?.toDate()?.getTime() || 0)
-            )
+            return (b.created_at?.toDate()?.getTime() || 0) - (a.created_at?.toDate()?.getTime() || 0)
         })
     } else if (sortOption.value === 'alphabetical') {
         sortedFavorites.value = [...favorites.value].sort((a, b) => {
@@ -41,7 +38,6 @@ function sortFavorites() {
         })
     }
 }
-
 
 async function reloadFavorites(force = false) {
     if (hasLoaded.value && !force) return
@@ -72,14 +68,32 @@ async function removeFavorite(videoId: string) {
     if (!userId) return
 
     deletingMap.value[videoId] = true
-    Toastify({ text: 'Eliminando...', duration: 1500, className: "toast-glass", gravity: "top", position: "right" }).showToast()
+    Toastify({
+        text: 'Eliminando...',
+        duration: 1500,
+        className: 'toast-glass',
+        gravity: 'top',
+        position: 'right',
+    }).showToast()
 
     try {
         await removeFavoriteMusic({ user_id: userId, video_id: videoId })
-        Toastify({ text: 'Eliminado de favoritos', duration: 1500, className: "toast-glass", gravity: "top", position: "right" }).showToast()
+        Toastify({
+            text: 'Eliminado de favoritos',
+            duration: 1500,
+            className: 'toast-glass',
+            gravity: 'top',
+            position: 'right',
+        }).showToast()
         await reloadFavorites(true)
     } catch (e) {
-        Toastify({ text: 'Error al eliminar favorito', duration: 1500, className: "toast-glass", gravity: "top", position: "right" }).showToast()
+        Toastify({
+            text: 'Error al eliminar favorito',
+            duration: 1500,
+            className: 'toast-glass',
+            gravity: 'top',
+            position: 'right',
+        }).showToast()
         console.error(e)
     } finally {
         deletingMap.value[videoId] = false
@@ -87,10 +101,10 @@ async function removeFavorite(videoId: string) {
 }
 
 function playFavorite(index: number) {
-    const playlist = sortedFavorites.value.map(fav => ({
+    const playlist = sortedFavorites.value.map((fav) => ({
         video_id: fav.video_id,
         video_title: fav.video_title,
-        video_thumbnail: fav.video_thumbnail
+        video_thumbnail: fav.video_thumbnail,
     }))
     const playerStore = usePlayerStore()
     playerStore.setPlaylist(playlist, index)
@@ -108,55 +122,60 @@ onMounted(() => {
 
 <template>
     <DashboardLayout>
-        <div class="container">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="text-white mb-0 title-page">Favoritos</h4>
-                <div class="d-flex align-items-center gap-2">
-                    <button @click="toggleSortOption" class="btn btn-light btn-sm">
-                        <i :class="sortOption === 'recent' ? 'bi bi-clock-history' : 'bi bi-sort-alpha-down'" />
+        <div class="container-fluid px-0">
+            <div class="d-flex justify-content-between align-items-center mb-4 px-3">
+                <h4 class="text-white mb-0 fw-bold">Favoritos</h4>
+                <div class="d-flex gap-2">
+                    <button @click="toggleSortOption" class="btn btn-dark btn-sm border-secondary rounded-pill px-3">
+                        <i :class="sortOption === 'recent' ? 'bi bi-clock-history' : 'bi bi-sort-alpha-down'"
+                            class="me-1" />
                         {{ sortOption === 'recent' ? 'Recientes' : 'A-Z' }}
                     </button>
                     <button @click="() => reloadFavorites(true)" :disabled="loading"
-                        class="btn btn-outline-light btn-sm">
+                        class="btn btn-outline-light btn-sm rounded-pill px-3">
                         <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                        <i v-else class="bi bi-arrow-clockwise me-1"></i>
-                        Recargar
+                        <i v-else class="bi bi-arrow-clockwise"></i>
                     </button>
                 </div>
             </div>
 
-            <div v-if="favorites.length === 0 && !loading" class="text-white p-4">No tienes favoritos aún.</div>
-            <div v-if="error" class="text-danger">{{ error }}</div>
+            <div class="row px-3 py-2 text-secondary d-none d-md-flex mb-2 border-bottom border-white border-opacity-10"
+                style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">
+                <div class="col-1 text-center">#</div>
+                <div class="col-6">Título</div>
+                <div class="col-3 text-center">Agregado el</div>
+                <div class="col-2 text-center">Acciones</div>
+            </div>
 
-            <div v-if="sortedFavorites.length > 0" class="container-scroll-wrapper-all mt-3 p-3 rounded">
-                <div class="row">
-                    <div v-for="(fav, index) in sortedFavorites" :key="fav.id"
-                        class="col-12 col-md-6 col-lg-6 col-xl-3 mb-3">
-                        <div class="card h-100 flex-row shadow-sm p-2 align-items-center video-card-custom">
-                            <img :src="fav.video_thumbnail" :alt="fav.video_title" class="rounded-start me-3"
-                                style="width: 120px; height: 80px; object-fit: cover" />
-                            <div class="flex-grow-1 d-flex flex-column justify-content-between" style="min-width: 0;">
-                                <h6 class="card-title text-truncate mb-1" :title="fav.video_title"
-                                    style="font-size: 0.85rem;">
-                                    {{ fav.video_title }}
-                                </h6>
-                                <small class="ms-1 text-center text-light date-container">
-                                    {{ fav.created_at?.toDate().toLocaleDateString() }}
-                                </small>
+            <div class="px-0">
+                <div v-for="(fav, index) in sortedFavorites" :key="fav.id"
+                    class="song-row row align-items-center p-2 mx-0 mb-1" @dblclick="playFavorite(index)">
 
-                                <div class="d-flex justify-content-start gap-2" style="margin: 10px 0 0 20px">
-                                    <button @click="playFavorite(index)" class="btn btn-sm">
-                                        <i class="bi bi-play-circle"></i>
-                                    </button>
-                                    <button @click="removeFavorite(fav.video_id)" class="btn btn-sm text-light"
-                                        :disabled="deletingMap[fav.video_id]">
-                                        <span v-if="deletingMap[fav.video_id]"
-                                            class="spinner-border spinner-border-sm"></span>
-                                        <i v-else class="bi bi-trash-fill"></i>
-                                    </button>
-                                </div>
-                            </div>
+                    <div class="col-1 text-secondary index-col text-center">
+                        <span class="number">{{ index + 1 }}</span>
+                        <i class="bi bi-play-fill play-icon text-white" @click="playFavorite(index)"></i>
+                    </div>
+
+                    <div class="col-10 col-md-6 d-flex align-items-center gap-3">
+                        <img :src="fav.video_thumbnail" class="rounded shadow-sm"
+                            style="width: 48px; height: 48px; object-fit: cover" />
+                        <div class="text-truncate">
+                            <h6 class="text-white mb-0 text-truncate fw-semibold" style="font-size: 0.9rem;">{{
+                                fav.video_title }}</h6>
+                            <small class="text-secondary">YouTube Music</small>
                         </div>
+                    </div>
+
+                    <div class="col-3 d-none d-md-block text-secondary small text-center font-monospace">
+                        {{ fav.created_at?.toDate().toLocaleDateString() }}
+                    </div>
+
+                    <div class="col-1 col-md-2 d-flex justify-content-center align-items-center">
+                        <button @click="removeFavorite(fav.video_id)" class="btn btn-link p-0 remove-btn">
+                            <span v-if="deletingMap[fav.video_id]"
+                                class="spinner-border spinner-border-sm text-secondary"></span>
+                            <i v-else class="bi bi-heart-fill text-danger"></i>
+                        </button>
                     </div>
                 </div>
             </div>

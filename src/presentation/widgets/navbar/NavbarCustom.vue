@@ -49,8 +49,13 @@ function closeWindow() {
     padding: 0 10px;
     z-index: 9999;
     backdrop-filter: blur(10px);
+    background-color: rgba(178, 178, 178, 0.05);
+    /*
+    background-color: black; */
     -webkit-backdrop-filter: blur(10px);
+    /*
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    */
     -webkit-app-region: drag;
     user-select: none;
 }

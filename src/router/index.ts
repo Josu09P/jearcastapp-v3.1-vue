@@ -64,14 +64,21 @@ const routes = [
 ]
 
 export const router = createRouter({
-  history: createWebHashHistory(), // hash-based routing para Electron
+  history: createWebHashHistory(), // HASH MODE FOR ELECTRON
   routes,
 })
 
-// Protection of routes privates
 router.beforeEach((to, _from, next) => {
   const store = useUserStore()
+  if (!store.id && localStorage.getItem('userJearCastInfo')) {
+    store.loadUserFromLocalStorage()
+  }
+
   const isLoggedIn = !!store.id
+
+  if (isLoggedIn && (to.path === '/' || to.path === '/home')) {
+    return next('/dashboard')
+  }
 
   if (to.path.startsWith('/dashboard') && !isLoggedIn) {
     return next('/auth/login')

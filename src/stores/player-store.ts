@@ -11,6 +11,7 @@ export const usePlayerStore = defineStore('player', {
     playlist: [] as Track[],
     currentIndex: 0,
     isPlaying: false,
+    isShuffling: false,
   }),
   getters: {
     currentTrack(state): Track | null {
@@ -23,24 +24,49 @@ export const usePlayerStore = defineStore('player', {
       this.currentIndex = startIndex
       this.isPlaying = true
     },
+
     playIndex(index: number) {
       if (index >= 0 && index < this.playlist.length) {
         this.currentIndex = index
         this.isPlaying = true
       }
     },
+
+    toggleShuffle() {
+      this.isShuffling = !this.isShuffling
+    },
+
     play() {
       this.isPlaying = true
     },
+
     pause() {
       this.isPlaying = false
     },
+
     next() {
+      if (this.isShuffling) {
+        // 🔥 Modo aleatorio
+        const max = this.playlist.length
+        let newIndex = this.currentIndex
+
+        // Evitar repetir la misma canción
+        while (newIndex === this.currentIndex && max > 1) {
+          newIndex = Math.floor(Math.random() * max)
+        }
+
+        this.currentIndex = newIndex
+        this.isPlaying = true
+        return
+      }
+
+      // Siguiente normal
       if (this.currentIndex < this.playlist.length - 1) {
         this.currentIndex++
         this.isPlaying = true
       }
     },
+
     prev() {
       if (this.currentIndex > 0) {
         this.currentIndex--

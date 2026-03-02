@@ -1,23 +1,24 @@
 <template>
   <nav class="navbar navbar-expand-lg navbar-light">
     <div class="container-fluid">
-      <button class="toggle-sidebar btn d-md-none" type="button" @click="toggleSidebar">
-        <i class="bi bi-list"></i>
+      <button class="toggle-sidebar btn d-md-none" @click="toggleSidebar">
+        <i class="bi bi-speaker fs-4 text-white icon-header-top"></i>
       </button>
+
       <h4 class="mb-0 ms-3 d-flex align-items-center">
         <div class="d-flex align-items-center me-3">
           <img src="@/assets/img/logo-v3.png" width="90" alt="Logo" style="filter: brightness(0) invert(1);"
-            class="me-4" />
+            class="me-4 img-logo-app" />
           <button class="toggle-sidebar ms-3 d-none d-md-block" @click="toggleSidebar"
-            style=" border: none; border-radius: 10px; padding: 5px;">
-            <i class="bi bi-speaker fs-4" style="color: black;"></i>
+            style=" border: none; border-radius: 10px; padding: 5px; background-color: transparent;">
+            <i class="bi bi-speaker fs-3" style="color: #f4f4f4;"></i>
           </button>
         </div>
       </h4>
       <!--BUSCADOR AQUI-->
       <div class="mx-auto d-none d-lg-block" style="width: 20%; margin-top: 0; margin-bottom: 0;">
         <form class="d-flex" @submit.prevent="showSearch = true">
-          <button class="btn btn-outline-light rounded-pill px-3 d-flex align-items-center" type="submit"
+          <button class="btn btn-outline-light px-3 d-flex align-items-center border-0" type="submit"
             style="font-size: 15px;">
             <span>Buscar</span>
             <i class="bi bi-search ms-2" style="font-size: 13px; vertical-align: middle;"></i>
@@ -31,7 +32,7 @@
           {{ userName }}
         </span>
         <button class="btn btn-sm" title="Cerrar sesión" style="color: rgb(229, 229, 229);" @click="logout">
-          <i class="bi bi-door-closed-fill fs-5"></i>
+          <i class="bi bi-door-open-fill fs-5"></i>
         </button>
       </div>
     </div>
@@ -92,14 +93,32 @@ function toggleSidebar() {
 
 <style scoped>
 nav.navbar {
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  border: 0.5px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1.3rem;
+  backdrop-filter: var(--blur-efect-global);
+  background: linear-gradient(to bottom,
+      rgba(178, 178, 178, 0.05) 0%,
+      /* Un poco más visible arriba */
+      rgba(178, 178, 178, 0.05) 50%,
+      /* Color medio */
+      transparent 100%
+      /* Totalmente transparente abajo */
+    );
+  -webkit-backdrop-filter: var(--blur-efect-global);
+  border: border !important;
+  border-radius: 1.0rem 1.0rem 0 0 !important;
 }
 
 .bi-search {
-
   width: 13px;
+}
+
+@media (max-width: 768px) {
+  .icon-header-top {
+    font-size: 39px !important;
+  }
+
+  .img-logo-app {
+    margin-left: -100px;
+    width: 77px;
+  }
 }
 </style>

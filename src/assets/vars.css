@@ -15,4 +15,7 @@ VAR -> COLORS GLOBALS
     --text-color: #ffffff;
     --text-secondary: #c2c2c2;
     --main-bg-color: #102c4a;
+    --blur-efect-global: blur(6px)
 }
+
+;
