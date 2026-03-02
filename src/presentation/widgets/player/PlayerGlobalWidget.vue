@@ -1,18 +1,34 @@
 <template>
-    <div class="floating-player" :class="{ expanded: isExpanded }"
+    <PlayerFullScreen :show="isFullScreen" :isPlaying="isPlaying" :progress="currentProgressValue"
+        :currentTime="currentTimeFormatted" :duration="durationFormatted" @close="isFullScreen = false"
+        @toggle-play="togglePlayPause" @seek="seekFromFullScreen">
+        <template #video-content>
+            <Teleport to=".iframe-placeholder" :disabled="!isFullScreen">
+                <div ref="playerContainer" id="yt-player" class="iframe-element" />
+            </Teleport>
+        </template>
+    </PlayerFullScreen>
+
+    <div class="floating-player" :class="{ expanded: isExpanded }" v-show="!isFullScreen"
         :style="{ top: `${position.y}px`, left: `${position.x}px` }" @mousedown="startDrag">
+
         <div class="player-header d-flex justify-content-between align-items-center">
             <span class="title">{{ currentTrack?.video_title || 'Sin reproducción' }}</span>
-            <button @click="toggleExpand" class="btn btn-sm btn-toggle"
-                style="background-color: #ffffff !important; border-radius: 1.0rem;">
-                <i :class="isExpanded ? 'bi bi-chevron-down' : 'bi bi-chevron-up'"
-                    style="background-color: #ffffff; color: red;"></i>
-            </button>
+            <div class="d-flex gap-2">
+                <button @click="isFullScreen = true" class="btn-action-mini">
+                    <i class="bi bi-fullscreen"></i>
+                </button>
+                <button @click="toggleExpand" class="btn-action-mini">
+                    <i :class="isExpanded ? 'bi bi-chevron-down' : 'bi bi-chevron-up'"></i>
+                </button>
+            </div>
         </div>
 
         <div v-show="isExpanded && currentTrack" class="iframe-container">
             <div class="thumbnail">
-                <div ref="playerContainer" id="yt-player" class="iframe-element" />
+                <div v-if="!isFullScreen" ref="playerContainer" id="yt-player-placeholder" class="iframe-element">
+                </div>
+
                 <div class="iframe-overlay" v-show="showOverlay" />
                 <div class="iframe-click-guard" :style="{
                     pointerEvents: allowClickThrough ? 'none' : 'auto',
@@ -20,39 +36,37 @@
                 }" />
             </div>
         </div>
-        <div v-if="isExpanded" class="player-body" style="margin-top: 20px ;">
-            <div v-show="isExpanded" class="d-flex justify-content-center mt-2">
+
+        <div v-if="isExpanded" class="player-body" style="margin-top: 20px;">
+            <div class="d-flex justify-content-center mt-2">
                 <div ref="lottieContainer" style="width: 200px; height: 70px;"></div>
             </div>
 
-            <!-- Progress Bar -->
-            <div v-show="isExpanded" class="d-flex justify-content-between px-2 text-white small">
+            <div class="d-flex justify-content-between px-2 text-white small">
                 <span>{{ currentTimeFormatted }}</span>
                 <span>{{ durationFormatted }}</span>
             </div>
-            <!-- Barra de progreso visible -->
-            <div v-show="isExpanded" class="d-flex align-items-center justify-content-center px-2 mt-1">
+
+            <div class="d-flex align-items-center justify-content-center px-2 mt-1">
                 <input ref="progressBar" type="range" min="0" max="100" step="0.1" class="form-range w-100"
                     @input="seekToProgress" style="accent-color: red" />
             </div>
+
             <div class="controls mt-3">
                 <button @click="prev" class="control-button">
                     <i class="bi bi-skip-backward-fill"></i>
                 </button>
-                <!-- Botón único de reproducción/pausa -->
                 <button @click="togglePlayPause" class="control-button play-pause">
                     <i :class="isPlaying ? 'bi bi-pause-fill' : 'bi bi-play-fill'"></i>
                 </button>
-
                 <button @click="next" class="control-button">
                     <i class="bi bi-skip-forward-fill"></i>
                 </button>
                 <button @click="toggleShuffle" class="control-button"
-                    :class="{ 'active-shuffle': playerStore.isShuffling }" title="Reproducción Aleatoria">
+                    :class="{ 'active-shuffle': playerStore.isShuffling }">
                     <i class="bi bi-shuffle"></i>
                 </button>
             </div>
-
         </div>
     </div>
 </template>
@@ -61,6 +75,7 @@ import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import { usePlayerStore } from '@/stores/player-store'
 import lottie from 'lottie-web'
 import animationData from '@/assets/anim/animation-sound2.json'
+import PlayerFullScreen from './PlayerFullScreen.vue'
 
 const lottieContainer = ref<HTMLElement | null>(null)
 const progressBar = ref<HTMLInputElement | null>(null)
@@ -77,6 +92,37 @@ const duration = ref(0)
 const isPlaying = ref(playerStore.isPlaying) // sincronizado con el store
 const currentTimeFormatted = computed(() => formatTime(currentTime.value))
 const durationFormatted = computed(() => formatTime(duration.value))
+
+const isFullScreen = ref(false)
+const currentProgressValue = ref(0) // Control de porcentaje 0-100
+
+// Sincronizar el valor numérico del progreso para el FullScreen
+function setupProgressBar() {
+    progressInterval && clearInterval(progressInterval)
+    progressInterval = setInterval(() => {
+        if (ytPlayer && ytPlayer.getCurrentTime && ytPlayer.getDuration) {
+            const time = ytPlayer.getCurrentTime()
+            const total = ytPlayer.getDuration()
+            const value = (time / total) * 100
+
+            currentTime.value = time
+            duration.value = total
+            currentProgressValue.value = value // <--- Actualizamos el valor plano
+
+            if (progressBar.value) {
+                progressBar.value.value = value.toString()
+            }
+        }
+    }, 200)
+}
+
+// Función para cuando mueves la barra en el modo FullScreen
+function seekFromFullScreen(percentage: number) {
+    if (ytPlayer && ytPlayer.seekTo && ytPlayer.getDuration) {
+        const totalDuration = ytPlayer.getDuration()
+        ytPlayer.seekTo((percentage / 100) * totalDuration, true)
+    }
+}
 
 function formatTime(seconds: number): string {
     const mins = Math.floor(seconds / 60)
@@ -99,25 +145,6 @@ function setupLottie() {
             animationData
         })
     }
-}
-
-function setupProgressBar() {
-    progressInterval && clearInterval(progressInterval)
-
-    progressInterval = setInterval(() => {
-        if (ytPlayer && ytPlayer.getCurrentTime && ytPlayer.getDuration) {
-            const time = ytPlayer.getCurrentTime()
-            const total = ytPlayer.getDuration()
-            const value = (time / total) * 100
-
-            currentTime.value = time
-            duration.value = total
-
-            if (progressBar.value) {
-                progressBar.value.value = value.toString()
-            }
-        }
-    }, 200)
 }
 
 function seekToProgress() {

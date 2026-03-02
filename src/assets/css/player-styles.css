@@ -120,3 +120,34 @@
     margin-top: 16px;
     gap: 10px;
 }
+
+.btn-action-mini {
+    background-color: #ffffff !important;
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    transition: transform 0.2s;
+}
+
+.btn-action-mini i {
+    color: #333;
+    font-size: 0.8rem;
+}
+
+.btn-action-mini:hover {
+    transform: scale(1.1);
+}
+
+.btn-action-mini:first-child i {
+    color: #000;
+    /* Icono fullscreen */
+}
+
+.btn-action-mini:last-child i {
+    color: red;
+    /* Icono chevron */
+}
