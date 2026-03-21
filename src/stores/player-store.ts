@@ -37,6 +37,10 @@ export const usePlayerStore = defineStore('player', {
       }
     },
 
+    addToPlaylist(tracks: Track[]) {
+      this.playlist = [...this.playlist, ...tracks]
+    },
+
     // OPEN/CLOSE FULLSCREEN
     openFullScreen() {
       this.isFullScreen = true
@@ -64,6 +68,7 @@ export const usePlayerStore = defineStore('player', {
       this.isPlaying = false
     },
 
+    // En player-store.ts
     next() {
       if (this.isShuffling) {
         // 🔥 Modo aleatorio
@@ -84,6 +89,11 @@ export const usePlayerStore = defineStore('player', {
       if (this.currentIndex < this.playlist.length - 1) {
         this.currentIndex++
         this.isPlaying = true
+      } else {
+        // Si es la última canción, volver al inicio o esperar nuevas canciones
+        console.log('Llegaste al final de la playlist, esperando nuevas canciones...')
+        // Opcional: pausar al final
+        // this.isPlaying = false
       }
     },
 

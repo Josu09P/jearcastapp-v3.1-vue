@@ -1,60 +1,8 @@
 <template>
     <DashboardLayout>
         <section class="container py-4">
-            <!-- SECCIÓN NUEVA: Descubrir basado en tu historial -->
-            <div class="discover-section" style="margin-top: -10px; margin-bottom: 20px;">
-                <div class="section-header">
-                    <div>
-                        <h5 class="section-title">
-                            <i class="bi bi-magic me-2"></i> Descubrir
-                        </h5>
-                        <p class="section-subtitle">Basado en tus últimas reproducciones</p>
-                    </div>
-                    <button v-if="recentlyPlayed.length" @click="refreshDiscover" class="refresh-btn"
-                        :disabled="discoverLoading">
-                        <i
-                            :class="['bi', discoverLoading ? 'bi-arrow-repeat spin-animation' : 'bi-arrow-clockwise']"></i>
-                    </button>
-                </div>
-
-                <!-- Estado cuando no hay historial -->
-                <div v-if="!recentlyPlayed.length" class="empty-discover">
-                    <i class="bi bi-music-note-beamed"></i>
-                    <p>Reproduce algunas canciones para obtener recomendaciones</p>
-                </div>
-
-                <!-- Grid de recomendaciones -->
-                <div v-else-if="discoverItems.length" class="discover-grid">
-                    <div v-for="(item, index) in discoverItems" :key="index" class="discover-card"
-                        @click="playDiscover(item)">
-                        <div class="card-image">
-                            <img :src="item.thumbnail" :alt="item.title">
-                            <div class="play-overlay">
-                                <i class="bi bi-play-fill"></i>
-                            </div>
-                        </div>
-                        <div class="card-info">
-                            <h6 class="card-title">{{ item.title }}</h6>
-                            <p class="card-artist">{{ item.artist }}</p>
-                        </div>
-                        <div class="card-actions">
-                            <button @click.stop="addToFavorites(item)" class="action-btn" title="Agregar a favoritos">
-                                <i class="bi bi-heart"></i>
-                            </button>
-                            <button @click.stop="openPlaylistModal(item)" class="action-btn" title="Agregar a playlist">
-                                <i class="bi bi-plus-lg"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Loader -->
-                <div v-else class="discover-loading">
-                    <div class="spinner-border text-light" role="status">
-                        <span class="visually-hidden">Cargando...</span>
-                    </div>
-                </div>
-            </div>
+            <!-- SECCIÓN MIXWIDGET (NUEVA) -->
+            <MixWidget ref="mixWidget" />
             <br>
             <!-- Tarjetas de estadísticas (más pequeñas y minimalistas) -->
             <div class="stats-grid">
@@ -102,10 +50,12 @@
                         <p class="section-subtitle">Tus últimas reproducciones</p>
                     </div>
                     <div class="header-actions">
-                        <button @click="refreshRecentlyPlayed" :disabled="loading" class="icon-btn">
+                        <button @click="refreshRecentlyPlayed" :disabled="loading" class="icon-btn"
+                            style="border-radius: 1.3rem;">
                             <i :class="['bi', loading ? 'bi-arrow-repeat spin-animation' : 'bi-arrow-clockwise']"></i>
                         </button>
-                        <button @click="clearRecentlyPlayed" class="icon-btn text-danger">
+                        <button @click="clearRecentlyPlayed" class="icon-btn text-danger"
+                            style="border-radius: 1.3rem;">
                             <i class="bi bi-trash3"></i>
                         </button>
                     </div>
@@ -118,7 +68,8 @@
                             <span class="item-title">{{ video.video_title }}</span>
                         </div>
                         <div class="item-actions">
-                            <button @click.stop="addToFavorites(video)" class="action-btn small">
+                            <button @click.stop="addToFavorites(video)" class="action-btn small"
+                                style="border-radius: 1.3rem !important;">
                                 <i class="bi bi-heart"></i>
                             </button>
                             <button @click.stop="openPlaylistModal(video)" class="action-btn small">
@@ -181,6 +132,7 @@ import { addSongToPlaylistService } from '@/data/services/firestore/PlaylistsFir
 import { createOrGetPlaylist } from '@/domain/usecases/playlists/CreateOrGetPlaylist'
 import Swal from 'sweetalert2'
 import { searchYoutube } from '@/data/services/youtube/SearchYoutube'
+import MixWidget from '@/presentation/widgets/recomendations/MixWidget.vue'
 
 const playerStore = usePlayerStore()
 const userStore = useUserStore()
@@ -199,6 +151,7 @@ const showPlaylistModal = ref(false)
 const selectedVideo = ref<any | null>(null)
 const addingFavoritesMap = ref<Record<string, boolean>>({})
 const loadingPlaylists = ref(false)
+const mixWidget = ref()
 
 // Generar recomendaciones basadas en el historial
 const generateDiscover = async () => {
@@ -319,6 +272,10 @@ const refreshRecentlyPlayed = () => {
     }, 500)
 }
 
+const refreshEverything = () => {
+    mixWidget.value?.refreshMixes()
+}
+
 const refreshPlaylists = async () => {
     if (!userStore.id) return
     loadingPlaylists.value = true
@@ -376,9 +333,13 @@ onMounted(async () => {
     playlists.value = playlistsData
 
     const stored = localStorage.getItem('recentlyPlayed')
+    console.log('🔍 localStorage recentlyPlayed:', stored)
     if (stored) {
         recentlyPlayed.value = JSON.parse(stored)
-        await generateDiscover() // Generar descubrimientos al cargar
+        console.log('Historial cargado:', recentlyPlayed.value.length, 'canciones')
+        await generateDiscover()
+    } else {
+        console.log('No hay historial en localStorage')
     }
 })
 
@@ -499,6 +460,9 @@ const createNewPlaylist = async () => {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    /* Permite que se envuelva si es necesario */
+    gap: 0.5rem;
 }
 
 .section-title {
@@ -679,7 +643,7 @@ const createNewPlaylist = async () => {
     color: rgba(255, 255, 255, 0.3);
     width: 28px;
     height: 28px;
-    border-radius: 6px;
+    border-radius: 1.3rem !important;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -726,7 +690,7 @@ const createNewPlaylist = async () => {
     color: rgba(255, 255, 255, 0.5);
     width: 32px;
     height: 32px;
-    border-radius: 8px;
+    border-radius: 1.3rem !important;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -830,6 +794,14 @@ const createNewPlaylist = async () => {
     animation: spin 1s linear infinite;
 }
 
+.header-actions {
+    display: flex;
+    flex-direction: row;
+    /* Fuerza que estén en línea */
+    gap: 0.5rem;
+    align-items: center;
+}
+
 @keyframes spin {
     from {
         transform: rotate(0deg);
@@ -859,11 +831,37 @@ const createNewPlaylist = async () => {
     }
 }
 
+/* En la sección .section-header, modifica o agrega */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    /* Permite que se envuelva si es necesario */
+    gap: 0.5rem;
+}
+
+.header-actions {
+    display: flex;
+    flex-direction: row;
+    /* Fuerza que estén en línea */
+    gap: 0.5rem;
+    align-items: center;
+}
+
+/* Modifica el media query para mantener los botones en línea */
 @media (max-width: 480px) {
     .section-header {
         flex-direction: column;
         align-items: flex-start;
-        gap: 0.5rem;
+        gap: 0.75rem;
+    }
+
+    /* Los botones siguen en línea horizontal */
+    .header-actions {
+        flex-direction: row;
+        width: auto;
     }
 
     .item-title {

@@ -30,7 +30,7 @@ export interface UserUpdateModel {
 
 export interface ApiKeyModel {
   key: string
-  service: 'youtube' | 'spotify' | 'other'
+  service: 'youtube'
   isActive: boolean
   created_at: Date
 }

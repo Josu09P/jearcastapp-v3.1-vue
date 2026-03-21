@@ -122,6 +122,10 @@ import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { usePlayerStore, type Track } from '@/stores/player-store'
 import lottie from 'lottie-web'
 import { useAnimationStore } from '@/stores/animation-store';
+import { useUserStore } from '@/stores/user';
+import { getArtistFromTitle, searchSongsByArtist } from '@/data/services/youtube/SearchByArtistService';
+import { useApiKeyManager } from '@/composables/useApiKeyManager';
+import { addToRecentlyPlayed } from '@/data/services/local/RecentlyPlayedService';
 
 /* ==================== TIPOS ==================== */
 interface Position { x: number; y: number }
@@ -146,7 +150,7 @@ declare namespace YT {
 }
 
 /* ==================== CONSTANTES ==================== */
-const BLUR_DURATION = 5000
+const BLUR_DURATION = 7000
 const ENDING_BLUR_OFFSET = 15000
 const PLAYER_WIDTH = 300
 const PLAYER_HEIGHT = 170
@@ -157,10 +161,12 @@ const RESIZE_DELAYS = [0, 50, 100, 200, 300] as const
 const playerStore = usePlayerStore()
 const currentTrack = computed(() => playerStore.currentTrack)
 const isPlaying = computed(() => playerStore.isPlaying)
+const userStore = useUserStore()
 
 /* ==================== REFS ==================== */
 const playerContainer = ref<HTMLDivElement | null>(null)
 const lottieContainer = ref<HTMLElement | null>(null)
+const lastMiniPosition = ref<Position | null>(null)
 
 /* ==================== ESTADO UI ==================== */
 const isExpanded = ref(true)
@@ -177,7 +183,7 @@ const duration = ref(0)
 const progressValue = ref(0)
 const isRepeatActive = ref(false)
 const isSeeking = ref(false)
-
+const apiKeyManager = useApiKeyManager()
 /* ==================== ESTADO VELO ==================== */
 const isVeilBlurActive = ref(true)
 let blurTimer: number | null = null
@@ -188,6 +194,7 @@ let ytPlayer: YT.Player | null = null
 let animationFrameId: number | null = null
 let lottieInstance: any = null
 let resizeObserver: ResizeObserver | null = null
+let isExpanding = false
 
 /* ==================== COMPUTED ==================== */
 const currentTimeFormatted = computed(() => formatTime(currentTime.value))
@@ -312,19 +319,69 @@ const handlePlayerReady = (event: any): void => {
     forceIframeResize()
 }
 
+const expandPlaylistWithMoreSongs = async () => {
+    if (isExpanding) return
+    if (!currentTrack.value?.video_title) return
+
+    isExpanding = true
+    const artist = getArtistFromTitle(currentTrack.value.video_title)
+    const currentPlaylist = playerStore.playlist
+
+    try {
+        console.log(`🔍 Buscando más canciones de ${artist}...`)
+
+        // Usar executeWithFailover para manejar automáticamente el cambio de keys
+        const moreSongs = await apiKeyManager.executeWithFailover(async (key) => {
+            return await searchSongsByArtist(artist, key, 10)
+        })
+
+        if (!moreSongs || moreSongs.length === 0) {
+            console.log(`No se encontraron más canciones de ${artist}`)
+            return
+        }
+
+        const existingIds = new Set(currentPlaylist.map(song => song.video_id))
+        const newSongs = moreSongs
+            .filter((song: any) => !existingIds.has(song.videoId))
+            .map((song: any) => ({
+                video_id: song.videoId,
+                video_title: song.title,
+                video_thumbnail: song.thumbnail
+            }))
+
+        if (newSongs.length > 0) {
+            playerStore.addToPlaylist(newSongs)
+            console.log(`✅ Agregadas ${newSongs.length} canciones nuevas de ${artist}`)
+            console.log(`Playlist ahora tiene ${playerStore.playlist.length} canciones`)
+        }
+    } catch (error) {
+        console.error('Error expandiendo playlist:', error)
+    } finally {
+        isExpanding = false
+    }
+}
+
 const handlePlayerStateChange = (state: number): void => {
     switch (state) {
         case window.YT.PlayerState.PLAYING:
             playerStore.play()
             lottieInstance?.play()
 
-            // CORREGIDO: Solo desactivar blur si NO estamos en fullscreen o si es por seek
+            // 🆕 GUARDAR EN HISTORIAL
+            if (currentTrack.value) {
+                addToRecentlyPlayed({
+                    video_id: currentTrack.value.video_id,
+                    video_title: currentTrack.value.video_title,
+                    video_thumbnail: currentTrack.value.video_thumbnail,
+                    video_author: currentTrack.value.video_author
+                })
+                console.log(`💾 Guardado en historial: ${currentTrack.value.video_title}`)
+            }
+
             if (playerStore.isFullScreen) {
                 if (isSeeking.value) {
                     // Si es por seek, no hacer nada con el blur
                 } else {
-                    // Si es reproducción normal, mantener el blur y programar su remoción
-                    // No desactivamos el blur inmediatamente
                     scheduleBlurRemoval()
                 }
             }
@@ -336,16 +393,41 @@ const handlePlayerStateChange = (state: number): void => {
             playerStore.pause()
             lottieInstance?.pause()
             if (playerStore.isFullScreen) {
-                activateBlur() // Activar blur al pausar
+                activateBlur()
             }
             break
 
         case window.YT.PlayerState.ENDED:
-            isRepeatActive.value ? ytPlayer?.seekTo(0, true) && ytPlayer?.playVideo() : playerStore.next()
+            // Verificar si quedan pocas canciones en la playlist (menos de 3)
+            const remainingSongs = playerStore.playlist.length - (playerStore.currentIndex + 1)
+
+            if (remainingSongs < 3) {
+                // Expandir la playlist con más canciones del artista
+                expandPlaylistWithMoreSongs()
+            }
+
+            // Avanzar a la siguiente canción si hay, o detener si no
+            if (playerStore.currentIndex < playerStore.playlist.length - 1) {
+                if (isRepeatActive.value) {
+                    ytPlayer?.seekTo(0, true)
+                    ytPlayer?.playVideo()
+                } else {
+                    playerStore.next()
+                }
+            } else {
+                // Si es la última canción y no hay más, detener o repetir
+                if (isRepeatActive.value) {
+                    ytPlayer?.seekTo(0, true)
+                    ytPlayer?.playVideo()
+                } else {
+                    // Opcional: pausar al final
+                    console.log('Fin de la playlist')
+                    // playerStore.pause()
+                }
+            }
             break
     }
 }
-
 // Función para obtener autor antes de cargar el video
 const prefetchAuthor = async (videoId: string) => {
     try {
@@ -492,10 +574,19 @@ const toggleExpand = (): void => {
 
 const closeFullScreen = (): void => {
     playerStore.closeFullScreen()
-    position.value = {
-        x: MINI_PLAYER_OFFSET,
-        y: window.innerHeight - PLAYER_HEIGHT - MINI_PLAYER_OFFSET
+
+    // Restaurar la última posición guardada o usar la posición actual si existe
+    if (lastMiniPosition.value) {
+        position.value = lastMiniPosition.value
+        lastMiniPosition.value = null
+    } else {
+        // Fallback a la posición por defecto
+        position.value = {
+            x: MINI_PLAYER_OFFSET,
+            y: window.innerHeight - PLAYER_HEIGHT - MINI_PLAYER_OFFSET
+        }
     }
+
     if (isExpanded.value) nextTick(setupLottie)
 }
 
@@ -529,29 +620,25 @@ const handleKeyPress = (e: KeyboardEvent): void => {
 /* ==================== WATCHERS ==================== */
 watch(() => playerStore.isFullScreen, async (isFull) => {
     if (isFull) {
+        // Guardar la posición actual del mini player antes de entrar en fullscreen
+        lastMiniPosition.value = { ...position.value }
+
         deactivateBlur()
         scheduleBlurRemoval()
 
-        // CORRECCIÓN: Obtener el videoId del currentTrack
         const currentVideoId = currentTrack.value?.video_id
         if (currentVideoId) {
             prefetchAuthor(currentVideoId)
         }
 
-        // Forzar resize múltiples veces al entrar en fullscreen
         await nextTick()
         forceIframeResize()
 
-        // También forzar después de que la transición termine
         setTimeout(() => {
             forceIframeResize()
         }, 400)
 
     } else {
-        position.value = {
-            x: MINI_PLAYER_OFFSET,
-            y: window.innerHeight - PLAYER_HEIGHT - MINI_PLAYER_OFFSET
-        }
         if (isExpanded.value) {
             await nextTick()
             setupLottie()
@@ -580,6 +667,28 @@ watch(() => animationStore.currentAnimationId, async (newId, oldId) => {
         setupLottie()
     }
 })
+
+// Watcher para anticipar cuando se acerca al final
+watch(() => playerStore.currentIndex, (newIndex) => {
+    const remaining = playerStore.playlist.length - (newIndex + 1)
+    if (remaining === 0 && !isExpanding) {
+        console.log('Quedan 0 canciones, precargando más...')
+        expandPlaylistWithMoreSongs()
+    }
+}, { deep: true })
+
+watch(() => currentTrack.value, (newTrack) => {
+    if (newTrack && playerStore.isPlaying) {
+        // Guardar en historial cuando cambia la canción
+        addToRecentlyPlayed({
+            video_id: newTrack.video_id,
+            video_title: newTrack.video_title,
+            video_thumbnail: newTrack.video_thumbnail,
+            video_author: newTrack.video_author
+        })
+        console.log(`Canción cambiada, guardada en historial: ${newTrack.video_title}`)
+    }
+}, { deep: true })
 /* ==================== LIFECYCLE ==================== */
 onMounted(() => {
     window.addEventListener('keydown', handleKeyPress)

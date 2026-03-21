@@ -109,7 +109,7 @@ onMounted(async () => {
 
                     <!-- Botón "Ver todas" cuando hay una playlist seleccionada -->
                     <button v-if="!showAllPlaylists" @click="showAllPlaylistsView"
-                        class="btn btn-sm btn-outline-light rounded-pill px-3">
+                        class="btn btn-sm btn-outline-light rounded-pill px-3 btn-ver-todas">
                         <i class="bi bi-arrow-left me-1"></i> Ver todas
                     </button>
                 </div>
@@ -173,7 +173,7 @@ onMounted(async () => {
                     <span class="badge bg-secondary bg-opacity-25 text-white">
                         {{ songs.length }} {{ songs.length === 1 ? 'canción' : 'canciones' }}
                     </span>
-                    <button @click="playAll" class="btn btn-sm btn-outline-light rounded-pill px-3">
+                    <button @click="playAll" class="btn btn-sm btn-outline-light rounded-pill px-3 btn-ver-todas">
                         <i class="bi bi-play-fill me-1"></i> Reproducir todo
                     </button>
                 </div>
@@ -213,7 +213,8 @@ onMounted(async () => {
                         <div class="col-1 col-md-2 d-flex justify-content-center align-items-center">
                             <button @click="playSong(index)" class="btn btn-link p-0 play-action-btn"
                                 title="Reproducir">
-                                <i class="bi bi-play-circle-fill text-success" style="font-size: 1.5rem;"></i>
+                                <i class="bi bi-play-circle-fill"
+                                    style="font-size: 1.5rem; color: rgba(255, 255, 255, 0.05);"></i>
                             </button>
                         </div>
                     </div>
@@ -249,6 +250,11 @@ onMounted(async () => {
     }
 }
 
+.btn-ver-todas {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
 .playlist-card-wrapper {
     transition: transform 0.2s ease;
 }
@@ -266,7 +272,7 @@ onMounted(async () => {
 }
 
 .playlist-card.active .playlist-image-wrapper {
-    box-shadow: 0 0 0 2px #1db954;
+    box-shadow: 0 0 0 2px #737373;
 }
 
 /* ==================== IMAGEN DE LA PLAYLIST ==================== */
@@ -316,8 +322,8 @@ onMounted(async () => {
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background: #1db954;
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.05);
     color: white;
     font-size: 1.5rem;
     display: flex;
@@ -330,7 +336,7 @@ onMounted(async () => {
 
 .play-button:hover {
     transform: scale(1.1);
-    background: #1ed760;
+    color: #ffffff;
 }
 
 /* ==================== BADGE DE CONTEO ==================== */
@@ -420,10 +426,12 @@ onMounted(async () => {
 .play-action-btn:hover {
     opacity: 1;
     transform: scale(1.1);
+    color: #ffffff
 }
 
 .play-action-btn i {
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    color: #ffffff
 }
 
 /* ==================== RESPONSIVE ==================== */
