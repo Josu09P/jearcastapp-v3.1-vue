@@ -59,6 +59,16 @@ const routes = [
         name: 'Recomendados',
         component: () => import('@/presentation/pages/dashboard/RecommendedPage.vue'),
       },
+      {
+        path: 'local-music',
+        name: 'Música Local',
+        component: () => import('@/presentation/pages/dashboard/LocalMusicPage.vue'),
+      },
+      {
+        path: 'settings',
+        name: 'Configuración',
+        component: () => import('@/presentation/pages/dashboard/SettingsPage.vue'),
+      },
     ],
   },
 ]

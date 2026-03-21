@@ -1,5 +1,5 @@
 <template>
-  <div class="container-fluid container-all px-md-4">
+  <div class="container-fluid container-all px-md-3">
     <Teleport to="body">
       <div class="sidebar" :class="{ 'collapsed': isSidebarCollapsed }" id="sidebar">
         <HeaderLeftWidget @toggle-sidebar="toggleSidebar" />
@@ -35,13 +35,13 @@ const toggleSidebar = () => {
     position: fixed;
     transition: all 0.3s ease;
     width: 230px;
-    left: 10px;
+    left: 8px;
     top: 42px;
     z-index: 1000;
   }
 
   .sidebar.collapsed {
-    margin-left: -250px;
+    margin-left: -280px;
   }
 
   .main-content {
@@ -74,9 +74,12 @@ const toggleSidebar = () => {
     transition: transform 0.3s ease;
   }
 
+
   .sidebar.collapsed {
     transform: translateX(0);
+    margin-left: -280px !important;
   }
+
 
   /* El contenido no se mueve en móvil */
   .main-content,

@@ -106,13 +106,22 @@ const handleLogin = async () => {
 
 <style scoped>
 .auth-login {
-  min-height: 100vh;
-  background-image: url("@/assets/img/bg-hero.png");
+  background-image: url('@/assets/img/bg-hero.png');
   background-size: cover;
+  /* Asegura que la imagen cubra todo el contenedor */
   background-position: center;
+  /* Centra la imagen */
   background-repeat: no-repeat;
+  /* Evita que la imagen se repita */
+  background-attachment: fixed;
+  /* Opcional: Fija la imagen al hacer scroll */
   background-color: #102c4a;
+  /* Color de fondo de respaldo */
+  min-height: 100vh;
+  /* Asegura que cubra toda la altura de la pantalla */
   padding-top: 43px;
+  color: white;
+  /* Texto claro para mejor contraste */
 }
 
 .card {

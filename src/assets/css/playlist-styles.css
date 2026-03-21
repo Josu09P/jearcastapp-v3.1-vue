@@ -1,0 +1,308 @@
+/* ==================== PLAYLISTS GRID (CARDS CUADRADAS) ==================== */
+.playlists-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+@media (min-width: 768px) {
+    .playlists-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}
+
+.playlist-card-wrapper {
+    transition: transform 0.2s ease;
+}
+
+.playlist-card-wrapper:hover {
+    transform: translateY(-4px);
+}
+
+.playlist-card {
+    cursor: pointer;
+    background: transparent;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.playlist-card.active .playlist-image-wrapper {
+    box-shadow: 0 0 0 2px #1db954;
+}
+
+/* ==================== IMAGEN DE LA PLAYLIST ==================== */
+.playlist-image-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1/1;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: #1a1a1a;
+    margin-bottom: 0.75rem;
+}
+
+.playlist-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.playlist-card:hover .playlist-image {
+    transform: scale(1.05);
+}
+
+/* ==================== OVERLAY CON BLUR Y BOTÓN PLAY ==================== */
+.playlist-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.playlist-card:hover .playlist-overlay {
+    opacity: 1;
+}
+
+.play-button {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #1db954;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.play-button:hover {
+    transform: scale(1.1);
+    background: #1ed760;
+}
+
+/* ==================== BADGE DE CONTEO ==================== */
+.song-count-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    z-index: 2;
+}
+
+/* ==================== BOTÓN CAMBIAR IMAGEN ==================== */
+.change-image-btn {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 2;
+    opacity: 0;
+}
+
+.playlist-card:hover .change-image-btn {
+    opacity: 1;
+}
+
+.change-image-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+/* ==================== BOTÓN ELIMINAR PLAYLIST ==================== */
+.delete-playlist-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 2;
+    opacity: 0;
+}
+
+.playlist-card:hover .delete-playlist-btn {
+    opacity: 1;
+}
+
+.delete-playlist-btn:hover {
+    background: rgba(220, 53, 69, 0.8);
+    color: white;
+    transform: scale(1.1);
+}
+
+/* ==================== INFORMACIÓN DE LA PLAYLIST ==================== */
+.playlist-info {
+    padding: 0 0.25rem;
+}
+
+.playlist-name {
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.playlist-description {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0;
+}
+
+/* ==================== ESTILOS DE CANCIONES ==================== */
+.song-row {
+    border-radius: 0.5rem;
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+}
+
+.song-row:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.index-col {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.index-col .number {
+    display: inline-block;
+}
+
+.index-col .play-icon {
+    display: none;
+    position: absolute;
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+
+.song-row:hover .index-col .number {
+    display: none;
+}
+
+.song-row:hover .index-col .play-icon {
+    display: inline-block;
+}
+
+.remove-btn {
+    color: rgba(255, 255, 255, 0.5);
+    transition: color 0.2s ease;
+}
+
+.remove-btn:hover {
+    color: #dc3545 !important;
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 767px) {
+    .playlists-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+    }
+
+    .play-button {
+        width: 36px;
+        height: 36px;
+        font-size: 1.2rem;
+    }
+
+    .change-image-btn,
+    .delete-playlist-btn {
+        width: 28px;
+        height: 28px;
+    }
+
+    .song-row {
+        font-size: 0.9rem;
+    }
+
+    .song-row img {
+        width: 40px;
+        height: 40px;
+    }
+}
+
+@media (max-width: 575px) {
+    .playlists-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .playlist-name {
+        font-size: 0.8rem;
+    }
+
+    .playlist-description {
+        font-size: 0.7rem;
+    }
+}
+
+/* ==================== ANIMACIONES ==================== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.playlist-card {
+    animation: fadeIn 0.3s ease;
+}

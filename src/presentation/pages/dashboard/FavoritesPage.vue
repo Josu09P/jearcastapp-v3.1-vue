@@ -107,6 +107,7 @@ function playFavorite(index: number) {
         video_thumbnail: fav.video_thumbnail,
     }))
     const playerStore = usePlayerStore()
+
     playerStore.setPlaylist(playlist, index)
 }
 
@@ -114,6 +115,8 @@ function toggleSortOption() {
     sortOption.value = sortOption.value === 'recent' ? 'alphabetical' : 'recent'
     sortFavorites()
 }
+
+
 
 onMounted(() => {
     reloadFavorites()
@@ -126,13 +129,14 @@ onMounted(() => {
             <div class="d-flex justify-content-between align-items-center mb-4 px-3">
                 <h4 class="text-white mb-0 fw-bold">Favoritos</h4>
                 <div class="d-flex gap-2">
-                    <button @click="toggleSortOption" class="btn btn-dark btn-sm border-secondary rounded-pill px-3">
+                    <button @click="toggleSortOption"
+                        class="btn btn-dark btn-sm rounded-pill px-3 filter-button-favorites">
                         <i :class="sortOption === 'recent' ? 'bi bi-clock-history' : 'bi bi-sort-alpha-down'"
                             class="me-1" />
                         {{ sortOption === 'recent' ? 'Recientes' : 'A-Z' }}
                     </button>
                     <button @click="() => reloadFavorites(true)" :disabled="loading"
-                        class="btn btn-outline-light btn-sm rounded-pill px-3">
+                        class="btn btn-outline-light btn-sm rounded-pill px-3 refresh-button-favorites">
                         <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
                         <i v-else class="bi bi-arrow-clockwise"></i>
                     </button>
@@ -153,7 +157,8 @@ onMounted(() => {
 
                     <div class="col-1 text-secondary index-col text-center">
                         <span class="number">{{ index + 1 }}</span>
-                        <i class="bi bi-play-fill play-icon text-white" @click="playFavorite(index)"></i>
+                        <i class="bi bi-play-fill play-icon text-white" @click="playFavorite(index)"
+                            title="Reproducir"></i>
                     </div>
 
                     <div class="col-10 col-md-6 d-flex align-items-center gap-3">
@@ -162,7 +167,7 @@ onMounted(() => {
                         <div class="text-truncate">
                             <h6 class="text-white mb-0 text-truncate fw-semibold" style="font-size: 0.9rem;">{{
                                 fav.video_title }}</h6>
-                            <small class="text-secondary">YouTube Music</small>
+                            <small class="text-secondary" style="font-size: 12px;">JearCast Music</small>
                         </div>
                     </div>
 
@@ -171,10 +176,14 @@ onMounted(() => {
                     </div>
 
                     <div class="col-1 col-md-2 d-flex justify-content-center align-items-center">
-                        <button @click="removeFavorite(fav.video_id)" class="btn btn-link p-0 remove-btn">
+                        <button @click="removeFavorite(fav.video_id)" class="btn btn-link p-0 remove-btn"
+                            title="Eliminar de favoritos">
                             <span v-if="deletingMap[fav.video_id]"
                                 class="spinner-border spinner-border-sm text-secondary"></span>
-                            <i v-else class="bi bi-heart-fill text-danger"></i>
+                            <i v-else class="bi bi-heart-fill text-secondary"></i>
+                        </button>
+                        <button class="btn btn-link p-0" title="Descargar">
+                            <i class="bi bi-arrow-down-circle-fill text-secondary"></i>
                         </button>
                     </div>
                 </div>
@@ -182,3 +191,17 @@ onMounted(() => {
         </div>
     </DashboardLayout>
 </template>
+
+<style scoped>
+.filter-button-favorites {
+    transition: background-color 0.3s, color 0.3s;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.refresh-button-favorites {
+    transition: background-color 0.3s, color 0.3s;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+</style>

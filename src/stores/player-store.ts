@@ -4,6 +4,8 @@ export type Track = {
   video_id: string
   video_title: string
   video_thumbnail: string
+  video_author?: string
+  video_likes?: string | number
 }
 
 export const usePlayerStore = defineStore('player', {
@@ -12,6 +14,8 @@ export const usePlayerStore = defineStore('player', {
     currentIndex: 0,
     isPlaying: false,
     isShuffling: false,
+    // FULLSCREEN -> NEW
+    isFullScreen: false,
   }),
   getters: {
     currentTrack(state): Track | null {
@@ -23,6 +27,22 @@ export const usePlayerStore = defineStore('player', {
       this.playlist = tracks
       this.currentIndex = startIndex
       this.isPlaying = true
+      // Resetear shuffle y fullscreen al cambiar la playlist
+      this.isFullScreen = true
+    },
+    // NUEVA ACCIÓN: Actualizar autor de la canción actual
+    updateCurrentTrackAuthor(author: string) {
+      if (this.playlist[this.currentIndex]) {
+        this.playlist[this.currentIndex].video_author = author
+      }
+    },
+
+    // OPEN/CLOSE FULLSCREEN
+    openFullScreen() {
+      this.isFullScreen = true
+    },
+    closeFullScreen() {
+      this.isFullScreen = false
     },
 
     playIndex(index: number) {

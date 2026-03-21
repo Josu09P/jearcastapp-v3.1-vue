@@ -7,20 +7,21 @@
 
       <h4 class="mb-0 ms-3 d-flex align-items-center">
         <div class="d-flex align-items-center me-3">
-          <img src="@/assets/img/logo-v3.png" width="90" alt="Logo" style="filter: brightness(0) invert(1);"
+          <img src="@/assets/img/logo-v3.png" width="80" alt="Logo" style="filter: brightness(0) invert(1);"
             class="me-4 img-logo-app" />
           <button class="toggle-sidebar ms-3 d-none d-md-block" @click="toggleSidebar"
-            style=" border: none; border-radius: 10px; padding: 5px; background-color: transparent;">
-            <i class="bi bi-speaker fs-3" style="color: #f4f4f4;"></i>
+            style=" border: none; padding: 5px; background-color: transparent !important;">
+            <i class="bi bi-arrow-bar-left fs-6"
+              style="color: #f4f4f4; border-radius: 1.3rem !important; backdrop-filter: var(--blur-efect-global); padding: 4px; border: 1px solid rgba(255, 255, 255, 0.08);"></i>
           </button>
         </div>
       </h4>
       <!--BUSCADOR AQUI-->
       <div class="mx-auto d-none d-lg-block" style="width: 20%; margin-top: 0; margin-bottom: 0;">
         <form class="d-flex" @submit.prevent="showSearch = true">
-          <button class="btn btn-outline-light px-3 d-flex align-items-center border-0" type="submit"
-            style="font-size: 15px;">
-            <span>Buscar</span>
+          <button class="btn btn-dark px-3 d-flex align-items-center" type="submit"
+            style="font-size: 15px; background-color: transparent; border: 1px solid rgba(255, 255, 255, 0.08) !important; border-radius: 1.0rem;">
+            <span style="font-size: 13px;">Buscar</span>
             <i class="bi bi-search ms-2" style="font-size: 13px; vertical-align: middle;"></i>
           </button>
         </form>
@@ -28,11 +29,11 @@
       </div>
 
       <div class="d-flex align-items-center order-2 order-lg-3 mt-2 mt-lg-0">
-        <span class="me-3" style="color: rgb(229, 229, 229); font-size: 14px;">
+        <span class="me-1" style="color: rgb(229, 229, 229); font-size: 13px;">
           {{ userName }}
         </span>
         <button class="btn btn-sm" title="Cerrar sesión" style="color: rgb(229, 229, 229);" @click="logout">
-          <i class="bi bi-door-open-fill fs-5"></i>
+          <i class="bi bi-door-open-fill" style="font-size: 16px;"></i>
         </button>
       </div>
     </div>
@@ -95,16 +96,14 @@ function toggleSidebar() {
 nav.navbar {
   backdrop-filter: var(--blur-efect-global);
   background: linear-gradient(to bottom,
-      rgba(178, 178, 178, 0.05) 0%,
-      /* Un poco más visible arriba */
-      rgba(178, 178, 178, 0.05) 50%,
-      /* Color medio */
-      transparent 100%
-      /* Totalmente transparente abajo */
-    );
+      #8e999d12 0%,
+      rgba(178, 178, 178, 0.05) 60%,
+      transparent 100%);
   -webkit-backdrop-filter: var(--blur-efect-global);
-  border: border !important;
-  border-radius: 1.0rem 1.0rem 0 0 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 0.50rem 0.50rem 0 0 !important;
 }
 
 .bi-search {

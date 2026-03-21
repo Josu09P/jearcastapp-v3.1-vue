@@ -41,10 +41,10 @@ const changeSection = inject('changeSection') as (section: string) => void;
 const menuItems = [
   { route: '/dashboard', label: 'Inicio', icon: 'bi bi-house-door-fill' },
   { route: '/dashboard/favorites', label: 'Favoritos', icon: 'bi bi-heart-fill' },
-  { route: '/dashboard/play-list', label: 'Play List', icon: 'bi bi-music-note-list' },
+  { route: '/dashboard/play-list', label: 'Play List', icon: 'bi bi-diagram-3-fill' },
   { route: '/dashboard/recommended', label: 'Recomendados', icon: 'bi bi-stars' },
-  //{ route: '/dashboard/local-music', label: 'Música Local', icon: 'bi bi-music-note-beamed' },
-  { route: '/dashboard/themes', label: 'Colores', icon: 'bi bi-palette-fill' }
+  { route: '/dashboard/local-music', label: 'Música Local', icon: 'bi bi-music-note-beamed' },
+  { route: '/dashboard/settings', label: 'Configuración', icon: 'bi bi-gear-fill' }
 ]
 
 </script>
@@ -52,15 +52,14 @@ const menuItems = [
 <style scoped>
 .sidebar-content {
   margin-top: -3px !important;
-  margin-left: -3px !important;
-  margin-right: -3px !important;
+  margin-right: -19px !important;
   margin-bottom: -3px !important;
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  background-color: rgba(178, 178, 178, 0.05);
-  border: none !important;
+  background-color: #8e999d12 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   min-height: 94.5vh;
-  border-radius: 1.3rem;
+  border-radius: 0.50rem;
   margin-bottom: 100px !important;
 }
 
@@ -80,10 +79,13 @@ const menuItems = [
   display: flex;
   align-items: center;
   border-radius: 1.0rem;
+  font-size: 14px;
+  font-weight: bold;
 }
 
 .nav-link i {
-  font-size: 18px;
+  font-size: 16px;
+  font-weight: bold;
 }
 
 .nav-link.active {
@@ -110,8 +112,6 @@ form input::placeholder {
 
 footer {
   border-radius: 1.0rem;
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 0.5px solid rgba(255, 255, 255, 0.1);
   padding: 5px;
   font-size: 13px !important;
 }

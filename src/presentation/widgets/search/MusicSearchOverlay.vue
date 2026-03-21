@@ -6,14 +6,42 @@
                     <input v-model="query" type="text" class="form-control search-input" placeholder="Buscar música..."
                         autofocus />
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-outline-light  btn-search">Buscar</button>
-                        <button type="button" class="btn btn-outline-light btn-search" @click="close">Cerrar</button>
+                        <button type="submit"
+                            class="btn btn-outline-light btn-search d-flex align-items-center justify-content-center button-search-custom"
+                            :disabled="searching">
+                            <span v-if="searching" class="spinner-border spinner-border-sm"></span>
+                            <i v-else class="bi bi-search"></i>
+                        </button>
+                        <button type="button"
+                            class="btn btn-outline-light btn-search d-flex align-items-center justify-content-center button-search-custom"
+                            @click="close">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
                     </div>
                 </div>
             </form>
 
+            <!-- Estado de API Keys (ahora sí funciona) -->
+            <div v-if="apiKeys.length > 0" class="mt-3 text-center">
+                <span class="badge me-2" :class="currentApiKeyIndex !== -1 ? 'bg-success' : 'bg-danger'">
+                    <i class="bi bi-key me-1"></i>
+                    {{ currentApiKeyIndex !== -1 ? `Usando Key ${currentApiKeyIndex + 1} de ${apiKeys.length}` :
+                        'Sinkeys activas' }}
+                </span>
+                <span v-if="quotaExceeded" class="badge bg-warning text-dark ms-2">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    Cuota excedida, cambiando de key...
+                </span>
+            </div>
+            <div v-else class="mt-3 text-center">
+                <span class="badge bg-danger">
+                    <i class="bi bi-exclamation-circle me-1"></i>
+                    No hay API Keys configuradas. Ve a Configuración.
+                </span>
+            </div>
+
             <div v-if="searchPerformed">
-                <h6 class="text-white mt-4">Resultados para: "{{ query }}"</h6>
+                <h6 class="text-white mt-4"><span class="result-search-text">Resultados para: "{{ query }}"</span></h6>
                 <div class="row gx-3 gy-4 mt-3">
                     <div v-for="(video, index) in results" :key="video.videoId" class="col-md-6 col-lg-4 col-xl-3">
                         <div class="card h-100 flex-row shadow-sm p-2 align-items-center video-card-custom">
@@ -52,11 +80,10 @@
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="text-white mb-0">Agregar / Crear Playlist</h5>
                     <button class="btn btn-outline-light d-flex align-items-center justify-content-center"
-                        @click="refreshPlaylists" :disabled="loading"
+                        @click="refreshPlaylists" :disabled="loadingPlaylists"
                         style="border-radius: 1rem; height: 36px; padding: 0 10px;">
                         <i :class="['bi', 'me-0', loadingPlaylists ? 'bi-arrow-repeat spin-animation' : 'bi-arrow-clockwise']"
                             style="font-size: 16px; vertical-align: middle; line-height: 1;"></i>
-
                     </button>
                 </div>
 
@@ -81,7 +108,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { getVideoStats } from '@/data/services/youtube/GetVideoStats'
 import { searchYoutube } from '@/data/services/youtube/SearchYoutube'
 import { addFavoriteMusic } from '@/domain/usecases/favorites/AddFavoriteMusic'
@@ -93,6 +120,9 @@ import type { PlaylistModel } from '@/domain/models/PlayListModel'
 import { songExistsInPlaylist } from '@/domain/usecases/playlists/SongExistsInPlaylist'
 import { addSongToPlaylistService } from '@/data/services/firestore/PlaylistsFirestore'
 import { createOrGetPlaylist } from '@/domain/usecases/playlists/CreateOrGetPlaylist'
+import { getApiKeys } from '@/domain/usecases/users/GetApiKeysUseCase'
+import { toggleApiKeyStatus } from '@/domain/usecases/users/UpdateApiKeyUseCase'
+import type { ApiKeyModel } from '@/domain/models/UserModel'
 
 const query = ref('')
 const results = ref<any[]>([])
@@ -100,7 +130,7 @@ const searchPerformed = ref(false)
 const props = defineProps<{ visible: boolean }>()
 const addingFavoritesMap = ref<Record<string, boolean>>({})
 const isProcessing = ref(false)
-const loading = ref(false)
+const searching = ref(false)
 const emit = defineEmits<{
     (e: 'close'): void
     (e: 'openPlaylistModal', video: any): void
@@ -114,6 +144,237 @@ const selectedPlaylistId = ref('')
 const newPlaylistName = ref('')
 const showPlaylistModal = ref(false)
 const selectedVideo = ref<any | null>(null)
+
+// ==================== GESTIÓN DE API KEYS ====================
+const apiKeys = ref<ApiKeyModel[]>([])
+const currentApiKeyIndex = ref(-1)
+const quotaExceeded = ref(false)
+const usingFirestoreKeys = ref(false) // Indica si estamos usando keys de Firestore
+
+// Obtener solo keys activas
+const activeApiKeys = computed(() => {
+    return apiKeys.value.filter(key => key.isActive)
+})
+
+// Guardar API key en localStorage (como la principal)
+const saveApiKeyToLocalStorage = (key: string) => {
+    // Actualizar el userStore y localStorage
+    if (userStore.id) {
+        const userData = {
+            id: userStore.id,
+            name: userStore.name,
+            email: userStore.email,
+            apikeyYoutube: key,
+            create_at: userStore.create_at
+        }
+        userStore.setUser(userData)
+        console.log('API Key guardada en localStorage como principal')
+    }
+}
+
+// Probar si una API key funciona
+const testApiKey = async (key: string): Promise<boolean> => {
+    try {
+        console.log('🔍 Probando API Key...')
+        await searchYoutube('test', key)
+        return true
+    } catch (error: any) {
+        console.log('API Key falló:', error.message)
+        return false
+    }
+}
+
+// Cargar API Keys desde Firestore
+const loadApiKeysFromFirestore = async () => {
+    if (!userStore.id) return false
+    try {
+        const keys = await getApiKeys(userStore.id)
+        apiKeys.value = keys
+        console.log('API Keys cargadas desde Firestore:', keys.length)
+        return keys.length > 0
+    } catch (error) {
+        console.error('Error cargando API Keys desde Firestore:', error)
+        return false
+    }
+}
+
+// Inicializar la búsqueda con la mejor API key disponible
+const initializeSearch = async (): Promise<boolean> => {
+    // 1. PRIMERO: Intentar con la API key del userStore (localStorage)
+    if (userStore.apikeyYoutube) {
+        const works = await testApiKey(userStore.apikeyYoutube)
+        if (works) {
+            console.log('Usando API Key principal de localStorage')
+            usingFirestoreKeys.value = false
+            currentApiKeyIndex.value = 0
+            // Crear una key temporal para mantener compatibilidad
+            apiKeys.value = [{
+                key: userStore.apikeyYoutube,
+                service: 'youtube',
+                isActive: true,
+                created_at: new Date()
+            }]
+            return true
+        } else {
+            console.log('API Key principal falló, buscará en Firestore...')
+        }
+    }
+
+    // 2. SEGUNDO: Si la principal falló, cargar desde Firestore
+    const hasFirestoreKeys = await loadApiKeysFromFirestore()
+
+    if (hasFirestoreKeys && activeApiKeys.value.length > 0) {
+        usingFirestoreKeys.value = true
+        currentApiKeyIndex.value = 0
+
+        // PROBAR la primera key de Firestore
+        const firstKey = activeApiKeys.value[0]
+        const works = await testApiKey(firstKey.key)
+
+        if (works) {
+            // Si funciona, guardarla como principal en localStorage
+            saveApiKeyToLocalStorage(firstKey.key)
+            console.log('Key de Firestore funciona, guardada en localStorage')
+            return true
+        } else {
+            // Si no funciona, desactivarla y probar la siguiente
+            await toggleApiKeyStatus(userStore.id!, firstKey)
+            // Recargar keys y continuar con el failover normal
+            await loadApiKeysFromFirestore()
+        }
+    }
+
+    return activeApiKeys.value.length > 0
+}
+
+// Cambiar a la siguiente API key activa
+const switchToNextApiKey = async () => {
+    quotaExceeded.value = true
+
+    if (usingFirestoreKeys.value) {
+        // Estamos usando keys de Firestore
+        const currentKey = activeApiKeys.value[currentApiKeyIndex.value]
+
+        if (currentKey) {
+            try {
+                // Desactivar la key actual
+                await toggleApiKeyStatus(userStore.id!, currentKey)
+                showToast(`Key ${currentApiKeyIndex.value + 1} desactivada por límite de cuota`)
+            } catch (error) {
+                console.error('Error desactivando key:', error)
+            }
+        }
+
+        // Recargar keys desde Firestore
+        await loadApiKeysFromFirestore()
+
+        // Buscar siguiente key activa
+        if (activeApiKeys.value.length > 0) {
+            currentApiKeyIndex.value = 0
+            const newKey = activeApiKeys.value[0]
+            // Guardar la nueva key en localStorage
+            saveApiKeyToLocalStorage(newKey.key)
+            showToast(`Cambiando a nueva API Key...`)
+        } else {
+            currentApiKeyIndex.value = -1
+            usingFirestoreKeys.value = false
+            showToast('No hay más API Keys activas. Espera 24 horas o agrega una nueva.')
+        }
+    } else {
+        // Estamos usando la key principal de localStorage y falló
+        // Cambiar a modo Firestore
+        console.log('Key principal falló, cambiando a Firestore...')
+        const hasKeys = await loadApiKeysFromFirestore()
+
+        if (hasKeys && activeApiKeys.value.length > 0) {
+            usingFirestoreKeys.value = true
+            currentApiKeyIndex.value = 0
+            const newKey = activeApiKeys.value[0]
+            saveApiKeyToLocalStorage(newKey.key)
+            showToast(`Cambiando a API Key de respaldo...`)
+        } else {
+            currentApiKeyIndex.value = -1
+            showToast('No hay API Keys disponibles.')
+        }
+    }
+
+    setTimeout(() => {
+        quotaExceeded.value = false
+    }, 3000)
+}
+
+// Función para ejecutar búsqueda
+const executeSearch = async (searchQuery: string): Promise<any[]> => {
+    // Si no hay key actual, intentar inicializar
+    if (currentApiKeyIndex.value === -1) {
+        const initialized = await initializeSearch()
+        if (!initialized) {
+            throw new Error('No hay API Keys disponibles')
+        }
+    }
+
+    const currentKey = usingFirestoreKeys.value
+        ? activeApiKeys.value[currentApiKeyIndex.value]
+        : { key: userStore.apikeyYoutube } // Key principal
+
+    if (!currentKey?.key) {
+        throw new Error('No hay API Key disponible')
+    }
+
+    try {
+        console.log(`Buscando con API Key...`)
+
+        // Intentar búsqueda
+        const videos = await searchYoutube(searchQuery, currentKey.key)
+
+        // Obtener estadísticas
+        const stats = await getVideoStats(videos.map((v: any) => v.videoId).join(','), currentKey.key)
+
+        return videos.map((v: any) => {
+            const stat = stats.find((s: any) => s.videoId === v.videoId)
+            return {
+                ...v,
+                viewCount: stat?.viewCount || 0
+            }
+        })
+
+    } catch (error: any) {
+        console.error('Error en búsqueda:', error)
+
+        // Detectar si es error de cuota (403)
+        if (error.message?.includes('quota') || error.message?.includes('403') || error.message?.includes('exceeded')) {
+            // Cambiar a siguiente key
+            await switchToNextApiKey()
+            // Reintentar la búsqueda con la nueva key
+            return executeSearch(searchQuery)
+        }
+
+        throw error
+    }
+}
+
+// Modificar onSearch para usar la nueva lógica
+const onSearch = async () => {
+    if (!query.value) return
+
+    searching.value = true
+    searchPerformed.value = true
+    results.value = []
+
+    try {
+        results.value = await executeSearch(query.value)
+        if (results.value.length === 0) {
+            showToast('No se encontraron resultados')
+        }
+    } catch (error: any) {
+        console.error('Error en búsqueda:', error)
+        showToast(error.message || 'Error al buscar')
+    } finally {
+        searching.value = false
+    }
+}
+
+// ==================== FIN GESTIÓN API KEYS ====================
 
 const showToast = (text: string) => {
     Toastify({
@@ -137,26 +398,44 @@ const refreshPlaylists = async () => {
     }, 1000)
 }
 
+// Al montar el componente, NO cargar Firestore, solo preparar
 onMounted(async () => {
     if (!userStore.id) return
+
+    // Solo registrar que estamos listos, pero no cargar Firestore aún
+    console.log('Buscador listo, usando API Key principal de localStorage')
+
+    // Si hay API key principal, prepararla
+    if (userStore.apikeyYoutube) {
+        apiKeys.value = [{
+            key: userStore.apikeyYoutube,
+            service: 'youtube',
+            isActive: true,
+            created_at: new Date()
+        }]
+        currentApiKeyIndex.value = 0
+        usingFirestoreKeys.value = false
+    }
+
     playlists.value = await getPlaylistsByUser(userStore.id)
 })
-const onSearch = async () => {
-    if (!query.value || !userStore.apikeyYoutube) return
-    searchPerformed.value = true
-    results.value = []
 
-    const videos = await searchYoutube(query.value, userStore.apikeyYoutube)
-    const stats = await getVideoStats(videos.map((v: any) => v.videoId).join(','), userStore.apikeyYoutube)
-
-    results.value = videos.map((v: any) => {
-        const stat = stats.find((s: any) => s.videoId === v.videoId)
-        return {
-            ...v,
-            viewCount: stat?.viewCount || 0
+// Cuando se abre el buscador, verificar la key principal
+watch(() => props.visible, async (newVal) => {
+    if (newVal && userStore.id) {
+        // Si no hay key actual, intentar con la principal
+        if (currentApiKeyIndex.value === -1 && userStore.apikeyYoutube) {
+            apiKeys.value = [{
+                key: userStore.apikeyYoutube,
+                service: 'youtube',
+                isActive: true,
+                created_at: new Date()
+            }]
+            currentApiKeyIndex.value = 0
+            usingFirestoreKeys.value = false
         }
-    })
-}
+    }
+})
 
 const playVideo = (index: number) => {
     const playlist = results.value.map((video: any) => ({
@@ -165,10 +444,8 @@ const playVideo = (index: number) => {
         video_thumbnail: video.thumbnail
     }))
 
-    // Guardar en localStorage
     const currentVideo = playlist[index]
     saveToRecentlyPlayed(currentVideo)
-
     playerStore.setPlaylist(playlist, index)
 }
 
@@ -185,7 +462,6 @@ const saveToRecentlyPlayed = (video: any) => {
 const addToFavorites = async (video: any) => {
     if (!userStore.id || addingFavoritesMap.value[video.videoId]) return
 
-    // Marcar como "en proceso"
     addingFavoritesMap.value[video.videoId] = true
     const result = await addFavoriteMusic({
         user_id: userStore.id,
@@ -208,7 +484,6 @@ const openPlaylistModal = (video: any) => {
     showPlaylistModal.value = true
 }
 
-// ADD NEW SONG 100%
 const addToPlaylist = async () => {
     if (isProcessing.value) return
     if (!userStore.id || !selectedVideo.value || !selectedPlaylistId.value) {
@@ -239,8 +514,6 @@ const addToPlaylist = async () => {
     }
 }
 
-
-// CREATE NEW PLAYLIST 100%
 const createNewPlaylist = async () => {
     if (isProcessing.value) return
     if (!newPlaylistName.value || !userStore.id) return showToast('Nombre no válido')
@@ -272,115 +545,5 @@ const createNewPlaylist = async () => {
 </script>
 
 <style scoped>
-.spin-animation {
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
-@keyframes float {
-    0% {
-        transform: translateY(0px);
-    }
-
-    50% {
-        transform: translateY(-8px);
-    }
-
-    100% {
-        transform: translateY(0px);
-    }
-}
-
-.search-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100vh;
-    backdrop-filter: blur(10px);
-    background-color: rgba(0, 0, 0, 0.7);
-    z-index: 2000;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding-top: 60px;
-}
-
-.search-box {
-    background-color: rgba(255, 255, 255, 0.05);
-    padding: 24px;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border: 0.5px solid rgba(255, 255, 255, 0.1);
-    border-radius: 1.3rem;
-    width: 90%;
-    max-width: 1200px;
-    color: white;
-}
-
-.search-form input {
-    max-width: 300px;
-    background-color: rgba(255, 255, 255, 0.1);
-    color: white;
-    border-radius: 1.3rem;
-    height: 40px;
-    padding: 10px 14px;
-    backdrop-filter: blur(4px);
-}
-
-.btn-search {
-    border-radius: 1.0rem;
-    font-size: 15px;
-}
-
-.video-card-custom {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    backdrop-filter: blur(6px);
-    color: white;
-}
-
-.search-input::placeholder {
-    color: rgb(142, 142, 142);
-    font-size: 14px;
-    text-align: center;
-    border: none;
-}
-
-.modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    backdrop-filter: blur(5px);
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 1040;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.search-modal-content {
-    background-color: #8f8f8f52;
-    padding: 20px;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 400px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-}
-
-input::placeholder {
-    color: #cccccc;
-    opacity: 1;
-}
+@import url('@/assets/css/search-styles.css');
 </style>

@@ -85,6 +85,7 @@ import FooterComponent from '@/presentation/widgets/FooterWidget.vue'
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
+    background-attachment: fixed;
     background-color: #102c4a;
     padding-top: 43px;
 }

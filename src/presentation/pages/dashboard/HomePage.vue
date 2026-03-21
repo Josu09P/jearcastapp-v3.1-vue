@@ -1,164 +1,163 @@
 <template>
     <DashboardLayout>
         <section class="container py-4">
-            <!-- Tarjetas de estadísticas -->
-            <div class="row g-4">
-                <!-- Favoritos -->
-                <div class="col-md-6 col-xl-4">
-                    <div class="card h-100 glass-card text-white p-3 shadow d-flex flex-column justify-content-between">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="mb-0"><i class="bi bi-heart-fill text-danger me-2"></i>Tus Favoritos</h5>
-                            <span class="badge bg-danger fs-6">{{ totalFavorites }}</span>
+            <!-- SECCIÓN NUEVA: Descubrir basado en tu historial -->
+            <div class="discover-section" style="margin-top: -10px; margin-bottom: 20px;">
+                <div class="section-header">
+                    <div>
+                        <h5 class="section-title">
+                            <i class="bi bi-magic me-2"></i> Descubrir
+                        </h5>
+                        <p class="section-subtitle">Basado en tus últimas reproducciones</p>
+                    </div>
+                    <button v-if="recentlyPlayed.length" @click="refreshDiscover" class="refresh-btn"
+                        :disabled="discoverLoading">
+                        <i
+                            :class="['bi', discoverLoading ? 'bi-arrow-repeat spin-animation' : 'bi-arrow-clockwise']"></i>
+                    </button>
+                </div>
+
+                <!-- Estado cuando no hay historial -->
+                <div v-if="!recentlyPlayed.length" class="empty-discover">
+                    <i class="bi bi-music-note-beamed"></i>
+                    <p>Reproduce algunas canciones para obtener recomendaciones</p>
+                </div>
+
+                <!-- Grid de recomendaciones -->
+                <div v-else-if="discoverItems.length" class="discover-grid">
+                    <div v-for="(item, index) in discoverItems" :key="index" class="discover-card"
+                        @click="playDiscover(item)">
+                        <div class="card-image">
+                            <img :src="item.thumbnail" :alt="item.title">
+                            <div class="play-overlay">
+                                <i class="bi bi-play-fill"></i>
+                            </div>
                         </div>
-                        <img src="https://cdn-icons-png.flaticon.com/512/833/833472.png" alt="Favoritos"
-                            class="img-fluid mx-auto float-animation"
-                            style="max-height: 80px; filter: drop-shadow(0 0 6px white); margin-bottom: 20px; margin-top: 20px;" />
+                        <div class="card-info">
+                            <h6 class="card-title">{{ item.title }}</h6>
+                            <p class="card-artist">{{ item.artist }}</p>
+                        </div>
+                        <div class="card-actions">
+                            <button @click.stop="addToFavorites(item)" class="action-btn" title="Agregar a favoritos">
+                                <i class="bi bi-heart"></i>
+                            </button>
+                            <button @click.stop="openPlaylistModal(item)" class="action-btn" title="Agregar a playlist">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loader -->
+                <div v-else class="discover-loading">
+                    <div class="spinner-border text-light" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                </div>
+            </div>
+            <br>
+            <!-- Tarjetas de estadísticas (más pequeñas y minimalistas) -->
+            <div class="stats-grid">
+                <!-- Favoritos -->
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="bi bi-heart-fill text-danger"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Favoritos</span>
+                        <span class="stat-value">{{ totalFavorites }}</span>
                     </div>
                 </div>
 
                 <!-- Playlists -->
-                <div class="col-md-6 col-xl-4">
-                    <div class="card h-100 glass-card text-white p-3 shadow d-flex flex-column justify-content-between">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="mb-0"><i class="bi bi-music-note-list me-2"></i>Tus Playlists</h5>
-                            <span class="badge bg-primary fs-6">{{ totalPlaylists }}</span>
-                        </div>
-                        <img src="https://cdn-icons-png.flaticon.com/512/984/984451.png" alt="Playlist"
-                            class="img-fluid mx-auto float-animation"
-                            style="max-height: 95px; filter: drop-shadow(0 0 6px white); margin-bottom: 20px; margin-top: 20px;" />
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="bi bi-music-note-list text-primary"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Playlists</span>
+                        <span class="stat-value">{{ totalPlaylists }}</span>
                     </div>
                 </div>
 
                 <!-- Recomendados -->
-                <div class="col-md-6 col-xl-4">
-                    <div class="card h-100 glass-card text-white p-3 shadow d-flex flex-column justify-content-between">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="mb-0"><i class="bi bi-stars me-2 text-warning"></i>Playlist JearCastApp</h5>
-                            <span class="badge bg-warning text-dark fs-6">{{ totalRecommended }}</span>
-                        </div>
-                        <img src="https://cdn-icons-png.flaticon.com/512/2909/2909734.png" alt="Recomendados"
-                            class="img-fluid mx-auto float-animation"
-                            style="max-height: 80px; filter: drop-shadow(0 0 6px white); margin-bottom: 20px; margin-top: 20px;" />
-
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="bi bi-stars text-warning"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Recomendados</span>
+                        <span class="stat-value">{{ totalRecommended }}</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Historial de reproducción -->
-            <div class="row g-4 mt-4">
-                <div class="col-md-9">
-                    <div class="card glass-card text-white p-4 shadow" style="max-height: 450px;">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="mb-0 text-white">
-                                <i class="bi bi-clock-history me-2"></i> Tus reproducciones
-                            </h5>
-                            <div class="d-flex gap-2">
-                                <button @click="refreshRecentlyPlayed" :disabled="loading"
-                                    class="btn btn-sm btn-outline-light me-2 d-flex align-items-center justify-content-center"
-                                    style="border-radius: .50rem;">
-                                    <i
-                                        :class="['bi', 'me-0', loading ? 'bi-arrow-repeat spin-animation' : 'bi-arrow-clockwise']"></i>
-                                </button>
-                                <button @click="clearRecentlyPlayed" class="btn btn-sm btn-outline-light"
-                                    style="border-radius: .50rem;">
-                                    <i class="bi bi-trash3-fill"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <p class="text-truncate mb-3" style="font-size: 13px;">
-                            Aquí aparecerán las últimas músicas reproducidas desde el buscador.
-                            <br />
-                            <span style="font-size: 10px;">
-                                <i class="bi bi-exclamation-triangle me-2"></i> Cuando cierres sesión los datos de tu
-                                navegación se
-                                perderán.
-                            </span>
-                        </p>
-
-                        <div v-if="recentlyPlayed.length" class="overflow-auto pe-2" style="max-height: 300px;">
-                            <div class="d-flex flex-column gap-3">
-                                <div v-for="(video, index) in recentlyPlayed" :key="video.video_id"
-                                    class="d-flex align-items-center justify-content-between rounded p-2"
-                                    style="background-color: var(--primary-bg) !important;;backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);border: 0.5px solid rgba(255, 255, 255, 0.1);">
-
-                                    <div class="d-flex align-items-center gap-3">
-                                        <img :src="video.video_thumbnail" alt="thumbnail" width="60" height="40"
-                                            class="rounded"
-                                            style="object-fit: cover; box-shadow: 0 0 5px rgba(255,255,255,0.3);" />
-                                        <span class="text-white text-truncate" style="max-width: 200px;">{{
-                                            video.video_title }}</span>
-                                    </div>
-
-                                    <div class="d-flex gap-2">
-                                        <button @click="playVideo(index)" class="btn btn-sm"
-                                            style="border: 0.5px solid #f4f4f4; border-radius: 1rem;">
-                                            <i class="bi bi-play-circle" style="color: #f4f4f4;"></i>
-                                        </button>
-                                        <button @click="addToFavorites(video)" class="btn btn-sm"
-                                            style="border: 0.5px solid #f4f4f4; border-radius: 1rem;">
-                                            <i class="bi bi-heart" style="color: #f4f4f4;"></i>
-                                        </button>
-                                        <button @click="openPlaylistModal(video)" class="btn btn-sm"
-                                            style="border: 0.5px solid #f4f4f4; border-radius: 1rem;">
-                                            <i class="bi bi-plus-lg" style="color: #f4f4f4;"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div v-else class="text-center text-light mt-1" style="font-size: 13px;">
-                            <i class="bi bi-music-note-beamed"></i> No hay reproducciones recientes aún.
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Espacio reservado para el reproductor -->
-                <div class="col-md-3 d-none d-md-block">
-                    <div class="glass-card d-flex align-items-center justify-content-center text-white text-center p-3 shadow"
-                        style="height: 450px;">
-                        <div>
-                            <i class="bi bi-box-arrow-in-down-right fs-1 mb-2"></i>
-                            <p class="mb-0" style="font-size: 14px;">
-                                Si te hace feliz<br />
-                                mueve el reproductor aqui <br>
-                                <span style="font-size: 13px;">(solo es para que tengas donde ubicarlo, <br>
-                                    no hay magia, funcionalidad o anclamiento de por medio)</span>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
-            <div v-if="showPlaylistModal" class="modal-backdrop" @click.self="showPlaylistModal = false">
-                <div class="search-modal-content">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="text-white mb-0">Agregar / Crear Playlist</h5>
-                        <button class="btn btn-outline-light d-flex align-items-center justify-content-center"
-                            @click="refreshPlaylists" :disabled="loading"
-                            style="border-radius: 1rem; height: 36px; padding: 0 10px;">
-                            <i :class="['bi', 'me-0', loadingPlaylists ? 'bi-arrow-repeat spin-animation' : 'bi-arrow-clockwise']"
-                                style="font-size: 16px; vertical-align: middle; line-height: 1;"></i>
-
-                        </button>
-
-                    </div>
-
-                    <div v-if="playlists.length > 0" class="mb-3">
-                        <select v-model="selectedPlaylistId" class="form-select mb-2">
-                            <option disabled value="">Selecciona una playlist</option>
-                            <option v-for="p in playlists" :key="p.id" :value="p.id">{{ p.name }}</option>
-                        </select>
-                        <button class="btn btn-outline-light btn-search w-100 mb-3" @click="addToPlaylist">Agregar a la
-                            playlist</button>
-                    </div>
+            <!-- Historial de reproducción (más compacto) -->
+            <div class="history-section mt-5">
+                <div class="section-header">
                     <div>
-                        <input v-model="newPlaylistName" type="text" class="form-control mb-2"
-                            placeholder="Nueva playlist..." />
-                        <button class="btn btn-outline-light btn-search w-100" @click="createNewPlaylist">Crear y
-                            agregar</button>
+                        <h5 class="section-title">
+                            <i class="bi bi-clock-history me-2"></i> Historial
+                        </h5>
+                        <p class="section-subtitle">Tus últimas reproducciones</p>
+                    </div>
+                    <div class="header-actions">
+                        <button @click="refreshRecentlyPlayed" :disabled="loading" class="icon-btn">
+                            <i :class="['bi', loading ? 'bi-arrow-repeat spin-animation' : 'bi-arrow-clockwise']"></i>
+                        </button>
+                        <button @click="clearRecentlyPlayed" class="icon-btn text-danger">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="recentlyPlayed.length" class="history-list">
+                    <div v-for="(video, index) in recentlyPlayed" :key="video.video_id" class="history-item">
+                        <div class="item-main" @click="playVideo(index)">
+                            <img :src="video.video_thumbnail" class="item-thumbnail">
+                            <span class="item-title">{{ video.video_title }}</span>
+                        </div>
+                        <div class="item-actions">
+                            <button @click.stop="addToFavorites(video)" class="action-btn small">
+                                <i class="bi bi-heart"></i>
+                            </button>
+                            <button @click.stop="openPlaylistModal(video)" class="action-btn small">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else class="empty-history">
+                    <i class="bi bi-music-note-beamed"></i>
+                    <p>No hay reproducciones recientes</p>
+                </div>
+            </div>
+
+            <!-- Modal de playlists (igual) -->
+            <div v-if="showPlaylistModal" class="modal-backdrop" @click.self="showPlaylistModal = false">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="text-white mb-0">Agregar a playlist</h5>
+                        <button class="btn-close btn-close-white" @click="showPlaylistModal = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div v-if="playlists.length > 0" class="mb-3">
+                            <select v-model="selectedPlaylistId" class="form-select">
+                                <option disabled value="">Selecciona una playlist</option>
+                                <option v-for="p in playlists" :key="p.id" :value="p.id">{{ p.name }}</option>
+                            </select>
+                            <button class="btn btn-outline-light w-100 mt-2" @click="addToPlaylist">
+                                Agregar
+                            </button>
+                        </div>
+                        <div>
+                            <input v-model="newPlaylistName" type="text" class="form-control mb-2"
+                                placeholder="Nueva playlist...">
+                            <button class="btn btn-outline-light w-100" @click="createNewPlaylist">
+                                Crear y agregar
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -174,7 +173,6 @@ import { useUserStore } from '@/stores/user'
 import { getFavoritesByUser } from '@/domain/usecases/favorites/GetFavoritesByUser'
 import { getPlaylistsByUser } from '@/domain/usecases/playlists/GetPlaylistsByUser'
 import { getRecommendedPlaylists } from '@/domain/usecases/recommended/GetRecommendedPlaylists'
-import StartToastifyInstance from 'toastify-js'
 import Toastify from 'toastify-js'
 import type { PlaylistModel } from '@/domain/models/PlayListModel'
 import { addFavoriteMusic } from '@/domain/usecases/favorites/AddFavoriteMusic'
@@ -182,6 +180,7 @@ import { songExistsInPlaylist } from '@/domain/usecases/playlists/SongExistsInPl
 import { addSongToPlaylistService } from '@/data/services/firestore/PlaylistsFirestore'
 import { createOrGetPlaylist } from '@/domain/usecases/playlists/CreateOrGetPlaylist'
 import Swal from 'sweetalert2'
+import { searchYoutube } from '@/data/services/youtube/SearchYoutube'
 
 const playerStore = usePlayerStore()
 const userStore = useUserStore()
@@ -189,11 +188,9 @@ const totalFavorites = ref(0)
 const totalPlaylists = ref(0)
 const totalRecommended = ref(0)
 const recentlyPlayed = ref<any[]>([])
+const discoverItems = ref<any[]>([])
+const discoverLoading = ref(false)
 const isProcessing = ref(false)
-const emit = defineEmits<{
-    (e: 'close'): void
-    (e: 'openPlaylistModal', video: any): void
-}>()
 const playlists = ref<PlaylistModel[]>([])
 const loading = ref(false)
 const selectedPlaylistId = ref('')
@@ -203,16 +200,70 @@ const selectedVideo = ref<any | null>(null)
 const addingFavoritesMap = ref<Record<string, boolean>>({})
 const loadingPlaylists = ref(false)
 
+// Generar recomendaciones basadas en el historial
+const generateDiscover = async () => {
+    if (!recentlyPlayed.value.length || !userStore.apikeyYoutube) return
+
+    discoverLoading.value = true
+    try {
+        // Tomar la última canción reproducida como base
+        const lastPlayed = recentlyPlayed.value[0]
+        const searchTerm = lastPlayed.video_title.split(' ').slice(0, 3).join(' ')
+
+        // Buscar canciones relacionadas
+        const results = await searchYoutube(searchTerm, userStore.apikeyYoutube)
+
+        // Filtrar para no mostrar las que ya están en el historial
+        const historyIds = new Set(recentlyPlayed.value.map(v => v.video_id))
+        const filtered = results
+            .filter((v: any) => !historyIds.has(v.videoId))
+            .slice(0, 8) // Mostrar solo 8 recomendaciones
+
+        discoverItems.value = filtered.map((v: any) => ({
+            videoId: v.videoId,
+            title: v.title,
+            thumbnail: v.thumbnail,
+            artist: 'JearCast Music'
+        }))
+    } catch (error) {
+        console.error('Error generando descubrimientos:', error)
+    } finally {
+        discoverLoading.value = false
+    }
+}
+
+// Refrescar descubrimientos manualmente
+const refreshDiscover = () => {
+    generateDiscover()
+}
+
+// Reproducir desde descubrimientos
+const playDiscover = (item: any) => {
+    const playlist = [{
+        video_id: item.videoId,
+        video_title: item.title,
+        video_thumbnail: item.thumbnail
+    }]
+    playerStore.setPlaylist(playlist, 0)
+
+    // Agregar al historial
+    const newVideo = {
+        video_id: item.videoId,
+        video_title: item.title,
+        video_thumbnail: item.thumbnail
+    }
+    const updated = [newVideo, ...recentlyPlayed.value.filter((v: any) => v.video_id !== item.videoId)].slice(0, 20)
+    recentlyPlayed.value = updated
+    localStorage.setItem('recentlyPlayed', JSON.stringify(updated))
+}
 
 const playVideo = (index: number) => {
     if (!recentlyPlayed.value.length) return
-
     const playlist = recentlyPlayed.value.map(video => ({
         video_id: video.video_id,
         video_title: video.video_title,
         video_thumbnail: video.video_thumbnail
     }))
-
     playerStore.setPlaylist(playlist, index)
 }
 
@@ -235,28 +286,21 @@ const clearRecentlyPlayed = async () => {
     })
 
     if (result.isConfirmed) {
-        try {
-            localStorage.removeItem('recentlyPlayed')
-            recentlyPlayed.value = []
-            Toastify({
-                text: 'Historial eliminado',
-                gravity: 'top',
-                position: 'right',
-                backgroundColor: '#dc3545'
-            }).showToast()
-        } catch (error) {
-            Toastify({
-                text: 'Error al eliminar el historial',
-                gravity: 'top',
-                position: 'right',
-                backgroundColor: '#ffc107'
-            }).showToast()
-        }
+        localStorage.removeItem('recentlyPlayed')
+        recentlyPlayed.value = []
+        discoverItems.value = []
+        Toastify({
+            text: 'Historial eliminado',
+            duration: 2000,
+            gravity: 'top',
+            position: 'right',
+            className: 'toast-glass bg-danger'
+        }).showToast()
     }
 }
 
 const showToast = (text: string) => {
-    StartToastifyInstance({
+    Toastify({
         text,
         duration: 2000,
         gravity: 'top',
@@ -265,36 +309,30 @@ const showToast = (text: string) => {
     }).showToast()
 }
 
-// REFRESH
 const refreshRecentlyPlayed = () => {
     loading.value = true
-
     setTimeout(() => {
         const stored = localStorage.getItem('recentlyPlayed')
         recentlyPlayed.value = stored ? JSON.parse(stored) : []
         showToast('Historial actualizado')
         loading.value = false
-    }, 1000) // simulamos un tiempo para que se vea el giro
+    }, 500)
 }
 
 const refreshPlaylists = async () => {
     if (!userStore.id) return
     loadingPlaylists.value = true
-
     playlists.value = await getPlaylistsByUser(userStore.id)
     showToast('Playlists actualizadas')
-
     setTimeout(() => {
         loadingPlaylists.value = false
-    }, 1000)
+    }, 500)
 }
 
 const addToFavorites = async (video: any) => {
     if (!userStore.id || addingFavoritesMap.value[video.videoId]) return
-    // Marcar como "en proceso"
-    addingFavoritesMap.value[video.videoId] = true
 
-    // Aseguramos compatibilidad con diferentes estructuras
+    addingFavoritesMap.value[video.videoId] = true
     const videoId = video.video_id || video.videoId
     const videoTitle = video.video_title || video.title
     const videoThumbnail = video.video_thumbnail || video.thumbnail
@@ -313,13 +351,15 @@ const addToFavorites = async (video: any) => {
         position: 'right',
         className: 'toast-glass'
     }).showToast()
-}
 
+    addingFavoritesMap.value[video.videoId] = false
+}
 
 const openPlaylistModal = (video: any) => {
     selectedVideo.value = video
     showPlaylistModal.value = true
 }
+
 onMounted(async () => {
     const userId = userStore.id
     if (!userId) return
@@ -338,108 +378,398 @@ onMounted(async () => {
     const stored = localStorage.getItem('recentlyPlayed')
     if (stored) {
         recentlyPlayed.value = JSON.parse(stored)
+        await generateDiscover() // Generar descubrimientos al cargar
     }
 })
 
-// ADD NEW SONG 100%
 const addToPlaylist = async () => {
     if (isProcessing.value) return
     if (!userStore.id || !selectedVideo.value || !selectedPlaylistId.value) {
-        return showToast('Faltan datos para agregar a la playlist')
+        return showToast('Faltan datos')
     }
 
     isProcessing.value = true
-    showToast('Añadiendo a la playlist...')
-
     try {
-        const exists = await songExistsInPlaylist(selectedPlaylistId.value, selectedVideo.value.video_id)
-
+        const exists = await songExistsInPlaylist(selectedPlaylistId.value, selectedVideo.value.videoId)
         if (exists) {
-            return showToast('La canción ya está en esta playlist')
+            return showToast('La canción ya existe')
         }
-
         await addSongToPlaylistService(selectedPlaylistId.value, {
-            video_id: selectedVideo.value.video_id,
-            video_title: selectedVideo.value.video_title,
-            video_thumbnail: selectedVideo.value.video_thumbnail
+            video_id: selectedVideo.value.videoId,
+            video_title: selectedVideo.value.title,
+            video_thumbnail: selectedVideo.value.thumbnail
         })
-
-
         showToast('Agregado a la playlist')
         showPlaylistModal.value = false
     } catch (error) {
-        showToast('Error al agregar a la playlist')
+        showToast('Error al agregar')
     } finally {
         isProcessing.value = false
     }
-
 }
 
-// CREATE NEW PLAYLIST 100%
 const createNewPlaylist = async () => {
     if (isProcessing.value) return
     if (!newPlaylistName.value || !userStore.id) return showToast('Nombre no válido')
 
     isProcessing.value = true
-    showToast('Creando playlist...')
-
     try {
         const playlistData: PlaylistModel = {
             name: newPlaylistName.value.trim(),
             user_id: userStore.id
         }
-
         const playlistId = await createOrGetPlaylist(playlistData)
         await addSongToPlaylistService(playlistId, {
             video_id: selectedVideo.value.videoId,
             video_title: selectedVideo.value.title,
             video_thumbnail: selectedVideo.value.thumbnail
         })
-
-        showToast('Canción añadida a la nueva playlist')
+        showToast('Playlist creada')
         showPlaylistModal.value = false
     } catch (error) {
-        showToast('Error al agregar a la playlist')
+        showToast('Error al crear')
     } finally {
         isProcessing.value = false
     }
-
 }
 </script>
 
 <style scoped>
-.spin-animation {
-    animation: spin 1s linear infinite;
+/* Stats minimalistas */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    max-width: 600px;
+    margin: 0 auto;
 }
 
-@keyframes spin {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(360deg);
-    }
+.stat-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.2s ease;
 }
 
-@keyframes float {
-    0% {
-        transform: translateY(0px);
-    }
-
-    50% {
-        transform: translateY(-8px);
-    }
-
-    100% {
-        transform: translateY(0px);
-    }
+.stat-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
 }
 
-.float-animation {
-    animation: float 3s ease-in-out infinite;
+.stat-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
 }
 
+.stat-icon i {
+    font-size: 1.2rem;
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 300;
+    color: white;
+    line-height: 1;
+}
+
+/* Secciones */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.section-title {
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 400;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.section-subtitle {
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 0.8rem;
+    margin: 0.25rem 0 0 0;
+}
+
+/* Grid de descubrimientos */
+.discover-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem;
+}
+
+.discover-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.discover-card:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+.card-image {
+    position: relative;
+    aspect-ratio: 1;
+    overflow: hidden;
+}
+
+.card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.discover-card:hover .card-image img {
+    transform: scale(1.05);
+}
+
+.play-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    backdrop-filter: blur(2px);
+}
+
+.play-overlay i {
+    font-size: 2rem;
+    color: white;
+    transform: scale(0.8);
+    transition: transform 0.2s ease;
+}
+
+.discover-card:hover .play-overlay {
+    opacity: 1;
+}
+
+.discover-card:hover .play-overlay i {
+    transform: scale(1);
+}
+
+.card-info {
+    padding: 0.75rem;
+}
+
+.card-title {
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 400;
+    margin: 0 0 0.25rem 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-artist {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.7rem;
+    margin: 0;
+}
+
+.card-actions {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    display: flex;
+    gap: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.discover-card:hover .card-actions {
+    opacity: 1;
+}
+
+/* Lista de historial */
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.history-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.item-main {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    flex: 1;
+    min-width: 0;
+}
+
+.item-thumbnail {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    object-fit: cover;
+}
+
+.item-title {
+    color: white;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.item-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+/* Botones */
+.action-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.3);
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.action-btn.small {
+    width: 24px;
+    height: 24px;
+}
+
+.action-btn:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.action-btn.small i {
+    font-size: 0.8rem;
+}
+
+.icon-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.refresh-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.refresh-btn:hover:not(:disabled) {
+    border-color: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.refresh-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Estados vacíos */
+.empty-discover,
+.empty-history,
+.discover-loading {
+    text-align: center;
+    padding: 3rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.empty-discover i,
+.empty-history i {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+.empty-discover p,
+.empty-history p {
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+/* Modal */
 .modal-backdrop {
     position: fixed;
     top: 0;
@@ -447,31 +777,97 @@ const createNewPlaylist = async () => {
     width: 100%;
     height: 100%;
     backdrop-filter: blur(5px);
-    background-color: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.5);
     z-index: 1040;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.search-modal-content {
-    background-color: #8f8f8f52;
-    padding: 20px;
-    border-radius: 12px;
+.modal-content {
+    background: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
     width: 90%;
     max-width: 400px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
 }
 
-.btn-search {
-    border-radius: 1.0rem;
-    font-size: 15px;
+.modal-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.glass-card {
+.modal-body {
+    padding: 1.5rem;
+}
+
+.form-select,
+.form-control {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 1rem;
-    backdrop-filter: blur(8px);
+    color: white;
+    border-radius: 8px;
+}
+
+.form-select:focus,
+.form-control:focus {
+    outline: none;
+    border-color: #1db954;
+    box-shadow: none;
+}
+
+.form-select option {
+    background: #1a1a1a;
+}
+
+/* Animaciones */
+.spin-animation {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .stats-grid {
+        gap: 0.5rem;
+    }
+
+    .stat-card {
+        padding: 0.75rem;
+    }
+
+    .stat-value {
+        font-size: 1.2rem;
+    }
+
+    .discover-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .item-title {
+        max-width: 150px;
+    }
 }
 </style>

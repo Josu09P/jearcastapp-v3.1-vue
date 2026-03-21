@@ -1,0 +1,206 @@
+.button-search-custom {
+    border-radius: 1.3rem !important;
+    background-color: rgba(178, 178, 178, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: white !important;
+
+}
+
+.result-search-text {
+    border-radius: 1.3rem;
+    background-color: rgba(126, 126, 126, 0.284);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: white !important;
+    padding: 5px 12px;
+    font-size: 13px;
+}
+
+.spin-animation {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.search-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    backdrop-filter: blur(10px);
+    background-color: rgba(178, 178, 178, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 60px;
+}
+
+.search-box {
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 24px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 0.5px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1.3rem;
+    width: 90%;
+    max-width: 1200px;
+    color: white;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* El área de resultados debe tener scroll interno */
+.search-box>div:last-child {
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1;
+    margin-top: 1rem;
+    padding-right: 4px;
+}
+
+/* Personalizar scrollbar para que se vea bien */
+.search-box>div:last-child::-webkit-scrollbar {
+    width: 6px;
+}
+
+.search-box>div:last-child::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+.search-box>div:last-child::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.search-box>div:last-child::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.search-form input {
+    max-width: 200px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-radius: 1.3rem;
+    height: 40px;
+    padding: 10px 14px;
+    border: 1px solid rgba(255, 247, 247, 0.23) !important;
+    backdrop-filter: blur(4px);
+}
+
+.btn-search {
+    border-radius: 1.0rem;
+    font-size: 15px;
+}
+
+.video-card-custom {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    backdrop-filter: blur(6px);
+    color: white;
+}
+
+.search-input::placeholder {
+    color: rgb(142, 142, 142);
+    font-size: 14px;
+    text-align: center;
+    border: none;
+}
+
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    backdrop-filter: blur(5px);
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1040;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-modal-content {
+    background-color: #8f8f8f52;
+    padding: 20px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+input::placeholder {
+    color: #cccccc;
+    opacity: 1;
+}
+
+.badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+.btn i {
+    color: white;
+}
+
+/* Ajustes responsivos para diferentes alturas de pantalla */
+@media (max-height: 700px) {
+    .search-box {
+        max-height: 88vh;
+    }
+}
+
+@media (max-height: 600px) {
+    .search-box {
+        max-height: 90vh;
+    }
+}
+
+@media (max-height: 500px) {
+    .search-box {
+        max-height: 92vh;
+        padding: 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .search-box {
+        padding: 16px;
+        width: 95%;
+    }
+
+    .search-form input {
+        max-width: 180px;
+    }
+}
+
+@media (max-width: 576px) {
+    .search-box {
+        padding: 12px;
+        width: 98%;
+    }
+
+    .search-form input {
+        max-width: 150px;
+        font-size: 12px;
+    }
+
+    .result-search-text {
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+}
