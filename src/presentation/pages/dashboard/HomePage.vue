@@ -1,10 +1,11 @@
 <template>
     <DashboardLayout>
         <section class="container py-4">
-            <!-- SECCIÓN MIXWIDGET (NUEVA) -->
+            <!-- SECCIÓN MIXWIDGET -->
             <MixWidget ref="mixWidget" />
             <br>
-            <!-- Tarjetas de estadísticas (más pequeñas y minimalistas) -->
+
+            <!-- Tarjetas de estadísticas -->
             <div class="stats-grid">
                 <!-- Favoritos -->
                 <div class="stat-card">
@@ -40,7 +41,7 @@
                 </div>
             </div>
 
-            <!-- Historial de reproducción (más compacto) -->
+            <!-- Historial de reproducción -->
             <div class="history-section mt-5">
                 <div class="section-header">
                     <div>
@@ -50,12 +51,10 @@
                         <p class="section-subtitle">Tus últimas reproducciones</p>
                     </div>
                     <div class="header-actions">
-                        <button @click="refreshRecentlyPlayed" :disabled="loading" class="icon-btn"
-                            style="border-radius: 1.3rem;">
+                        <button @click="refreshRecentlyPlayed" :disabled="loading" class="icon-btn">
                             <i :class="['bi', loading ? 'bi-arrow-repeat spin-animation' : 'bi-arrow-clockwise']"></i>
                         </button>
-                        <button @click="clearRecentlyPlayed" class="icon-btn text-danger"
-                            style="border-radius: 1.3rem;">
+                        <button @click="clearRecentlyPlayed" class="icon-btn text-danger">
                             <i class="bi bi-trash3"></i>
                         </button>
                     </div>
@@ -68,8 +67,7 @@
                             <span class="item-title">{{ video.video_title }}</span>
                         </div>
                         <div class="item-actions">
-                            <button @click.stop="addToFavorites(video)" class="action-btn small"
-                                style="border-radius: 1.3rem !important;">
+                            <button @click.stop="addToFavorites(video)" class="action-btn small">
                                 <i class="bi bi-heart"></i>
                             </button>
                             <button @click.stop="openPlaylistModal(video)" class="action-btn small">
@@ -85,7 +83,7 @@
                 </div>
             </div>
 
-            <!-- Modal de playlists (igual) -->
+            <!-- Modal de playlists -->
             <div v-if="showPlaylistModal" class="modal-backdrop" @click.self="showPlaylistModal = false">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -131,7 +129,6 @@ import { songExistsInPlaylist } from '@/domain/usecases/playlists/SongExistsInPl
 import { addSongToPlaylistService } from '@/data/services/firestore/PlaylistsFirestore'
 import { createOrGetPlaylist } from '@/domain/usecases/playlists/CreateOrGetPlaylist'
 import Swal from 'sweetalert2'
-import { searchYoutube } from '@/data/services/youtube/SearchYoutube'
 import MixWidget from '@/presentation/widgets/recomendations/MixWidget.vue'
 
 const playerStore = usePlayerStore()
@@ -140,8 +137,6 @@ const totalFavorites = ref(0)
 const totalPlaylists = ref(0)
 const totalRecommended = ref(0)
 const recentlyPlayed = ref<any[]>([])
-const discoverItems = ref<any[]>([])
-const discoverLoading = ref(false)
 const isProcessing = ref(false)
 const playlists = ref<PlaylistModel[]>([])
 const loading = ref(false)
@@ -152,63 +147,6 @@ const selectedVideo = ref<any | null>(null)
 const addingFavoritesMap = ref<Record<string, boolean>>({})
 const loadingPlaylists = ref(false)
 const mixWidget = ref()
-
-// Generar recomendaciones basadas en el historial
-const generateDiscover = async () => {
-    if (!recentlyPlayed.value.length || !userStore.apikeyYoutube) return
-
-    discoverLoading.value = true
-    try {
-        // Tomar la última canción reproducida como base
-        const lastPlayed = recentlyPlayed.value[0]
-        const searchTerm = lastPlayed.video_title.split(' ').slice(0, 3).join(' ')
-
-        // Buscar canciones relacionadas
-        const results = await searchYoutube(searchTerm, userStore.apikeyYoutube)
-
-        // Filtrar para no mostrar las que ya están en el historial
-        const historyIds = new Set(recentlyPlayed.value.map(v => v.video_id))
-        const filtered = results
-            .filter((v: any) => !historyIds.has(v.videoId))
-            .slice(0, 8) // Mostrar solo 8 recomendaciones
-
-        discoverItems.value = filtered.map((v: any) => ({
-            videoId: v.videoId,
-            title: v.title,
-            thumbnail: v.thumbnail,
-            artist: 'JearCast Music'
-        }))
-    } catch (error) {
-        console.error('Error generando descubrimientos:', error)
-    } finally {
-        discoverLoading.value = false
-    }
-}
-
-// Refrescar descubrimientos manualmente
-const refreshDiscover = () => {
-    generateDiscover()
-}
-
-// Reproducir desde descubrimientos
-const playDiscover = (item: any) => {
-    const playlist = [{
-        video_id: item.videoId,
-        video_title: item.title,
-        video_thumbnail: item.thumbnail
-    }]
-    playerStore.setPlaylist(playlist, 0)
-
-    // Agregar al historial
-    const newVideo = {
-        video_id: item.videoId,
-        video_title: item.title,
-        video_thumbnail: item.thumbnail
-    }
-    const updated = [newVideo, ...recentlyPlayed.value.filter((v: any) => v.video_id !== item.videoId)].slice(0, 20)
-    recentlyPlayed.value = updated
-    localStorage.setItem('recentlyPlayed', JSON.stringify(updated))
-}
 
 const playVideo = (index: number) => {
     if (!recentlyPlayed.value.length) return
@@ -241,7 +179,6 @@ const clearRecentlyPlayed = async () => {
     if (result.isConfirmed) {
         localStorage.removeItem('recentlyPlayed')
         recentlyPlayed.value = []
-        discoverItems.value = []
         Toastify({
             text: 'Historial eliminado',
             duration: 2000,
@@ -270,10 +207,6 @@ const refreshRecentlyPlayed = () => {
         showToast('Historial actualizado')
         loading.value = false
     }, 500)
-}
-
-const refreshEverything = () => {
-    mixWidget.value?.refreshMixes()
 }
 
 const refreshPlaylists = async () => {
@@ -333,13 +266,12 @@ onMounted(async () => {
     playlists.value = playlistsData
 
     const stored = localStorage.getItem('recentlyPlayed')
-    console.log('🔍 localStorage recentlyPlayed:', stored)
     if (stored) {
         recentlyPlayed.value = JSON.parse(stored)
-        console.log('Historial cargado:', recentlyPlayed.value.length, 'canciones')
-        await generateDiscover()
-    } else {
-        console.log('No hay historial en localStorage')
+    }
+
+    if (!userStore.id) {
+        userStore.loadUserFromLocalStorage()
     }
 })
 
@@ -461,7 +393,6 @@ const createNewPlaylist = async () => {
     align-items: center;
     margin-bottom: 1.5rem;
     flex-wrap: wrap;
-    /* Permite que se envuelva si es necesario */
     gap: 0.5rem;
 }
 
@@ -478,110 +409,6 @@ const createNewPlaylist = async () => {
     color: rgba(255, 255, 255, 0.3);
     font-size: 0.8rem;
     margin: 0.25rem 0 0 0;
-}
-
-/* Grid de descubrimientos */
-.discover-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 1rem;
-}
-
-.discover-card {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
-    overflow: hidden;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    position: relative;
-}
-
-.discover-card:hover {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.1);
-    transform: translateY(-2px);
-}
-
-.card-image {
-    position: relative;
-    aspect-ratio: 1;
-    overflow: hidden;
-}
-
-.card-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-}
-
-.discover-card:hover .card-image img {
-    transform: scale(1.05);
-}
-
-.play-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    backdrop-filter: blur(2px);
-}
-
-.play-overlay i {
-    font-size: 2rem;
-    color: white;
-    transform: scale(0.8);
-    transition: transform 0.2s ease;
-}
-
-.discover-card:hover .play-overlay {
-    opacity: 1;
-}
-
-.discover-card:hover .play-overlay i {
-    transform: scale(1);
-}
-
-.card-info {
-    padding: 0.75rem;
-}
-
-.card-title {
-    color: white;
-    font-size: 0.85rem;
-    font-weight: 400;
-    margin: 0 0 0.25rem 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.card-artist {
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 0.7rem;
-    margin: 0;
-}
-
-.card-actions {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    display: flex;
-    gap: 0.25rem;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-
-.discover-card:hover .card-actions {
-    opacity: 1;
 }
 
 /* Lista de historial */
@@ -671,7 +498,7 @@ const createNewPlaylist = async () => {
     color: rgba(255, 255, 255, 0.5);
     width: 32px;
     height: 32px;
-    border-radius: 8px;
+    border-radius: 1.3rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -684,34 +511,8 @@ const createNewPlaylist = async () => {
     color: white;
 }
 
-.refresh-btn {
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.5);
-    width: 32px;
-    height: 32px;
-    border-radius: 1.3rem !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.refresh-btn:hover:not(:disabled) {
-    border-color: rgba(255, 255, 255, 0.3);
-    color: white;
-}
-
-.refresh-btn:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-}
-
 /* Estados vacíos */
-.empty-discover,
-.empty-history,
-.discover-loading {
+.empty-history {
     text-align: center;
     padding: 3rem;
     background: rgba(255, 255, 255, 0.02);
@@ -720,14 +521,12 @@ const createNewPlaylist = async () => {
     color: rgba(255, 255, 255, 0.3);
 }
 
-.empty-discover i,
 .empty-history i {
     font-size: 2rem;
     margin-bottom: 1rem;
     opacity: 0.3;
 }
 
-.empty-discover p,
 .empty-history p {
     font-size: 0.9rem;
     margin: 0;
@@ -797,7 +596,6 @@ const createNewPlaylist = async () => {
 .header-actions {
     display: flex;
     flex-direction: row;
-    /* Fuerza que estén en línea */
     gap: 0.5rem;
     align-items: center;
 }
@@ -825,32 +623,8 @@ const createNewPlaylist = async () => {
     .stat-value {
         font-size: 1.2rem;
     }
-
-    .discover-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
 }
 
-/* En la sección .section-header, modifica o agrega */
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-    /* Permite que se envuelva si es necesario */
-    gap: 0.5rem;
-}
-
-.header-actions {
-    display: flex;
-    flex-direction: row;
-    /* Fuerza que estén en línea */
-    gap: 0.5rem;
-    align-items: center;
-}
-
-/* Modifica el media query para mantener los botones en línea */
 @media (max-width: 480px) {
     .section-header {
         flex-direction: column;
@@ -858,7 +632,6 @@ const createNewPlaylist = async () => {
         gap: 0.75rem;
     }
 
-    /* Los botones siguen en línea horizontal */
     .header-actions {
         flex-direction: row;
         width: auto;

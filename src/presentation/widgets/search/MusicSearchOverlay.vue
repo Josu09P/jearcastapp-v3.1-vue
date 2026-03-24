@@ -33,6 +33,16 @@ const selectedPlaylistId = ref('')
 const newPlaylistName = ref('')
 const showPlaylistModal = ref(false)
 const selectedVideo = ref<any | null>(null)
+const inputRef = ref<HTMLInputElement | null>(null)
+
+// Método para enfocar el input
+const focusInput = () => {
+    setTimeout(() => {
+        if (inputRef.value) {
+            inputRef.value.focus()
+        }
+    }, 50)
+}
 
 // ==================== USAR EL API KEY MANAGER ====================
 const apiKeyManager = useApiKeyManager()
@@ -221,8 +231,8 @@ const createNewPlaylist = async () => {
         <div class="search-box">
             <form @submit.prevent="onSearch" class="search-form">
                 <div class="d-flex flex-wrap justify-content-center align-items-center gap-3">
-                    <input v-model="query" type="text" class="form-control search-input" placeholder="Buscar música..."
-                        autofocus />
+                    <input ref="inputRef" v-model="query" type="text" class="form-control search-input"
+                        placeholder="Buscar música..." autofocus />
                     <div class="d-flex gap-2">
                         <button type="submit"
                             class="btn btn-outline-light btn-search d-flex align-items-center justify-content-center button-search-custom"

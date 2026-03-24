@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import DashboardLayout from '@/presentation/layouts/DashboardLayout.vue'
+import { useLocalMusicStore } from '@/stores/local-music-store'
 import { usePlayerStore } from '@/stores/player-store'
 import Toastify from 'toastify-js'
 import Swal from 'sweetalert2'
-import { useLocalMusicStore } from '@/stores/local-music-store'
 
 const localMusicStore = useLocalMusicStore()
 const playerStore = usePlayerStore()
@@ -23,15 +23,15 @@ const showToast = (text: string, isError: boolean = false) => {
 const selectFolder = async () => {
     const success = await localMusicStore.selectFolder()
     if (success) {
-        showToast(`Carpeta seleccionada: ${localMusicStore.musicFolder}`)
+        showToast(`✅ Carpeta seleccionada: ${localMusicStore.musicFolder}`)
     } else {
-        showToast('Error al seleccionar la carpeta', true)
+        showToast('❌ Error al seleccionar la carpeta', true)
     }
 }
 
 const rescan = async () => {
     await localMusicStore.rescan()
-    showToast(`Escaneo completado: ${localMusicStore.totalTracks} canciones encontradas`)
+    showToast(`✅ Escaneo completado: ${localMusicStore.totalTracks} canciones encontradas`)
 }
 
 const clearFolder = async () => {
@@ -58,15 +58,26 @@ const clearFolder = async () => {
     }
 }
 
+// ==================== FUNCIÓN PRINCIPAL PARA REPRODUCIR ====================
 const playTrack = (index: number) => {
-    const playlist = localMusicStore.tracks.map((track: any) => ({
-        video_id: track.id,
-        video_title: track.title,
-        video_thumbnail: track.cover || '',
-        video_author: track.artist || 'Artista desconocido'
+    const track = localMusicStore.tracks[index]
+    if (!track) return
+
+    // Crear playlist con formato que el reproductor espera
+    const playlist = localMusicStore.tracks.map(t => ({
+        video_id: t.id,
+        video_title: t.title,
+        video_thumbnail: t.cover || '',
+        video_author: t.artist || 'Artista desconocido',
+        isLocal: true,           // <-- Importante: identificar como música local
+        localPath: t.path        // <-- Importante: ruta del archivo local
     }))
+
+    // Enviar al reproductor global
     playerStore.setPlaylist(playlist, index)
+    showToast(`🎵 Reproduciendo: ${track.title}`)
 }
+// ==================== FIN ====================
 </script>
 
 <template>

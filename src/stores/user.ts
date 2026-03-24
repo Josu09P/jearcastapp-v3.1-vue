@@ -10,22 +10,30 @@ export const useUserStore = defineStore('user', {
   }),
   actions: {
     setUser(user: any) {
-      this.id = user.id
-      this.name = user.name
-      this.email = user.email
-      this.apikeyYoutube = user.apikeyYoutube
-      this.create_at = user.create_at
-      localStorage.setItem('userJearCastInfo', JSON.stringify(user))
+      if (!user) return
+
+      this.id = user.id || ''
+      this.name = user.name || 'Usuario'
+      this.email = user.email || ''
+      this.apikeyYoutube = user.apikeyYoutube || ''
+      this.create_at = user.create_at || null
+
+      // Solo guardar si hay datos válidos
+      if (user.id) {
+        localStorage.setItem('userJearCastInfo', JSON.stringify(user))
+      }
     },
     loadUserFromLocalStorage() {
-      const data = localStorage.getItem('userJearCastInfo')
-      if (data) {
-        try {
+      try {
+        const data = localStorage.getItem('userJearCastInfo')
+        if (data) {
           const user = JSON.parse(data)
           this.setUser(user)
-        } catch (err) {
-          console.error('Error cargando usuario:', err)
         }
+      } catch (err) {
+        console.error('Error cargando usuario:', err)
+        // Limpiar localStorage corrupto
+        localStorage.removeItem('userJearCastInfo')
       }
     },
     logout() {
@@ -34,10 +42,13 @@ export const useUserStore = defineStore('user', {
       this.email = ''
       this.apikeyYoutube = ''
       this.create_at = null
+
       localStorage.removeItem('userJearCastInfo')
       localStorage.removeItem('recentlyPlayed')
       localStorage.removeItem('jearcast_selectedPlaylistId')
       localStorage.removeItem('lastRecommendedPlaylistId')
+      localStorage.removeItem('cachedMixes')
+      localStorage.removeItem('cachedMixesHash')
     },
   },
 })

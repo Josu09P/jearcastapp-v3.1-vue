@@ -46,12 +46,21 @@
                     'fullscreen': playerStore.isFullScreen,
                     'mini': !playerStore.isFullScreen && isExpanded
                 }">
-                    <!-- Video Player (siempre presente pero oculto visualmente en mini) -->
+                    <!-- Reemplaza la sección del video wrapper -->
                     <div class="video-wrapper" :class="{
                         'fullscreen': playerStore.isFullScreen,
                         'mini-hidden': !playerStore.isFullScreen
                     }">
-                        <div ref="playerContainer" class="iframe-element"></div>
+                        <!-- Iframe de YouTube (solo para música de YouTube) -->
+                        <div v-if="!isLocalPlayback" ref="playerContainer" class="iframe-element"></div>
+
+                        <!-- Placeholder para música local -->
+                        <div v-else class="local-player-placeholder">
+                            <i class="bi bi-file-music-fill"></i>
+                            <p>{{ currentTrack?.video_title }}</p>
+                            <small>{{ currentTrack?.video_author }}</small>
+                        </div>
+
                         <!-- Velo con blur (solo visible en fullscreen) -->
                         <div v-if="playerStore.isFullScreen" class="video-veil"
                             :class="{ 'blur-active': isVeilBlurActive }"></div>
@@ -69,7 +78,7 @@
                     'mini': !playerStore.isFullScreen
                 }">
                     <div class="author-info-content d-flex align-items-center gap-2">
-                        <i class="bi bi-person-circle author-icon"></i>
+                        <i class="bi bi-person-circle author-icon" style="color: white !important;"></i>
                         <span class="author-name">{{ currentTrack.video_author || 'Cargando artista...' }}</span>
                         <span v-if="currentTrack.video_author" class="author-badge">Artista</span>
                         <span v-else class="author-badge bg-secondary bg-opacity-25">Cargando</span>
@@ -126,6 +135,18 @@ import { useUserStore } from '@/stores/user';
 import { getArtistFromTitle, searchSongsByArtist } from '@/data/services/youtube/SearchByArtistService';
 import { useApiKeyManager } from '@/composables/useApiKeyManager';
 import { addToRecentlyPlayed } from '@/data/services/local/RecentlyPlayedService';
+// Agregar estas importaciones después de las existentes
+import {
+    initLocalAudio,
+    playLocalTrack,
+    pauseLocalAudio,
+    resumeLocalAudio,
+    setLocalAudioCurrentTime,
+    getLocalAudioCurrentTime,
+    getLocalAudioDuration,
+    onLocalAudioTimeUpdate,
+    onLocalAudioEnded
+} from '@/data/services/audio/LocalAudioService'
 
 /* ==================== TIPOS ==================== */
 interface Position { x: number; y: number }
@@ -200,6 +221,10 @@ let isExpanding = false
 const currentTimeFormatted = computed(() => formatTime(currentTime.value))
 const durationFormatted = computed(() => formatTime(duration.value))
 const transitionName = computed(() => playerStore.isFullScreen ? 'slide-up' : 'slide-down')
+
+// Después de otras variables
+const isLocalPlayback = ref(false)
+let localAudioElement: HTMLAudioElement | null = null
 
 /* ==================== UTILIDADES ==================== */
 const formatTime = (seconds: number): string => {
@@ -505,7 +530,15 @@ const loadPlaylistWithAuthors = async (tracks: Track[]) => {
 const startProgressLoop = (): void => {
     if (animationFrameId) cancelAnimationFrame(animationFrameId)
     const update = () => {
-        if (ytPlayer) {
+        if (isLocalPlayback.value) {
+            const time = getLocalAudioCurrentTime()
+            const total = getLocalAudioDuration()
+            if (!isNaN(time) && !isNaN(total) && total > 0) {
+                currentTime.value = time
+                duration.value = total
+                if (!isSeeking.value) progressValue.value = (time / total) * 100
+            }
+        } else if (ytPlayer) {
             try {
                 const time = ytPlayer.getCurrentTime()
                 const total = ytPlayer.getDuration()
@@ -520,7 +553,6 @@ const startProgressLoop = (): void => {
     }
     animationFrameId = requestAnimationFrame(update)
 }
-
 /* ==================== LOTTIE ==================== */
 const animationStore = useAnimationStore()
 
@@ -540,16 +572,34 @@ const setupLottie = (): void => {
 
 /* ==================== CONTROLES ==================== */
 const togglePlayPause = (): void => {
-    if (!ytPlayer) return
-    ytPlayer.getPlayerState() === window.YT.PlayerState.PLAYING
-        ? ytPlayer.pauseVideo()
-        : ytPlayer.playVideo()
+    if (isLocalPlayback.value) {
+        // Música local
+        if (isPlaying.value) {
+            pauseLocalAudio()
+        } else {
+            resumeLocalAudio()
+        }
+    } else if (ytPlayer) {
+        // YouTube
+        ytPlayer.getPlayerState() === window.YT.PlayerState.PLAYING
+            ? ytPlayer.pauseVideo()
+            : ytPlayer.playVideo()
+    }
 }
 
 const handleSeek = (): void => {
-    if (!ytPlayer || !isSeeking.value) return
-    const total = ytPlayer.getDuration()
-    if (total > 0) ytPlayer.seekTo((progressValue.value / 100) * total, true)
+    if (isLocalPlayback.value) {
+        if (!isSeeking.value) return
+        const total = getLocalAudioDuration()
+        if (total > 0) {
+            setLocalAudioCurrentTime((progressValue.value / 100) * total)
+        }
+    } else if (ytPlayer && isSeeking.value) {
+        const total = ytPlayer.getDuration()
+        if (total > 0) {
+            ytPlayer.seekTo((progressValue.value / 100) * total, true)
+        }
+    }
 }
 
 const handleSeekStart = (): void => { isSeeking.value = true }
@@ -617,6 +667,52 @@ const handleKeyPress = (e: KeyboardEvent): void => {
     if (e.code === 'Space') { e.preventDefault(); togglePlayPause() }
 }
 
+
+// Función para reproducir música local
+const playLocalTrackFromStore = async (track: Track) => {
+    if (!track.localPath) return
+
+    isLocalPlayback.value = true
+
+    try {
+        // Inicializar audio
+        const audio = initLocalAudio()
+
+        // Configurar eventos
+        onLocalAudioTimeUpdate((time, dur) => {
+            if (!isSeeking.value) {
+                currentTime.value = time
+                duration.value = dur
+                progressValue.value = (time / dur) * 100
+            }
+        })
+
+        onLocalAudioEnded(() => {
+            if (isRepeatActive.value) {
+                setLocalAudioCurrentTime(0)
+                resumeLocalAudio()
+            } else {
+                next()
+            }
+        })
+
+        await playLocalTrack(track.localPath)
+
+        // Guardar en historial
+        addToRecentlyPlayed({
+            video_id: track.video_id,
+            video_title: track.video_title,
+            video_thumbnail: track.video_thumbnail,
+            video_author: track.video_author
+        })
+
+        startProgressLoop()
+
+    } catch (error) {
+        console.error('Error reproduciendo local:', error)
+        isLocalPlayback.value = false
+    }
+}
 /* ==================== WATCHERS ==================== */
 watch(() => playerStore.isFullScreen, async (isFull) => {
     if (isFull) {
@@ -646,17 +742,26 @@ watch(() => playerStore.isFullScreen, async (isFull) => {
     }
 })
 
-watch(() => currentTrack.value?.video_id, async (videoId) => {
-    if (!videoId) return
+watch(() => currentTrack.value, async (newTrack) => {
+    if (!newTrack) return
+
     // Activar blur al cambiar de canción
     if (playerStore.isFullScreen) {
         activateBlur()
-        // No programamos remoción aquí porque esperamos a que empiece a reproducir
     }
-    prefetchAuthor(videoId)
-    await loadYouTubeAPI()
-    await nextTick()
-    createPlayer(videoId)
+
+    // Detectar si es música local o YouTube
+    if (newTrack.isLocal && newTrack.localPath) {
+        // Reproducir música local
+        await playLocalTrackFromStore(newTrack)
+    } else if (newTrack.video_id && !newTrack.isLocal) {
+        // Reproducir YouTube
+        isLocalPlayback.value = false
+        prefetchAuthor(newTrack.video_id)
+        await loadYouTubeAPI()
+        await nextTick()
+        createPlayer(newTrack.video_id)
+    }
 }, { immediate: true })
 
 // Watch para cambiar la animación en tiempo real
@@ -831,5 +936,35 @@ onBeforeUnmount(() => {
     .author-icon {
         font-size: 1rem;
     }
+}
+
+.local-player-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.3) 100%);
+    color: white;
+    text-align: center;
+    padding: 2rem;
+}
+
+.local-player-placeholder i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.7;
+}
+
+.local-player-placeholder p {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.local-player-placeholder small {
+    font-size: 0.85rem;
+    opacity: 0.6;
 }
 </style>

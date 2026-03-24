@@ -206,7 +206,7 @@ const toggleApiKey = async (apiKey: ApiKeyModel) => {
                 <!-- Tarjeta 1: Perfil -->
                 <div class="settings-card">
                     <div class="card-header">
-                        <i class="bi bi-person-circle"></i>
+                        <i class="bi bi-person-circle" style="color: white !important;"></i>
                         <h5>Perfil</h5>
                     </div>
 
@@ -244,7 +244,7 @@ const toggleApiKey = async (apiKey: ApiKeyModel) => {
                         <!-- Botones de acción del perfil -->
                         <div v-if="!editing" class="card-actions">
                             <button @click="editing = true" class="action-btn">
-                                <i class="bi bi-pencil"></i>
+                                <i class="bi bi-pencil" style="color: white !important;"></i>
                                 Editar
                             </button>
                         </div>
@@ -263,7 +263,7 @@ const toggleApiKey = async (apiKey: ApiKeyModel) => {
                 <!-- Tarjeta 2: API Keys de Respaldo -->
                 <div class="settings-card">
                     <div class="card-header">
-                        <i class="bi bi-key"></i>
+                        <i class="bi bi-key" style="color: white !important;"></i>
                         <h5>API Keys de Respaldo</h5>
                         <button @click="showApiKeyForm = !showApiKeyForm" class="add-btn">
                             <i class="bi bi-plus-lg"></i>
@@ -320,12 +320,12 @@ const toggleApiKey = async (apiKey: ApiKeyModel) => {
                 <!-- Tarjeta 3: Diseñador (Themes) -->
                 <div class="settings-card theme-card">
                     <div class="card-header">
-                        <i class="bi bi-palette-fill"></i>
-                        <h5>Themas</h5>
+                        <i class="bi bi-palette-fill" style="color: white !important;"></i>
+                        <h5>Apariencia</h5>
                     </div>
 
                     <div class="card-content">
-                        <p class="theme-description">Personaliza la apariencia de la aplicación</p>
+                        <p class="theme-description">Personaliza la apariencia de la APP (Themas en desarrollo)</p>
                         <button @click="$router.push('/dashboard/themes')" class="theme-link">
                             <span>Ir ya</span>
                             <i class="bi bi-arrow-right"></i>

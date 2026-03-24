@@ -6,24 +6,22 @@ export const createArtistMix = async (
   apiKey: string,
 ): Promise<MixModel> => {
   try {
-    // 1. Buscar más canciones del artista en YouTube
-    const moreSongs = await searchSongsByArtist(artistAnalysis.name, apiKey, 15)
+    let allSongs = [...artistAnalysis.songs]
 
-    // 2. Combinar canciones existentes con nuevas (sin duplicados)
-    const existingIds = new Set(artistAnalysis.songs.map((s) => s.videoId))
-    const newSongs = moreSongs.filter((song: any) => !existingIds.has(song.videoId))
+    // Solo buscar más canciones si tenemos menos de 8
+    if (artistAnalysis.songs.length < 8) {
+      const moreSongs = await searchSongsByArtist(artistAnalysis.name, apiKey, 8)
+      const existingIds = new Set(artistAnalysis.songs.map((s) => s.videoId))
+      const newSongs = moreSongs.filter((song: any) => !existingIds.has(song.videoId))
+      allSongs = [...artistAnalysis.songs, ...newSongs]
+    }
 
-    // 3. Mezclar: poner las canciones conocidas primero, luego nuevas
-    const allSongs = [...artistAnalysis.songs, ...newSongs]
+    const limitedSongs = allSongs.slice(0, 10) // Reducir de 20 a 15
 
-    // 4. Limitar a 20 canciones máximo
-    const limitedSongs = allSongs.slice(0, 20)
-
-    // 5. Crear el mix
     return {
       id: `mix_${artistAnalysis.name}_${Date.now()}`,
       name: `${artistAnalysis.name} Mix`,
-      description: `${artistAnalysis.count} canciones en favoritos + nuevas recomendaciones`,
+      description: `${artistAnalysis.count} canciones en favoritos`,
       cover: artistAnalysis.songs[0]?.thumbnail || limitedSongs[0]?.thumbnail || '',
       artist: artistAnalysis.name,
       songs: limitedSongs,

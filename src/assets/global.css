@@ -1,25 +1,45 @@
 @import './vars.css';
 
 /*==============================================
-    GLOBAL & SCROLLBAR RESET
+    FORZAR COLORES DE TEXTO GLOBALES
 ================================================*/
-::-webkit-scrollbar {
-  width: 0px;
-  background: transparent;
+* {
+  color-scheme: dark !important;
 }
 
-body {
+/* Forzar colores de iconos Bootstrap */
+.bi, [class^="bi-"], [class*=" bi-"] {
+  color: inherit !important;
+}
+
+/*==============================================
+    GLOBAL & SCROLLBAR RESET
+================================================*/
+*::-webkit-scrollbar {
+  display: none;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+html, body {
+  overflow: overlay;
   scrollbar-width: none;
-  overflow-y: scroll;
   -ms-overflow-style: none;
-  border: none !important;
 }
 
 .container-all {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
   overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   width: 100%;
   height: 100vh;
+}
+
+.container-all::-webkit-scrollbar {
+  display: none;
 }
 
 .container-all {

@@ -10,7 +10,7 @@ export const selectMusicFolder = async (): Promise<MusicFolderInfo | null> => {
         tracks: result.musicFiles,
         lastScan: new Date(),
         totalSize: result.musicFiles.reduce(
-          (acc: number, track: LocalTrack) => acc + track.size,
+          (acc: number, track: LocalTrack) => acc + (track.size || 0),
           0,
         ),
         totalTracks: result.musicFiles.length,

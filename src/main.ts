@@ -6,6 +6,7 @@ import { router } from './router'
 // Global CSS
 import '@/assets/global.css'
 import '@/assets/vars.css'
+
 // Bootstrap (CSS y JS)
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'

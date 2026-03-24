@@ -1,44 +1,45 @@
 <template>
-  <nav class="navbar navbar-expand-lg navbar-light">
-    <div class="container-fluid">
-      <button class="toggle-sidebar btn d-md-none" @click="toggleSidebar">
-        <i class="bi bi-speaker fs-4 text-white icon-header-top"></i>
-      </button>
-
-      <h4 class="mb-0 ms-3 d-flex align-items-center">
-        <div class="d-flex align-items-center me-3">
-          <img src="@/assets/img/logo-v3.png" width="80" alt="Logo" style="filter: brightness(0) invert(1);"
-            class="me-4 img-logo-app" />
-          <button class="toggle-sidebar ms-3 d-none d-md-block" @click="toggleSidebar"
-            style=" border: none; padding: 5px; background-color: transparent !important;">
-            <i class="bi bi-arrow-bar-left fs-6"
-              style="color: #f4f4f4; border-radius: 1.3rem !important; backdrop-filter: var(--blur-efect-global); padding: 4px; border: 1px solid rgba(255, 255, 255, 0.08);"></i>
-          </button>
+  <div class="header-top">
+    <div class="header-container">
+      <!-- Logo y botón de menú -->
+      <div class="header-left">
+        <button class="menu-toggle" @click="toggleSidebar" :class="{ 'active': isSidebarCollapsed }">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <div class="logo">
+          <span class="logo-text">Steel Music</span>
         </div>
-      </h4>
-      <!--BUSCADOR AQUI-->
-      <div class="mx-auto d-none d-lg-block" style="width: 20%; margin-top: 0; margin-bottom: 0;">
-        <form class="d-flex" @submit.prevent="showSearch = true">
-          <button class="btn btn-dark px-3 d-flex align-items-center" type="submit"
-            style="font-size: 15px; background-color: transparent; border: 1px solid rgba(255, 255, 255, 0.08) !important; border-radius: 1.0rem;">
-            <span style="font-size: 13px;">Buscar</span>
-            <i class="bi bi-search ms-2" style="font-size: 13px; vertical-align: middle;"></i>
-          </button>
-        </form>
-
       </div>
 
-      <div class="d-flex align-items-center order-2 order-lg-3 mt-2 mt-lg-0">
-        <span class="me-1" style="color: rgb(229, 229, 229); font-size: 13px;">
-          {{ userName }}
-        </span>
-        <button class="btn btn-sm" title="Cerrar sesión" style="color: rgb(229, 229, 229);" @click="logout">
-          <i class="bi bi-door-open-fill" style="font-size: 16px;"></i>
+      <!-- Buscador (centrado en desktop) -->
+      <div class="search-wrapper">
+        <form @submit.prevent="openSearch" class="search-form">
+          <i class="bi bi-search search-icon" style="color: white !important;"></i>
+          <input type="text" @click="openSearch" readonly ref="searchInput" />
+          <kbd class="search-shortcut"></kbd>
+        </form>
+      </div>
+
+      <!-- Perfil y acciones -->
+      <div class="header-right">
+        <div class="user-info">
+          <div class="user-avatar">
+            <span>{{ userInitials }}</span>
+          </div>
+          <div class="user-details">
+            <span class="user-name">{{ userName }}</span>
+          </div>
+        </div>
+        <button class="logout-btn" @click="logout" title="Cerrar sesión">
+          <i class="bi bi-box-arrow-right"></i>
         </button>
       </div>
     </div>
-  </nav>
-  <MusicSearchOverlay :visible="showSearch" @close="showSearch = false" @openPlaylistModal="openPlaylistModal" />
+  </div>
+  <MusicSearchOverlay :visible="showSearch" @close="closeSearch" @openPlaylistModal="openPlaylistModal"
+    ref="searchOverlay" />
 </template>
 
 <script setup lang="ts">
@@ -47,14 +48,42 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import MusicSearchOverlay from './search/MusicSearchOverlay.vue'
+import type { ComponentPublicInstance } from 'vue'
+
+// Define el tipo del overlay
+interface MusicSearchOverlayInstance extends ComponentPublicInstance {
+  focusInput: () => void
+}
+
 const showSearch = ref(false)
+const searchOverlay = ref<MusicSearchOverlayInstance | null>(null)
+
+const openSearch = () => {
+  showSearch.value = true
+  setTimeout(() => {
+    searchOverlay.value?.focusInput()
+  }, 100)
+}
+
+const closeSearch = () => {
+  showSearch.value = false
+}
 
 const openPlaylistModal = (video: any) => {
   console.log('Agregar a playlist:', video)
 }
+
 const router = useRouter()
 const userStore = useUserStore()
 const userName = computed(() => userStore.name)
+const userInitials = computed(() => {
+  return userName.value
+    .split(' ')
+    .map(word => word[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+})
 
 const logout = async () => {
   const result = await Swal.fire({
@@ -75,49 +104,292 @@ const logout = async () => {
   })
 
   if (result.isConfirmed) {
-    userStore.logout() // ✅ logout desde el store
+    userStore.logout()
     router.push('/auth/login').then(() => {
       window.location.reload()
     })
   }
 }
 
-const emit = defineEmits(['toggle-sidebar']);
+const emit = defineEmits(['toggle-sidebar'])
 const props = defineProps({
   isSidebarCollapsed: Boolean
-});
+})
 
 function toggleSidebar() {
-  emit('toggle-sidebar');
+  emit('toggle-sidebar')
 }
 </script>
-
 <style scoped>
-nav.navbar {
-  backdrop-filter: var(--blur-efect-global);
-  background: linear-gradient(to bottom,
-      #8e999d12 0%,
-      rgba(178, 178, 178, 0.05) 60%,
-      transparent 100%);
-  -webkit-backdrop-filter: var(--blur-efect-global);
-  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 0.50rem 0.50rem 0 0 !important;
+.header-top {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 2.70rem 1.5rem 0.75rem;
 }
 
-.bi-search {
-  width: 13px;
+.header-container {
+  max-width: 1600px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* Left Section */
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.menu-toggle {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.menu-toggle span {
+  width: 18px;
+  height: 2px;
+  background: white;
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.menu-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.menu-toggle.active span:nth-child(1) {
+  transform: rotate(45deg) translate(4px, 4px);
+}
+
+.menu-toggle.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.menu-toggle.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(5px, -5px);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+
+.logo-text {
+  font-size: 1.25rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #fff 0%, #1db954 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Search Section */
+.search-wrapper {
+  flex: 1;
+  max-height: 40px !important;
+  max-width: 100px;
+  margin: 0 auto;
+}
+
+.search-form {
+  position: relative;
+  height: 40px;
+  width: 100%;
+}
+
+.search-form input {
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 30px;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  color: white;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.search-form input:focus {
+  outline: none;
+  border-color: #1db954;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.search-form input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 1rem;
+  pointer-events: none;
+}
+
+.search-shortcut {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: monospace;
+}
+
+/* Right Section */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.25rem 0.75rem 0.25rem 0.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #414040, #1b7d3c);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+}
+
+.user-avatar span {
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: white;
+}
+
+.user-role {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 30px;
+  padding: 0.5rem 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+  border-color: #ff4d4d;
+  color: #ff4d4d;
+  background: rgba(255, 77, 77, 0.05);
+}
+
+.logout-btn i {
+  font-size: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .header-container {
+    gap: 0.75rem;
+  }
+
+  .user-details {
+    display: none;
+  }
+
+  .logo-text {
+    display: none;
+  }
+
+  .logout-btn span {
+    display: none;
+  }
+
+  .logout-btn {
+    padding: 0.5rem;
+  }
 }
 
 @media (max-width: 768px) {
-  .icon-header-top {
-    font-size: 39px !important;
+  .header-top {
+    padding: 0.5rem 1rem;
   }
 
-  .img-logo-app {
-    margin-left: -100px;
-    width: 77px;
+  .search-wrapper {
+    max-width: 300px;
+  }
+
+  .search-shortcut {
+    display: none;
+  }
+}
+
+@media (max-width: 576px) {
+  .search-wrapper {
+    max-width: 200px;
+  }
+
+  .user-info {
+    padding: 0.25rem;
+  }
+
+  .user-avatar {
+    width: 28px;
+    height: 28px;
+  }
+
+  .user-avatar span {
+    font-size: 0.7rem;
   }
 }
 </style>

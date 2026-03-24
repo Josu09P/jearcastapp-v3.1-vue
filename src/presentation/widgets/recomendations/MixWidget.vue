@@ -3,14 +3,19 @@
         <div class="mix-header">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h5 class="mix-title">
-                        <i class="bi bi-stars me-2"></i> Mix para ti
+                    <h5 class="mix-title" style="margin-top: -40px !important;">
+                        <i class="bi bi-stars me-2 fw-bold"></i> Mix para ti
                     </h5>
                     <p class="mix-subtitle">Basado en tus artistas favoritos</p>
                 </div>
-                <button @click="refreshMixes" class="refresh-mix-btn" :disabled="loading">
-                    <i :class="['bi', loading ? 'bi-arrow-repeat spin-animation' : 'bi-arrow-clockwise']"></i>
-                </button>
+                <div class="d-flex gap-2 align-items-center">
+                    <span v-if="mixes.length > 0 && !loading" class="cached-badge" title="Guardado en caché">
+                        <i class="bi bi-database"></i>
+                    </span>
+                    <button @click="refreshMixes" class="refresh-mix-btn" :disabled="loading">
+                        <i :class="['bi', loading ? 'bi-arrow-repeat spin-animation' : 'bi-arrow-clockwise']"></i>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -22,22 +27,29 @@
             <p class="mt-2">Analizando tus artistas favoritos...</p>
         </div>
 
-        <!-- Grid de mixes -->
-        <div v-else-if="mixes.length > 0" class="mix-grid">
-            <div v-for="mix in mixes" :key="mix.id" class="mix-card" @click="playMix(mix)">
-                <div class="mix-cover">
+        <!-- Grid de mixes - NUEVO DISEÑO HORIZONTAL -->
+        <div v-else-if="mixes.length > 0" class="mix-list">
+            <div v-for="mix in mixes" :key="mix.id" class="mix-item" @click="playMix(mix)">
+                <div class="mix-item-cover">
                     <img :src="mix.cover" :alt="mix.name">
-                    <div class="mix-play-overlay">
+                    <div class="mix-item-overlay">
                         <i class="bi bi-play-fill"></i>
                     </div>
                 </div>
-                <div class="mix-info">
-                    <h6 class="mix-name">{{ mix.name }}</h6>
-                    <p class="mix-desc">{{ mix.description }}</p>
-                    <span class="mix-badge">
-                        <i class="bi bi-music-note-beamed me-1"></i>
-                        {{ mix.songs.length }} canciones
-                    </span>
+                <div class="mix-item-info">
+                    <h6 class="mix-item-name">{{ mix.name }}</h6>
+                    <p class="mix-item-desc">{{ mix.description }}</p>
+                    <div class="mix-item-meta">
+                        <span class="mix-item-badge">
+                            <i class="bi bi-music-note-beamed me-1"></i>
+                            {{ mix.songs.length }} canciones
+                        </span>
+                    </div>
+                </div>
+                <div class="mix-item-action">
+                    <button class="mix-play-button" @click.stop="playMix(mix)">
+                        <i class="bi bi-play-circle-fill"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -57,11 +69,15 @@ import type { MixModel } from '@/domain/models/MixModel'
 import { useUserStore } from '@/stores/user'
 import { usePlayerStore } from '@/stores/player-store'
 import Toastify from 'toastify-js'
+import { getFavoritesByUser } from '@/domain/usecases/favorites/GetFavoritesByUser'
 
 const userStore = useUserStore()
 const playerStore = usePlayerStore()
 const mixes = ref<MixModel[]>([])
 const loading = ref(true)
+const favoritesHash = ref('')
+const initialized = ref(false)
+const MAX_MIXES = 4
 
 const showToast = (text: string, isError: boolean = false) => {
     Toastify({
@@ -73,30 +89,96 @@ const showToast = (text: string, isError: boolean = false) => {
     }).showToast()
 }
 
-const loadMixes = async () => {
+// Generar hash único de los favoritos
+const generateFavoritesHash = async (): Promise<string> => {
+    try {
+        if (!userStore.id) return ''
+        const favorites = await getFavoritesByUser(userStore.id)
+        const hash = favorites.map(f => f.video_id).sort().join(',')
+        return hash
+    } catch (error) {
+        console.error('Error generando hash:', error)
+        return ''
+    }
+}
+
+// Cargar mixes desde localStorage
+const loadMixesFromCache = (): MixModel[] | null => {
+    try {
+        const cached = localStorage.getItem('cachedMixes')
+        const cachedHash = localStorage.getItem('cachedMixesHash')
+
+        if (cached && cachedHash && cachedHash === favoritesHash.value) {
+            return JSON.parse(cached)
+        }
+        return null
+    } catch (error) {
+        console.error('Error cargando caché:', error)
+        return null
+    }
+}
+
+// Guardar mixes en localStorage
+const saveMixesToCache = (mixesData: MixModel[]) => {
+    try {
+        localStorage.setItem('cachedMixes', JSON.stringify(mixesData))
+        localStorage.setItem('cachedMixesHash', favoritesHash.value)
+    } catch (error) {
+        console.error('Error guardando caché:', error)
+    }
+}
+
+// Limpiar caché
+const clearCache = () => {
+    localStorage.removeItem('cachedMixes')
+    localStorage.removeItem('cachedMixesHash')
+}
+
+// Cargar mixes
+const loadMixes = async (forceRefresh: boolean = false) => {
     if (!userStore.id || !userStore.apikeyYoutube) {
         loading.value = false
         return
     }
 
     loading.value = true
+
     try {
-        const generatedMixes = await generateArtistMixes(userStore.id, userStore.apikeyYoutube, 8)
+        favoritesHash.value = await generateFavoritesHash()
+
+        if (!forceRefresh) {
+            const cached = loadMixesFromCache()
+            if (cached && cached.length > 0) {
+                console.log('Usando mixes cacheados')
+                mixes.value = cached
+                loading.value = false
+                return
+            }
+        }
+
+        console.log('Generando nuevos mixes...')
+        const generatedMixes = await generateArtistMixes(userStore.id, userStore.apikeyYoutube, MAX_MIXES)
         mixes.value = generatedMixes
 
+        if (generatedMixes.length > 0) {
+            saveMixesToCache(generatedMixes)
+        }
+
         if (generatedMixes.length === 0) {
-            showToast('Agrega más favoritos para obtener mixes personalizados', false)
+            showToast('Agrega más favoritos para obtener mixes personalizados')
         }
     } catch (error) {
         console.error('Error generando mixes:', error)
         showToast('Error al generar mixes', true)
+        clearCache()
     } finally {
         loading.value = false
     }
 }
 
 const refreshMixes = async () => {
-    await loadMixes()
+    clearCache()
+    await loadMixes(true)
     showToast('Mixes actualizados')
 }
 
@@ -116,18 +198,27 @@ const playMix = (mix: MixModel) => {
     showToast(`🎵 Reproduciendo: ${mix.name}`)
 }
 
-onMounted(() => {
-    loadMixes()
+onMounted(async () => {
+    if (!initialized.value && userStore.id) {
+        await loadMixes()
+        initialized.value = true
+    }
 })
 
-defineExpose({ refreshMixes })
+defineExpose({ refreshMixes, loadMixes })
 </script>
 
 <style scoped>
 .mix-widget {
     border-radius: 16px;
-    padding: 1.5rem;
+    padding: 1rem;
     margin-bottom: 2rem;
+}
+
+.cached-badge {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.3);
+    cursor: help;
 }
 
 .mix-header {
@@ -172,53 +263,59 @@ defineExpose({ refreshMixes })
     cursor: not-allowed;
 }
 
-.mix-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 1.25rem;
+/* NUEVO DISEÑO - LISTA HORIZONTAL */
+.mix-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
-.mix-card {
+.mix-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 12px;
-    overflow: hidden;
+    padding: 0.75rem;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.mix-card:hover {
+.mix-item:hover {
     background: rgba(255, 255, 255, 0.05);
-    transform: translateY(-4px);
     border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    transform: translateX(4px);
 }
 
-.mix-cover {
+.mix-item-cover {
     position: relative;
-    width: 100%;
-    aspect-ratio: 1;
+    width: 60px;
+    height: 60px;
+    border-radius: 10px;
     overflow: hidden;
+    flex-shrink: 0;
+    background: rgba(0, 0, 0, 0.3);
 }
 
-.mix-cover img {
+.mix-item-cover img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     transition: transform 0.3s ease;
 }
 
-.mix-card:hover .mix-cover img {
+.mix-item:hover .mix-item-cover img {
     transform: scale(1.05);
 }
 
-.mix-play-overlay {
+.mix-item-overlay {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -227,52 +324,58 @@ defineExpose({ refreshMixes })
     backdrop-filter: blur(2px);
 }
 
-.mix-card:hover .mix-play-overlay {
+.mix-item:hover .mix-item-overlay {
     opacity: 1;
 }
 
-.mix-play-overlay i {
-    font-size: 3rem;
+.mix-item-overlay i {
+    font-size: 1.5rem;
     color: white;
-    transform: scale(0.8);
-    transition: transform 0.2s ease;
 }
 
-.mix-card:hover .mix-play-overlay i {
-    transform: scale(1);
+.mix-item-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
 }
 
-.mix-info {
-    padding: 0.75rem;
-}
-
-.mix-name {
+.mix-item-name {
     color: white;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 500;
-    margin: 0 0 0.25rem 0;
+    margin: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.mix-desc {
+.mix-item-desc {
     color: rgba(255, 255, 255, 0.4);
     font-size: 0.7rem;
-    margin: 0 0 0.5rem 0;
+    margin: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.mix-badge {
+.mix-item-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+.mix-item-badge {
     display: inline-flex;
     align-items: center;
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     padding: 2px 8px;
     border-radius: 20px;
     background: rgba(29, 185, 84, 0.1);
     color: #1db954;
+    width: fit-content;
 }
 
 .mix-loading,
@@ -297,6 +400,40 @@ defineExpose({ refreshMixes })
     animation: spin 1s linear infinite;
 }
 
+.mix-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.mix-item-action {
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.mix-play-button {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mix-play-button:hover {
+    color: #1db954;
+    transform: scale(1.1);
+}
+
 @keyframes spin {
     from {
         transform: rotate(0deg);
@@ -310,29 +447,46 @@ defineExpose({ refreshMixes })
 /* Responsive */
 @media (max-width: 768px) {
     .mix-widget {
-        padding: 1rem;
-        margin-bottom: 1.5rem;
+        padding: 0.75rem;
     }
 
-    .mix-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
+    .mix-item {
+        padding: 0.5rem;
+        gap: 0.75rem;
     }
 
-    .mix-name {
+    .mix-item-cover {
+        width: 50px;
+        height: 50px;
+    }
+
+    .mix-item-name {
         font-size: 0.85rem;
+    }
+
+    .mix-item-desc {
+        font-size: 0.65rem;
     }
 }
 
 @media (max-width: 480px) {
-    .mix-grid {
-        grid-template-columns: 1fr;
-    }
-
     .mix-header .d-flex {
         flex-direction: column;
         align-items: flex-start;
         gap: 0.5rem;
+    }
+
+    .mix-item {
+        padding: 0.5rem;
+    }
+
+    .mix-item-cover {
+        width: 45px;
+        height: 45px;
+    }
+
+    .mix-item-name {
+        font-size: 0.8rem;
     }
 }
 </style>

@@ -150,8 +150,8 @@ const presetColors: ThemeColor[] = [
 <template>
     <DashboardLayout>
         <div class="theme-container">
-            <!-- SECCIÓN 1: COLORES -->
-            <header class="theme-header">
+            <!-- EN DESARROLLO: => SECCIÓN 1: COLORES -->
+            <!--  <header class="theme-header">
                 <div class="header-content">
                     <h4 class="title">Apariencia</h4>
                     <p class="subtitle">Personaliza el color de acento de tu interfaz</p>
@@ -185,11 +185,10 @@ const presetColors: ThemeColor[] = [
                 </div>
             </div>
 
-            <!-- LÍNEA SEPARADORA -->
-            <div class="section-divider"></div>
+            <div class="section-divider"></div> -->
 
             <!-- SECCIÓN 2: ANIMACIONES DEL REPRODUCTOR -->
-            <section class="animation-section">
+            <section class="animation-section" style="margin-top: -20px !important;">
                 <header class="section-header">
                     <div class="header-content">
                         <h4 class="title">Reproductor</h4>

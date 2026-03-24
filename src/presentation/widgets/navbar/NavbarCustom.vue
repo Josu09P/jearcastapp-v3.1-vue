@@ -1,7 +1,6 @@
 <template>
     <div class="custom-navbar">
         <div class="left-section">
-            <img src="@/assets/img/logo-v3-icon.png" alt="App Icon" class="app-icon" />
             <span class="app-title">V.1.2</span>
         </div>
 
@@ -49,7 +48,7 @@ function closeWindow() {
     padding: 0 10px;
     z-index: 9999;
     backdrop-filter: blur(10px);
-    background-color: #8e999d12 !important;
+    background: transparent;
     /*
     background-color: black; */
     -webkit-backdrop-filter: blur(10px);
