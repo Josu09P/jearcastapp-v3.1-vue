@@ -17,7 +17,7 @@ import 'toastify-js/src/toastify.css'
 
 // Pinia
 import { useUserStore } from './stores/user'
-import { useTheme } from './utils/userTheme'
+import { useThemeStore } from './stores/theme'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -25,9 +25,10 @@ const pinia = createPinia()
 app.use(pinia)
 app.use(router)
 
-// CARGAR TEMA
-const { loadTheme } = useTheme()
-loadTheme()
+// Cargar tema guardado
+const themeStore = useThemeStore()
+themeStore.loadTheme()
+
 // Cargar usuario desde localStorage
 const userStore = useUserStore()
 userStore.loadUserFromLocalStorage()

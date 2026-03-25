@@ -195,16 +195,16 @@ const playTrack = (index: number) => {
 
 .btn-select-folder {
     padding: 0.6rem 1.5rem;
-    background: rgba(29, 185, 84, 0.1);
-    border: 1px solid rgba(29, 185, 84, 0.3);
+    background: var(--accent-color-rg) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 30px;
-    color: #1db954;
+    color: var(--accent-color);
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .btn-select-folder:hover {
-    background: rgba(29, 185, 84, 0.2);
+    background: var(--accent-color-rg);
     transform: translateY(-2px);
 }
 

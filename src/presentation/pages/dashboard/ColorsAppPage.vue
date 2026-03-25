@@ -1,13 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useTheme } from '@/utils/userTheme'
 import DashboardLayout from '@/presentation/layouts/DashboardLayout.vue'
 import { animations, useAnimationStore } from '@/stores/animation-store'
 import lottie from 'lottie-web'
-
-const colorInput = ref<HTMLInputElement | null>(null)
-const { applyTheme, currentThemeColor } = useTheme()
-const customColor = ref(currentThemeColor.value)
+import ThemeSelector from '@/presentation/widgets/ThemeSelector.vue'
 
 // Store de animaciones
 const animationStore = useAnimationStore()
@@ -75,14 +71,6 @@ onBeforeUnmount(() => {
     })
 })
 
-function changeColor(color: string) {
-    applyTheme(color)
-}
-
-function openColorPicker() {
-    (colorInput.value as HTMLInputElement)?.click()
-}
-
 function selectAnimation(id: string) {
     selectedAnimation.value = id
     animationStore.setAnimation(id)
@@ -96,99 +84,28 @@ function resetAnimation() {
     animationStore.resetToDefault()
     window.dispatchEvent(new CustomEvent('reload-animation'))
 }
-
-const isCustomColorSelected = computed(() => {
-    return !presetColors.some((c) => c.value === currentThemeColor.value)
-})
-
-
-type ThemeColor = {
-    type: 'solid' | 'gradient'
-    value: string
-    preview: string
-}
-
-const presetColors: ThemeColor[] = [
-    { type: 'solid', value: '#102c4a', preview: '#102c4a' },
-    { type: 'solid', value: '#5d0909', preview: '#5d0909' },
-    { type: 'solid', value: '#123c24', preview: '#123c24' },
-    { type: 'solid', value: '#4a0958', preview: '#4a0958' },
-    { type: 'solid', value: '#c64600', preview: '#c64600' },
-    { type: 'solid', value: '#1a0101', preview: '#1a0101' },
-    { type: 'solid', value: '#124242', preview: '#124242' },
-    { type: 'solid', value: '#2d0a2e', preview: '#2d0a2e' },
-    { type: 'solid', value: '#1b2f0d', preview: '#1b2f0d' },
-    { type: 'solid', value: '#0c1c33', preview: '#0c1c33' },
-    { type: 'solid', value: '#3b1f07', preview: '#3b1f07' },
-    { type: 'solid', value: '#470029', preview: '#470029' },
-    { type: 'solid', value: '#003c3c', preview: '#003c3c' },
-    { type: 'solid', value: '#2f0e0e', preview: '#2f0e0e' },
-    { type: 'solid', value: '#1c0d2f', preview: '#1c0d2f' },
-    { type: 'solid', value: '#3a3a00', preview: '#3a3a00' },
-    { type: 'solid', value: '#0d0b3e', preview: '#0d0b3e' },
-    { type: 'solid', value: '#180c22', preview: '#180c22' },
-    { type: 'solid', value: '#1c1b55', preview: '#1c1b55' },
-    { type: 'solid', value: '#112a46', preview: '#112a46' },
-    { type: 'solid', value: '#1b2631', preview: '#1b2631' },
-    { type: 'solid', value: '#173017', preview: '#173017' },
-    { type: 'solid', value: '#362202', preview: '#362202' },
-    { type: 'solid', value: '#3d000f', preview: '#3d000f' },
-    { type: 'solid', value: '#4c1036', preview: '#4c1036' },
-    { type: 'solid', value: '#1ed760', preview: '#1ed760' },
-    { type: 'gradient', value: '#3f0d12', preview: 'linear-gradient(135deg, #3f0d12, #a71d31)' },
-    { type: 'gradient', value: '#1f1c2c', preview: 'linear-gradient(135deg, #1f1c2c, #928dab)' },
-    { type: 'gradient', value: '#232526', preview: 'linear-gradient(135deg, #232526, #414345)' },
-    { type: 'gradient', value: '#0f2027', preview: 'linear-gradient(135deg, #0f2027, #203a43, #2c5364)' },
-    { type: 'gradient', value: '#000000', preview: 'linear-gradient(135deg, #000000, #434343)' },
-    { type: 'gradient', value: '#2c3e50', preview: 'linear-gradient(135deg, #2c3e50, #4ca1af)' },
-    { type: 'gradient', value: '#000428', preview: 'linear-gradient(135deg, #000428, #004e92)' },
-    { type: 'gradient', value: '#1e130c', preview: 'linear-gradient(135deg, #1e130c, #9a8478)' },
-    { type: 'gradient', value: '#141e30', preview: 'linear-gradient(135deg, #141e30, #243b55)' }
-]
 </script>
 
 <template>
     <DashboardLayout>
         <div class="theme-container">
-            <!-- EN DESARROLLO: => SECCIÓN 1: COLORES -->
-            <!--  <header class="theme-header">
-                <div class="header-content">
-                    <h4 class="title">Apariencia</h4>
-                    <p class="subtitle">Personaliza el color de acento de tu interfaz</p>
-                </div>
-
-                <button class="custom-picker-tile" @click="openColorPicker" :class="{ active: isCustomColorSelected }">
-                    <div class="picker-preview"
-                        :style="{ background: isCustomColorSelected ? customColor : 'transparent' }">
-                        <img src="@/assets/img/colors-svgrepo-com.svg" alt="Custom" />
+            <!-- SECCIÓN 1: TEMAS - REEMPLAZA LOS COLORES -->
+            <section class="themes-section">
+                <header class="section-header">
+                    <div class="header-content">
+                        <h4 class="title">Apariencia</h4>
+                        <p class="subtitle">Personaliza el color de acento de tu interfaz</p>
                     </div>
-                    <span>Personalizado</span>
-                    <input ref="colorInput" type="color" v-model="customColor" @input="changeColor(customColor)"
-                        class="hidden-input" />
-                </button>
-            </header>
+                </header>
 
-            <div class="color-grid">
-                <div v-for="color in presetColors" :key="color.preview" class="color-card"
-                    :class="{ 'is-selected': color.value === currentThemeColor }" @click="changeColor(color.value)">
-                    <div class="color-fill" :style="{ background: color.preview }">
-                        <div class="check-icon" v-if="color.value === currentThemeColor">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                                <polyline points="20 6 9 17 4 12"></polyline>
-                            </svg>
-                        </div>
-                    </div>
-                    <div class="color-info">
-                        <span class="color-type">{{ color.type }}</span>
-                        <span class="color-hex">{{ color.value.toUpperCase() }}</span>
-                    </div>
-                </div>
-            </div>
+                <!-- Aquí va el ThemeSelector -->
+                <ThemeSelector />
+            </section>
 
-            <div class="section-divider"></div> -->
+            <div class="section-divider"></div>
 
             <!-- SECCIÓN 2: ANIMACIONES DEL REPRODUCTOR -->
-            <section class="animation-section" style="margin-top: -20px !important;">
+            <section class="animation-section">
                 <header class="section-header">
                     <div class="header-content">
                         <h4 class="title">Reproductor</h4>
@@ -238,8 +155,12 @@ const presetColors: ThemeColor[] = [
     box-sizing: border-box;
 }
 
-/* Header & Custom Picker */
-.theme-header,
+/* Secciones */
+.themes-section,
+.animation-section {
+    margin-bottom: 2rem;
+}
+
 .section-header {
     display: flex;
     justify-content: space-between;
@@ -262,139 +183,14 @@ const presetColors: ThemeColor[] = [
     margin: 4px 0 0 0;
 }
 
-.custom-picker-tile {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 8px 16px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    color: white;
-}
-
-.custom-picker-tile:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: translateY(-2px);
-}
-
-.custom-picker-tile.active {
-    border-color: #fff;
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
-}
-
-.picker-preview {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.picker-preview img {
-    width: 20px;
-    height: 20px;
-}
-
-/* Grid de Colores */
-.color-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 1.25rem;
-}
-
-.color-card {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 16px;
-    padding: 8px;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 1px solid transparent;
-}
-
-.color-card:hover {
-    background: rgba(255, 255, 255, 0.08);
-    transform: scale(1.02);
-}
-
-.color-card.is-selected {
-    border-color: rgba(255, 255, 255, 0.3);
-    background: rgba(255, 255, 255, 0.12);
-}
-
-.color-fill {
-    width: 100%;
-    height: 80px;
-    border-radius: 10px;
-    position: relative;
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-}
-
-.color-info {
-    padding: 4px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.color-type {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: rgba(255, 255, 255, 0.4);
-    font-weight: 600;
-}
-
-.color-hex {
-    font-size: 12px;
-    font-family: 'Monaco', monospace;
-    color: rgba(255, 255, 255, 0.8);
-}
-
-/* Check Icon Overlay */
-.check-icon {
-    background: rgba(0, 0, 0, 0.2);
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(2px);
-}
-
-.check-icon svg {
-    width: 24px;
-    height: 24px;
-    color: white;
-}
-
-.hidden-input {
-    position: absolute;
-    width: 0;
-    height: 0;
-    opacity: 0;
-}
-
 /* Línea separadora */
 .section-divider {
     height: 1px;
     background: rgba(255, 255, 255, 0.1);
-    margin: 3rem 0;
+    margin: 2rem 0;
 }
 
 /* Sección de Animaciones */
-.animation-section {
-    margin-top: 1rem;
-}
-
 .reset-button {
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -410,10 +206,13 @@ const presetColors: ThemeColor[] = [
 }
 
 .reset-button:hover {
-    border-color: #1db954;
-    color: #1db954;
-    background: rgba(29, 185, 84, 0.05);
+    border-color: var(--accent-color);
+    /* ✅ Cambiado de #1db954 a variable */
+    color: var(--accent-color);
+    /* ✅ Cambiado de #1db954 a variable */
+    background: rgba(var(--accent-color-rgb, 29, 185, 84), 0.05);
 }
+
 
 .animation-grid {
     display: grid;
@@ -440,8 +239,9 @@ const presetColors: ThemeColor[] = [
 }
 
 .animation-card.is-selected {
-    border-color: #1db954;
-    background: rgba(29, 185, 84, 0.05);
+    border-color: var(--accent-color);
+    /* ✅ Cambiado de #1db954 a variable */
+    background: rgba(var(--accent-color-rgb, 29, 185, 84), 0.05);
 }
 
 .animation-preview {
@@ -455,9 +255,9 @@ const presetColors: ThemeColor[] = [
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.preview-emoji {
-    font-size: 3rem;
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+.lottie-preview {
+    width: 100%;
+    height: 100%;
 }
 
 .animation-info {
@@ -473,7 +273,8 @@ const presetColors: ThemeColor[] = [
 }
 
 .animation-id {
-    color: #1db954;
+    color: var(--accent-color);
+    /* ✅ Cambiado de #1db954 a variable */
     font-size: 0.75rem;
     display: flex;
     align-items: center;
@@ -502,13 +303,11 @@ const presetColors: ThemeColor[] = [
         padding: 1rem;
     }
 
-    .theme-header,
     .section-header {
         flex-direction: column;
         align-items: flex-start;
     }
 
-    .custom-picker-tile,
     .reset-button {
         width: 100%;
         justify-content: center;

@@ -365,6 +365,7 @@ const createNewPlaylist = async () => {
 
 .stat-icon i {
     font-size: 1.2rem;
+    color: var(--accent-color) !important;
 }
 
 .stat-info {

@@ -880,7 +880,7 @@ onBeforeUnmount(() => {
 }
 
 .author-badge {
-    color: #1db954;
+    color: var(--accent-color);
     /* Verde Spotify */
     font-size: 0.7rem;
     font-weight: 500;

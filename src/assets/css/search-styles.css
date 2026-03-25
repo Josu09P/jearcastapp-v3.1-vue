@@ -154,7 +154,7 @@ input::placeholder {
 }
 
 .btn i {
-    color: white;
+    color: white !important;
 }
 
 /* Ajustes responsivos para diferentes alturas de pantalla */

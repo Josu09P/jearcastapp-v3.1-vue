@@ -26,7 +26,6 @@ const toggleSidebar = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value;
 };
 
-
 const activeSection = ref('home')
 const changeSection = (section: string) => {
   activeSection.value = section
@@ -40,7 +39,8 @@ provide('changeSection', changeSection)
 .app-layout {
   display: flex;
   min-height: 100vh;
-  background: radial-gradient(circle at 20% 30%, rgba(10, 10, 10, 0.879), rgba(5, 5, 5, 1));
+  background: var(--main-bg-color);
+  background-attachment: fixed;
 }
 
 /* Sidebar */

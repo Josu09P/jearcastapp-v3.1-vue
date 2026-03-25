@@ -330,7 +330,7 @@ defineExpose({ refreshMixes, loadMixes })
 
 .mix-item-overlay i {
     font-size: 1.5rem;
-    color: white;
+    color: var(--accent-color) !important;
 }
 
 .mix-item-info {
@@ -374,7 +374,7 @@ defineExpose({ refreshMixes, loadMixes })
     padding: 2px 8px;
     border-radius: 20px;
     background: rgba(29, 185, 84, 0.1);
-    color: #1db954;
+    color: var(--accent-color);
     width: fit-content;
 }
 
@@ -430,7 +430,7 @@ defineExpose({ refreshMixes, loadMixes })
 }
 
 .mix-play-button:hover {
-    color: #1db954;
+    color: var(--accent-color);
     transform: scale(1.1);
 }
 

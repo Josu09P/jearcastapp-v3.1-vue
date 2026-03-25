@@ -7,6 +7,27 @@
   color-scheme: dark !important;
 }
 
+body, html, #app {
+  background-color: var(--main-bg-color);
+}
+
+.text-accent {
+  color: var(--accent-color);
+}
+
+.bg-accent {
+  background-color: var(--accent-color);
+}
+
+.border-accent {
+  border-color: var(--accent-color);
+}
+
+.btn-outline-light:hover {
+  background-color: var(--accent-color) !important;
+  border-color: var(--accent-color) !important;
+}
+
 /* Forzar colores de iconos Bootstrap */
 .bi, [class^="bi-"], [class*=" bi-"] {
   color: inherit !important;
@@ -132,7 +153,6 @@ html, body {
 }
 
 .song-row:hover {
-  background-color: rgba(255, 255, 255, 0.08) !important;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 

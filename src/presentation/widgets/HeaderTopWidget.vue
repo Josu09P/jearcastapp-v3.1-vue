@@ -9,7 +9,10 @@
           <span></span>
         </button>
         <div class="logo">
-          <span class="logo-text">Steel Music</span>
+          <span class="logo-text"
+            style="background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;">
+            Steel Music
+          </span>
         </div>
       </div>
 
@@ -196,7 +199,7 @@ function toggleSidebar() {
 .logo-text {
   font-size: 1.25rem;
   font-weight: 600;
-  background: linear-gradient(135deg, #fff 0%, #1db954 100%);
+  background: var(--brand-gradient);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -283,7 +286,7 @@ function toggleSidebar() {
 .user-avatar {
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, #414040, #1b7d3c);
+  background: linear-gradient(135deg, #d2c8c8, var(--accent-color));
   border-radius: 50%;
   display: flex;
   align-items: center;

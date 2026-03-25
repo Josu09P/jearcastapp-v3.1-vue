@@ -7,7 +7,10 @@
           <div class="brand-icon">
             <img src="@/assets/img/logo-v3-icon.png" alt="App Icon" class="app-icon" />
           </div>
-          <span class="brand-name" style="font-weight: bold;">JearCastMusic</span>
+          <span class="brand-name"
+            style="font-weight: bold; background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;">
+            JearCastMusic
+          </span>
         </div>
       </div>
 
@@ -101,7 +104,7 @@ function toggleSidebar() {
 .brand-name {
   font-size: 1.3rem;
   font-weight: 600;
-  background: linear-gradient(135deg, #fff, #1db954);
+  background: var(--brand-gradient);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -170,7 +173,7 @@ function toggleSidebar() {
   transform: translateY(-50%);
   width: 3px;
   height: 20px;
-  background: #1db954;
+  background: var(--accent-color);
   border-radius: 3px;
 }
 
@@ -180,12 +183,12 @@ function toggleSidebar() {
 }
 
 .nav-link.active {
-  background: rgba(29, 185, 84, 0.1);
-  color: #1db954;
+  background: rgba(var(--accent-color-rgb, 29, 185, 84), 0.1);
+  color: var(--accent-color);
 }
 
 .nav-link.active i {
-  color: #1db954;
+  color: var(--accent-color);
 }
 
 /* Footer */
