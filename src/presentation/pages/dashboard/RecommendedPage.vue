@@ -214,7 +214,7 @@ onMounted(async () => {
                             <button @click="playSong(index)" class="btn btn-link p-0 play-action-btn"
                                 title="Reproducir">
                                 <i class="bi bi-play-circle-fill"
-                                    style="font-size: 1.5rem; color: rgba(255, 255, 255, 0.05);"></i>
+                                    style="font-size: 1.5rem; color: var(--accent-color) !important"></i>
                             </button>
                         </div>
                     </div>
