@@ -176,7 +176,7 @@ onMounted(() => {
                     </div>
 
                     <div class="col-1 col-md-2 d-flex justify-content-center align-items-center">
-                        <button @click="removeFavorite(fav.video_id)" class="btn btn-link p-0 remove-btn"
+                        <button @click="removeFavorite(fav.video_id)" class="btn btn-link p-0 remove-btn me-2"
                             title="Eliminar de favoritos">
                             <span v-if="deletingMap[fav.video_id]"
                                 class="spinner-border spinner-border-sm text-secondary"></span>

@@ -3,10 +3,10 @@
     <div class="header-container">
       <!-- Logo y botón de menú -->
       <div class="header-left">
-        <button class="menu-toggle" @click="toggleSidebar" :class="{ 'active': isSidebarCollapsed }">
-          <span></span>
-          <span></span>
-          <span></span>
+        <button class="menu-toggle" @click="toggleSidebar">
+          <i class="bi bi-display" v-if="!isSidebarCollapsed"
+            style="font-size: 18px !important; color: white !important;"></i>
+          <i class="bi bi-display-fill" v-else style="font-size: 18px !important; color: white !important;"></i>
         </button>
         <div class="logo">
           <span class="logo-text"
@@ -151,42 +151,22 @@ function toggleSidebar() {
 }
 
 .menu-toggle {
-  background: rgba(255, 255, 255, 0.05);
+  background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  border-radius: 1.3rem;
   width: 40px;
   height: 40px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.menu-toggle span {
-  width: 18px;
-  height: 2px;
-  background: white;
-  border-radius: 2px;
   transition: all 0.2s ease;
 }
 
 .menu-toggle:hover {
   background: rgba(255, 255, 255, 0.1);
-}
-
-.menu-toggle.active span:nth-child(1) {
-  transform: rotate(45deg) translate(4px, 4px);
-}
-
-.menu-toggle.active span:nth-child(2) {
-  opacity: 0;
-}
-
-.menu-toggle.active span:nth-child(3) {
-  transform: rotate(-45deg) translate(5px, -5px);
 }
 
 .logo {
@@ -369,7 +349,16 @@ function toggleSidebar() {
   }
 
   .search-wrapper {
-    max-width: 300px;
+    max-width: 20px;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex;
+  }
+
+  .search-shortcut {
+    display: none;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .search-shortcut {
@@ -379,7 +368,7 @@ function toggleSidebar() {
 
 @media (max-width: 576px) {
   .search-wrapper {
-    max-width: 200px;
+    max-width: 10px;
   }
 
   .user-info {

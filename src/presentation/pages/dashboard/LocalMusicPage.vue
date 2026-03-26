@@ -83,8 +83,8 @@ const playTrack = (index: number) => {
 <template>
     <DashboardLayout>
         <div class="container-fluid px-4 py-4">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h4 class="text-white mb-0 fw-bold">Música Local</h4>
+            <div class="d-flex justify-content-between align-items-center mb-4" style="margin-top: -22px !important;">
+                <h4 class="text-white mb-0 fw-bold" style="margin-top: 0px !important;">Música Local</h4>
             </div>
 
             <!-- Configuración de carpeta -->
