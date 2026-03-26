@@ -6,8 +6,8 @@ export type Track = {
   video_thumbnail: string
   video_author?: string
   video_likes?: string | number
-  isLocal?: boolean // Nueva propiedad para identificar música local
-  localPath?: string // Ruta del archivo local
+  isLocal?: boolean
+  localPath?: string //LOCAL PATH
 }
 
 export const usePlayerStore = defineStore('player', {
@@ -16,7 +16,6 @@ export const usePlayerStore = defineStore('player', {
     currentIndex: 0,
     isPlaying: false,
     isShuffling: false,
-    // FULLSCREEN -> NEW
     isFullScreen: false,
   }),
   getters: {

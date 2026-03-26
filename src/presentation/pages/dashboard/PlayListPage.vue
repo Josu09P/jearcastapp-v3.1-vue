@@ -1,26 +1,30 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import DashboardLayout from '@/presentation/layouts/DashboardLayout.vue'
 import Toastify from 'toastify-js'
 import Swal from 'sweetalert2'
 import type { PlaylistModel } from '@/domain/models/PlayListModel'
 import type { PlaylistSongModel } from '@/domain/models/PlaylistSongModel'
-import { getPlaylistsByUser } from '@/domain/usecases/playlists/GetPlaylistsByUser'
 import { getSongsFromPlaylist } from '@/domain/usecases/playlists/GetSongsFromPlaylist'
 import { deleteSongFromPlaylist } from '@/domain/usecases/playlists/DeleteSongFromPlaylist'
 import { deletePlaylist } from '@/domain/usecases/playlists/DeletePlayList'
 import { usePlayerStore } from '@/stores/player-store'
-import { useUserStore } from '@/stores/user'
+import { useUserDataStore } from '@/stores/userDataStore'
 
-const userStore = useUserStore()
-const playlists = ref<PlaylistModel[]>([])
+const userDataStore = useUserDataStore()
+const playerStore = usePlayerStore()
+
+// Usar datos del store (ya cargados en el layout)
+const playlists = computed(() => userDataStore.playlists)
+const loadingPlaylists = computed(() => userDataStore.loading.playlists)
+const playlistSongCounts = computed(() => userDataStore.playlistSongCounts)
+
+// Estado local
 const songs = ref<PlaylistSongModel[]>([])
 const currentPlaylistId = ref<string | null>(null)
 const currentPlaylistName = ref<string>('')
 const deletingMap = ref<Record<string, boolean>>({})
-const playlistSongCounts = ref<Record<string, number>>({})
 const playlistImages = ref<Record<string, string>>({})
-const loadingPlaylists = ref(false)
 const loadingSongs = ref(false)
 const sortOption = ref<'recent' | 'alphabetical'>('recent')
 const showAllPlaylists = ref(true)
@@ -30,7 +34,7 @@ const PLAYLIST_IMAGES_KEY = 'jearcast_playlist_images'
 
 // ==================== UTILIDADES ====================
 const getUserId = (): string | null => {
-    return userStore.id || null
+    return userDataStore.getUserId()
 }
 
 // Cargar imágenes guardadas de localStorage
@@ -98,39 +102,15 @@ const selectPlaylistImage = async (playlistId: string) => {
 }
 
 // ==================== PLAYLISTS ====================
-async function loadPlaylists() {
-    const userId = getUserId()
-    if (!userId) return
-
-    loadingPlaylists.value = true
-    try {
-        playlists.value = await getPlaylistsByUser(userId)
-
-        // Cargar imágenes guardadas
-        loadPlaylistImages()
-
-        // Cargar conteo de canciones para cada playlist
-        for (const playlist of playlists.value) {
-            if (playlist.id) {
-                try {
-                    const playlistSongs = await getSongsFromPlaylist(playlist.id)
-                    playlistSongCounts.value[playlist.id] = playlistSongs.length
-                } catch (e) {
-                    console.error(`Error cargando canciones para playlist ${playlist.id}:`, e)
-                    playlistSongCounts.value[playlist.id] = 0
-                }
-            }
-        }
-    } catch (e) {
-        Toastify({
-            text: 'Error cargando playlists',
-            className: 'toast-glass',
-            gravity: 'top',
-            position: 'right'
-        }).showToast()
-    } finally {
-        loadingPlaylists.value = false
-    }
+async function refreshPlaylists() {
+    await userDataStore.invalidateAndRefreshPlaylists()
+    Toastify({
+        text: 'Playlists actualizadas',
+        duration: 3000,
+        className: 'toast-glass',
+        gravity: 'top',
+        position: 'right'
+    }).showToast()
 }
 
 function saveSelectedPlaylist(id: string, name: string) {
@@ -155,7 +135,6 @@ async function loadSongs(playlistId: string, playlistName: string) {
 
     try {
         songs.value = await getSongsFromPlaylist(playlistId)
-        playlistSongCounts.value[playlistId] = songs.value.length
     } catch (e) {
         Toastify({
             text: 'Error cargando canciones',
@@ -194,7 +173,6 @@ function playSong(index: number) {
         video_title: song.video_title,
         video_thumbnail: song.video_thumbnail
     }))
-    const playerStore = usePlayerStore()
     playerStore.setPlaylist(playlist, index)
 }
 
@@ -220,10 +198,8 @@ async function deleteSong(videoId: string) {
         await deleteSongFromPlaylist(currentPlaylistId.value, videoId)
         songs.value = songs.value.filter(song => song.video_id !== videoId)
 
-        // Actualizar conteo
-        if (currentPlaylistId.value) {
-            playlistSongCounts.value[currentPlaylistId.value] = songs.value.length
-        }
+        // Actualizar conteo en el store
+        await userDataStore.updatePlaylistSongCount(currentPlaylistId.value)
 
         Toastify({
             text: 'Canción eliminada',
@@ -265,14 +241,11 @@ async function confirmDeletePlaylist(playlistId: string) {
     if (result.isConfirmed) {
         try {
             await deletePlaylist(playlistId)
-            playlists.value = playlists.value.filter(p => p.id !== playlistId)
 
-            // Eliminar imagen guardada
-            if (playlistImages.value[playlistId]) {
-                delete playlistImages.value[playlistId]
-                localStorage.setItem(PLAYLIST_IMAGES_KEY, JSON.stringify(playlistImages.value))
-            }
+            // Invalidar playlists en el store después de eliminar
+            await userDataStore.invalidateAndRefreshPlaylists()
 
+            // Actualizar vista local
             if (currentPlaylistId.value === playlistId) {
                 songs.value = []
                 currentPlaylistId.value = null
@@ -300,24 +273,26 @@ async function confirmDeletePlaylist(playlistId: string) {
 }
 
 // ==================== WATCHERS ====================
-// Actualizar conteo cuando cambian las canciones
-watch(songs, (newSongs) => {
+// Actualizar conteo local cuando cambian las canciones
+watch(songs, async (newSongs) => {
     if (currentPlaylistId.value) {
-        playlistSongCounts.value[currentPlaylistId.value] = newSongs.length
+        await userDataStore.updatePlaylistSongCount(currentPlaylistId.value)
     }
 }, { deep: true })
 
 // ==================== LIFECYCLE ====================
-onMounted(async () => {
-    await loadPlaylists()
+onMounted(() => {
+    loadPlaylistImages()
 
     const savedId = localStorage.getItem(LOCAL_PLAYLIST_KEY)
     if (savedId) {
         const savedPlaylist = playlists.value.find(p => p.id === savedId)
         if (savedPlaylist) {
-            await loadSongs(savedId, savedPlaylist.name)
+            loadSongs(savedId, savedPlaylist.name)
         }
     }
+
+    console.log('Playlists: usando datos del store (sin petición)')
 })
 </script>
 
@@ -346,11 +321,18 @@ onMounted(async () => {
                     </button>
 
                     <!-- Botón recargar playlists -->
-                    <button @click="loadPlaylists" :disabled="loadingPlaylists"
-                        class="btn btn-outline-light btn-sm rounded-pill px-3 refresh-button-playlists">
+                    <button @click="refreshPlaylists" :disabled="loadingPlaylists"
+                        class="btn btn-outline-light btn-sm rounded-pill px-3 refresh-button-playlists"
+                        title="Refrescar">
                         <span v-if="loadingPlaylists" class="spinner-border spinner-border-sm me-2"></span>
                         <i v-else class="bi bi-arrow-clockwise"></i>
                     </button>
+
+                    <!-- Indicador de caché -->
+                    <span v-if="!loadingPlaylists && playlists.length > 0" class="cached-badge" title="Datos en caché"
+                        style="border: 1px solid rgba(255, 255, 255, 0.08);">
+                        <i class="bi bi-database"></i>
+                    </span>
                 </div>
             </div>
 
@@ -372,7 +354,7 @@ onMounted(async () => {
                                 </button>
                             </div>
 
-                            <!-- Badge con cantidad de canciones (AHORA FUNCIONA) -->
+                            <!-- Badge con cantidad de canciones (✅ usando playlistSongCounts del store) -->
                             <span class="song-count-badge">
                                 <i class="bi bi-music-note-beamed me-1"></i>
                                 {{ playlistSongCounts[playlist.id!] || 0 }}
@@ -475,7 +457,6 @@ onMounted(async () => {
         </div>
     </DashboardLayout>
 </template>
-
 <style scoped>
 @import url('@/assets/css/playlist-styles.css');
 
@@ -495,5 +476,16 @@ onMounted(async () => {
     transition: background-color 0.3s, color 0.3s;
     border: 1px solid rgba(255, 255, 255, 0.1);
     background-color: rgba(255, 255, 255, 0.05);
+}
+
+.cached-badge {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.4);
+    display: flex;
+    align-items: center;
+    cursor: help;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0 8px;
+    border-radius: 20px;
 }
 </style>

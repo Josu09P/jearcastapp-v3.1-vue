@@ -12,7 +12,7 @@ export interface AnimationOption {
   id: string
   name: string
   data: any
-  preview: string // emoji para vista previa
+  preview: string // OPTIONAL
 }
 
 export const animations: AnimationOption[] = [

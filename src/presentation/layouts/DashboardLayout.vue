@@ -16,10 +16,12 @@
 </template>
 
 <script setup lang="ts">
-import { provide, ref } from 'vue';
+import { onMounted, provide, ref } from 'vue';
 import HeaderTopWidget from '@/presentation/widgets/HeaderTopWidget.vue';
 import HeaderLeftWidget from '@/presentation/widgets/HeaderLeftWidget.vue';
+import { useUserDataStore } from '@/stores/userDataStore';
 
+const userDataStore = useUserDataStore();
 const isSidebarCollapsed = ref(false);
 
 const toggleSidebar = () => {
@@ -33,6 +35,15 @@ const changeSection = (section: string) => {
 
 provide('activeSection', activeSection)
 provide('changeSection', changeSection)
+
+// FETCH USER DATA ON MOUNT
+onMounted(async () => {
+  await Promise.all([
+    userDataStore.fetchFavorites(),
+    userDataStore.fetchPlaylists(),
+    userDataStore.fetchRecommended(),
+  ])
+})
 </script>
 
 <style scoped>

@@ -154,8 +154,8 @@ function toggleSidebar() {
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 1.3rem;
-  width: 40px;
-  height: 40px;
+  width: 33px;
+  height: 33px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -299,11 +299,15 @@ function toggleSidebar() {
 .logout-btn {
   display: flex;
   align-items: center;
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
   gap: 0.5rem;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 30px;
-  padding: 0.5rem 1rem;
+  padding-left: 13px;
+  padding-right: 10px;
   color: rgba(255, 255, 255, 0.7);
   font-size: 0.85rem;
   cursor: pointer;
@@ -311,9 +315,7 @@ function toggleSidebar() {
 }
 
 .logout-btn:hover {
-  border-color: #ff4d4d;
   color: #ff4d4d;
-  background: rgba(255, 77, 77, 0.05);
 }
 
 .logout-btn i {

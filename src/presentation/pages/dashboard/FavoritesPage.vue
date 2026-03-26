@@ -1,70 +1,35 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import DashboardLayout from '@/presentation/layouts/DashboardLayout.vue'
-import type { FavoriteMusicModel } from '@/domain/models/FavoriteMusicModel'
-import { getFavoritesByUser } from '@/domain/usecases/favorites/GetFavoritesByUser'
+import { useUserDataStore } from '@/stores/userDataStore'
 import { removeFavoriteMusic } from '@/domain/usecases/favorites/RemoveFavoriteMusic'
 import Toastify from 'toastify-js'
 import { usePlayerStore } from '@/stores/player-store'
 
-const favorites = ref<FavoriteMusicModel[]>([])
-const sortedFavorites = ref<FavoriteMusicModel[]>([])
+const userDataStore = useUserDataStore()
+const playerStore = usePlayerStore()
 const sortOption = ref<'recent' | 'alphabetical'>('recent')
-
-const loading = ref(false)
-const error = ref<string | null>(null)
 const deletingMap = ref<Record<string, boolean>>({})
-const hasLoaded = ref(false)
 
-const getUserId = (): string | null => {
-    const raw = localStorage.getItem('userJearCastInfo')
-    if (!raw) return null
-    try {
-        const parsed = JSON.parse(raw)
-        return parsed.id || null
-    } catch {
-        return null
-    }
-}
+// ✅ Usar datos del store (ya cargados en el layout)
+const favorites = computed(() => userDataStore.favorites)
+const loading = computed(() => userDataStore.loading.favorites)
 
-function sortFavorites() {
+// Ordenar favoritos
+const sortedFavorites = computed(() => {
     if (sortOption.value === 'recent') {
-        sortedFavorites.value = [...favorites.value].sort((a, b) => {
+        return [...favorites.value].sort((a, b) => {
             return (b.created_at?.toDate()?.getTime() || 0) - (a.created_at?.toDate()?.getTime() || 0)
         })
-    } else if (sortOption.value === 'alphabetical') {
-        sortedFavorites.value = [...favorites.value].sort((a, b) => {
+    } else {
+        return [...favorites.value].sort((a, b) => {
             return a.video_title.localeCompare(b.video_title)
         })
     }
-}
-
-async function reloadFavorites(force = false) {
-    if (hasLoaded.value && !force) return
-
-    const userId = getUserId()
-    if (!userId) {
-        error.value = 'Usuario no autenticado'
-        return
-    }
-
-    loading.value = true
-    error.value = null
-
-    try {
-        favorites.value = await getFavoritesByUser(userId)
-        sortFavorites()
-        hasLoaded.value = true
-    } catch (e) {
-        error.value = 'Error cargando favoritos'
-        console.error(e)
-    } finally {
-        loading.value = false
-    }
-}
+})
 
 async function removeFavorite(videoId: string) {
-    const userId = getUserId()
+    const userId = userDataStore.getUserId()
     if (!userId) return
 
     deletingMap.value[videoId] = true
@@ -78,6 +43,10 @@ async function removeFavorite(videoId: string) {
 
     try {
         await removeFavoriteMusic({ user_id: userId, video_id: videoId })
+
+        // ✅ Invalidar y recargar favoritos
+        await userDataStore.invalidateAndRefreshFavorites()
+
         Toastify({
             text: 'Eliminado de favoritos',
             duration: 1500,
@@ -85,7 +54,6 @@ async function removeFavorite(videoId: string) {
             gravity: 'top',
             position: 'right',
         }).showToast()
-        await reloadFavorites(true)
     } catch (e) {
         Toastify({
             text: 'Error al eliminar favorito',
@@ -106,20 +74,27 @@ function playFavorite(index: number) {
         video_title: fav.video_title,
         video_thumbnail: fav.video_thumbnail,
     }))
-    const playerStore = usePlayerStore()
-
     playerStore.setPlaylist(playlist, index)
 }
 
 function toggleSortOption() {
     sortOption.value = sortOption.value === 'recent' ? 'alphabetical' : 'recent'
-    sortFavorites()
 }
 
+async function refreshFavorites() {
+    await userDataStore.invalidateAndRefreshFavorites()
+    Toastify({
+        text: 'Favoritos actualizados',
+        duration: 1500,
+        className: 'toast-glass',
+        gravity: 'top',
+        position: 'right',
+    }).showToast()
+}
 
-
+// ✅ No cargar datos en onMounted, ya están precargados en el layout
 onMounted(() => {
-    reloadFavorites()
+    console.log('✅ Favoritos: usando datos del store (sin petición)')
 })
 </script>
 
@@ -135,15 +110,19 @@ onMounted(() => {
                             class="me-1" />
                         {{ sortOption === 'recent' ? 'Recientes' : 'A-Z' }}
                     </button>
-                    <button @click="() => reloadFavorites(true)" :disabled="loading"
-                        class="btn btn-outline-light btn-sm rounded-pill px-3 refresh-button-favorites">
+                    <button @click="refreshFavorites" :disabled="loading"
+                        class="btn btn-outline-light btn-sm rounded-pill px-3 refresh-button-favorites"
+                        title="Refrescar Favoritos" style="border: 1px solid rgba(255, 255, 255, 0.08);">
                         <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
                         <i v-else class="bi bi-arrow-clockwise"></i>
                     </button>
+                    <span v-if="!loading && favorites.length > 0" class="cached-badge" title="Datos en caché">
+                        <i class="bi bi-database"></i>
+                    </span>
                 </div>
             </div>
 
-            <div class="row px-3 py-2 text-secondary d-none d-md-flex mb-2 border-bottom border-white border-opacity-10"
+            <div class="row px-3 py-2 text-secondary d-none d-md-flex mb-2 border-bottom border-white rounded border-opacity-10"
                 style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">
                 <div class="col-1 text-center">#</div>
                 <div class="col-6">Título</div>
@@ -203,5 +182,16 @@ onMounted(() => {
     transition: background-color 0.3s, color 0.3s;
     border: 1px solid rgba(255, 255, 255, 0.1);
     background-color: rgba(255, 255, 255, 0.05);
+}
+
+.cached-badge {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.4);
+    display: flex;
+    align-items: center;
+    cursor: help;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0 8px;
+    border-radius: 20px;
 }
 </style>
