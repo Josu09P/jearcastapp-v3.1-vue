@@ -1,5 +1,5 @@
 <template>
-    <div class="lyrics-container" :class="{ 'active': visible }">
+    <div class="lyrics-container" :class="{ 'active': visible, 'two-columns': twoColumnLayout }">
         <div class="lyrics-header">
             <button class="close-lyrics" @click="$emit('close')">
                 <i class="bi bi-x-lg"></i>
@@ -36,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch } from 'vue'
 import type { LyricsData } from '@/data/services/youtube/LyricsService'
 
 const props = defineProps<{
@@ -44,6 +44,7 @@ const props = defineProps<{
     loading: boolean
     visible: boolean
     currentTime: number
+    twoColumnLayout?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -76,12 +77,16 @@ watch(() => props.currentTime, (time) => {
     if (newIndex !== currentLineIndex.value) {
         currentLineIndex.value = newIndex
 
-        // Scroll a la línea activa
+        // Scroll a la línea activa con centrado perfecto
         if (newIndex >= 0 && lineRefs.value[newIndex] && lyricsContainer.value) {
             const activeLine = lineRefs.value[newIndex]
             const container = lyricsContainer.value
-            const offsetTop = activeLine!.offsetTop - container.offsetTop
-            const targetScroll = offsetTop - (container.clientHeight / 2) + (activeLine!.clientHeight / 2)
+            const lineHeight = activeLine!.clientHeight
+            const containerHeight = container.clientHeight
+
+            // Calcular posición para centrar la línea activa
+            const offsetTop = activeLine!.offsetTop
+            const targetScroll = offsetTop - (containerHeight / 2) + (lineHeight / 2)
 
             container.scrollTo({
                 top: Math.max(0, targetScroll),
@@ -101,7 +106,6 @@ watch(() => props.lyrics, () => {
 </script>
 
 <style scoped>
-/* En el archivo del reproductor o en el scoped de LyricsDisplay, ajusta */
 .lyrics-container {
     position: absolute;
     top: 0;
@@ -120,6 +124,21 @@ watch(() => props.lyrics, () => {
     border-radius: 12px;
     overflow: hidden;
     pointer-events: auto;
+    padding-top: 30px !important;
+}
+
+/* Modo two-columns (cuando está en el layout de dos columnas) */
+.lyrics-container.two-columns {
+    position: relative;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(20px);
+    border-radius: 0;
+    transform: none;
+    pointer-events: auto;
+}
+
+.lyrics-container.two-columns.active {
+    transform: none;
 }
 
 .unified-player.fullscreen-mode .lyrics-container {
@@ -130,12 +149,18 @@ watch(() => props.lyrics, () => {
     transform: translateX(0);
 }
 
+/* Header */
 .lyrics-header {
     padding: 1.2rem 1.5rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     position: relative;
     flex-shrink: 0;
     background: rgba(0, 0, 0, 0.3);
+}
+
+.lyrics-container.two-columns .lyrics-header {
+    padding: 1rem 1.5rem;
+    background: rgba(0, 0, 0, 0.5);
 }
 
 .close-lyrics {
@@ -178,10 +203,66 @@ watch(() => props.lyrics, () => {
     display: block;
 }
 
+/* Contenido de letras - CENTRADO VERTICALMENTE */
 .lyrics-content {
     flex: 1;
     overflow-y: auto;
-    padding: 1.5rem;
+    padding: 2rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    scroll-behavior: smooth;
+}
+
+/* Cuando no hay suficientes líneas para centrar, mantener el scroll normal */
+.lyrics-content:has(.synced-lyrics) {
+    justify-content: flex-start;
+}
+
+/* Para letras sincronizadas, mantener el scroll normal pero centrar visualmente */
+.synced-lyrics {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 1rem 0;
+}
+
+/* Para letras normales (plain) también centrar */
+.plain-lyrics {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.plain-lyrics p {
+    margin-bottom: 1rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1rem;
+}
+
+/* Líneas de letras */
+.lyrics-line {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.6);
+    transition: all 0.2s ease;
+    padding: 0.4rem 0;
+    cursor: default;
+    text-align: center;
+    letter-spacing: 0.3px;
+}
+
+.lyrics-line.active {
+    color: var(--accent-color, #1db954);
+    font-size: 1.2rem;
+    font-weight: 600;
+    text-shadow: 0 0 20px rgba(29, 185, 84, 0.4);
+    transform: scale(1.02);
 }
 
 /* Scrollbar personalizada */
@@ -203,29 +284,7 @@ watch(() => props.lyrics, () => {
     background: rgba(255, 255, 255, 0.3);
 }
 
-.synced-lyrics {
-    display: flex;
-    flex-direction: column;
-    gap: 0.8rem;
-}
-
-.lyrics-line {
-    font-size: 0.95rem;
-    line-height: 1.5;
-    color: rgba(255, 255, 255, 0.5);
-    transition: all 0.2s ease;
-    padding: 0.25rem 0;
-    cursor: default;
-}
-
-.lyrics-line.active {
-    color: var(--accent-color);
-    font-size: 1.1rem;
-    font-weight: 500;
-    text-shadow: 0 0 15px rgba(29, 185, 84, 0.3);
-    transform: scale(1.02);
-}
-
+/* Estados de carga y error */
 .lyrics-loading,
 .lyrics-error {
     display: flex;
@@ -242,5 +301,43 @@ watch(() => props.lyrics, () => {
 .lyrics-error i {
     font-size: 3rem;
     opacity: 0.5;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .lyrics-content {
+        padding: 1.5rem 1rem;
+    }
+
+    .synced-lyrics {
+        gap: 0.6rem;
+    }
+
+    .lyrics-line {
+        font-size: 0.9rem;
+        padding: 0.3rem 0;
+    }
+
+    .lyrics-line.active {
+        font-size: 1.05rem;
+    }
+
+    .plain-lyrics p {
+        font-size: 0.9rem;
+    }
+}
+
+@media (min-width: 1200px) {
+    .synced-lyrics {
+        max-width: 700px;
+    }
+
+    .lyrics-line {
+        font-size: 1.05rem;
+    }
+
+    .lyrics-line.active {
+        font-size: 1.25rem;
+    }
 }
 </style>

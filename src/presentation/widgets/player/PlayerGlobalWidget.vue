@@ -30,11 +30,11 @@
                         <div class="lyrics-toggle">
                             <button @click="toggleLyrics" class="lyrics-btn" :class="{ active: showLyrics }">
                                 <i class="bi bi-music-note-beamed"></i>
-                                <span>Letras</span>
+                                <span>Letra</span>
                             </button>
                         </div>
                         <!-- Botón de prueba temporal -->
-                        <div class="lyrics-toggle">
+                        <div class="lyrics-toggle d-none">
                             <button @click="testLyricsDisplay" class="lyrics-btn"
                                 style="background: #ff4d4d; border-color: #ff4d4d;">
                                 <i class="bi bi-bug"></i>
@@ -131,8 +131,8 @@
                 </div>
             </div>
 
-            <!-- Panel de prueba de letras (fuera del reproductor) -->
-            <div v-if="showDebugLyrics" class="debug-lyrics-overlay" @click="showDebugLyrics = false">
+            <!-- Panel de prueba de letras - SOLO PARA DEBUG -->
+            <div v-if="showDebugLyrics" class="debug-lyrics-overlay d-none" @click="showDebugLyrics = false">
                 <div class="debug-lyrics-content" @click.stop>
                     <button class="debug-close" @click="showDebugLyrics = false">✕</button>
                     <h3>{{ currentTrack?.video_title || 'Letras de prueba' }}</h3>
@@ -166,7 +166,7 @@
                 </div>
             </div>
 
-            <!-- ✅ COMPONENTE DE LETRAS DENTRO DEL REPRODUCTOR -->
+            <!-- COMPONENTE DE LETRAS DENTRO DEL REPRODUCTOR -->
             <LyricsDisplay :lyrics="currentLyrics" :loading="loadingLyrics" :visible="showLyrics"
                 :current-time="currentTime" @close="closeLyrics" />
         </div>
@@ -193,6 +193,7 @@ import {
     onLocalAudioEnded
 } from '@/data/services/audio/LocalAudioService'
 import { LyricsService, type LyricsData } from '@/data/services/youtube/LyricsService';
+import LyricsDisplay from '../LyricsDisplay.vue';
 
 /* ==================== TIPOS ==================== */
 interface Position { x: number; y: number }
@@ -897,7 +898,6 @@ onBeforeUnmount(() => {
 <style scoped>
 @import url('@/assets/css/player-styles.css');
 
-/* Estilos de prueba - fuera del reproductor */
 .debug-lyrics-overlay {
     position: fixed;
     top: 0;
@@ -1125,9 +1125,9 @@ onBeforeUnmount(() => {
 }
 
 .lyrics-btn {
-    background: rgba(255, 255, 255, 0.1);
+    background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 30px;
+    border-radius: 10px;
     padding: 6px 12px;
     color: white;
     display: flex;
