@@ -9,7 +9,7 @@
 /* ==================== CONTENEDOR PRINCIPAL ==================== */
 .unified-player {
     position: fixed;
-    z-index: 2000;
+    z-index: 5000;
     transition: all var(--transition-duration) cubic-bezier(0.16, 1, 0.3, 1);
     will-change: transform, width, height, top, left;
 }
@@ -44,7 +44,7 @@
     padding: 0;
     background: #000;
     backdrop-filter: none;
-    z-index: 3000;
+    z-index: 2000;
 }
 
 /* ==================== BACKGROUND BLUR ==================== */
@@ -152,6 +152,22 @@
     margin-top: 4px;
     height: calc(var(--player-height) - 100px);
     max-height: calc(var(--player-height) - 100px);
+}
+
+/* Cuando las letras están activas, reducir opacidad del video wrapper */
+.video-section.with-lyrics .video-wrapper {
+    opacity: 0.4;
+    transition: opacity 0.3s ease;
+}
+
+/* Asegurar que el contenedor del video no tape las letras */
+.video-section {
+    position: relative;
+    z-index: 1;
+}
+
+.lyrics-container {
+    z-index: 100;
 }
 
 /* ==================== VIDEO WRAPPER ==================== */

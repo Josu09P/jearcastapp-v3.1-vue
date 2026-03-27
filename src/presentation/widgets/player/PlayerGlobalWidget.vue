@@ -5,7 +5,7 @@
             'mini-mode': !playerStore.isFullScreen
         }" :style="!playerStore.isFullScreen ? { top: `${position.y}px`, left: `${position.x}px` } : {}">
 
-            <!-- Background Blur (solo en fullscreen) -->
+            <!-- Background Blur -->
             <div v-if="playerStore.isFullScreen" class="background-blur"
                 :style="{ backgroundImage: `url(${currentTrack?.video_thumbnail})` }">
             </div>
@@ -24,10 +24,27 @@
                         </small>
                         <h5 class="mb-0 text-white fw-bold">{{ currentTrack?.video_title }}</h5>
                     </div>
-                    <div style="width: 40px;"></div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <div style="width: 40px;"></div>
+                        <!-- Botón de letras dentro del header -->
+                        <div class="lyrics-toggle">
+                            <button @click="toggleLyrics" class="lyrics-btn" :class="{ active: showLyrics }">
+                                <i class="bi bi-music-note-beamed"></i>
+                                <span>Letras</span>
+                            </button>
+                        </div>
+                        <!-- Botón de prueba temporal -->
+                        <div class="lyrics-toggle">
+                            <button @click="testLyricsDisplay" class="lyrics-btn"
+                                style="background: #ff4d4d; border-color: #ff4d4d;">
+                                <i class="bi bi-bug"></i>
+                                <span>Test</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- HEADER - Mini Player (flotante) -->
+                <!-- HEADER - Mini Player -->
                 <div v-else class="header-mini d-flex justify-content-between align-items-center"
                     @mousedown="startDrag">
                     <span class="title text-truncate">{{ currentTrack?.video_title || 'Sin reproducción' }}</span>
@@ -44,24 +61,20 @@
                 <!-- SECCIÓN DE VIDEO/ANIMACIÓN -->
                 <div class="video-section" :class="{
                     'fullscreen': playerStore.isFullScreen,
+                    'with-lyrics': playerStore.isFullScreen && showLyrics,
                     'mini': !playerStore.isFullScreen && isExpanded
                 }">
-                    <!-- Reemplaza la sección del video wrapper -->
+                    <!-- Video wrapper -->
                     <div class="video-wrapper" :class="{
                         'fullscreen': playerStore.isFullScreen,
                         'mini-hidden': !playerStore.isFullScreen
                     }">
-                        <!-- Iframe de YouTube (solo para música de YouTube) -->
                         <div v-if="!isLocalPlayback" ref="playerContainer" class="iframe-element"></div>
-
-                        <!-- Placeholder para música local -->
                         <div v-else class="local-player-placeholder">
                             <i class="bi bi-file-music-fill"></i>
                             <p>{{ currentTrack?.video_title }}</p>
                             <small>{{ currentTrack?.video_author }}</small>
                         </div>
-
-                        <!-- Velo con blur (solo visible en fullscreen) -->
                         <div v-if="playerStore.isFullScreen" class="video-veil"
                             :class="{ 'blur-active': isVeilBlurActive }"></div>
                     </div>
@@ -72,7 +85,7 @@
                     </div>
                 </div>
 
-                <!-- INFO DEL AUTOR - CORREGIDO -->
+                <!-- INFO DEL AUTOR -->
                 <div v-if="currentTrack" class="author-info-section" :class="{
                     'fullscreen': playerStore.isFullScreen,
                     'mini': !playerStore.isFullScreen
@@ -87,7 +100,6 @@
 
                 <!-- CONTROLES -->
                 <div class="controls-wrapper" :class="{ 'fullscreen': playerStore.isFullScreen }">
-                    <!-- Barra de progreso -->
                     <div class="progress-container" :class="{ 'fullscreen': playerStore.isFullScreen }">
                         <input type="range" min="0" max="100" step="0.1" v-model="progressValue" @input="handleSeek"
                             @mousedown="handleSeekStart" @mouseup="handleSeekEnd" class="form-range custom-range" />
@@ -97,25 +109,20 @@
                         </div>
                     </div>
 
-                    <!-- Botones de control -->
                     <div class="buttons-container" :class="{ 'fullscreen': playerStore.isFullScreen }">
                         <button @click="toggleShuffle" class="control-btn secondary"
                             :class="{ 'active': playerStore.isShuffling }">
                             <i class="bi bi-shuffle"></i>
                         </button>
-
                         <button @click="prev" class="control-btn main">
                             <i class="bi bi-skip-start-fill"></i>
                         </button>
-
                         <button @click="togglePlayPause" class="control-btn play">
                             <i :class="isPlaying ? 'bi bi-pause-fill' : 'bi bi-play-fill'"></i>
                         </button>
-
                         <button @click="next" class="control-btn main">
                             <i class="bi bi-skip-end-fill"></i>
                         </button>
-
                         <button @click="toggleRepeat" class="control-btn secondary"
                             :class="{ 'active': isRepeatActive }">
                             <i class="bi bi-repeat"></i>
@@ -123,6 +130,45 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Panel de prueba de letras (fuera del reproductor) -->
+            <div v-if="showDebugLyrics" class="debug-lyrics-overlay" @click="showDebugLyrics = false">
+                <div class="debug-lyrics-content" @click.stop>
+                    <button class="debug-close" @click="showDebugLyrics = false">✕</button>
+                    <h3>{{ currentTrack?.video_title || 'Letras de prueba' }}</h3>
+                    <h4>Artista: {{ currentTrack?.video_author || 'Desconocido' }}</h4>
+                    <div class="debug-divider"></div>
+                    <div class="debug-info">
+                        <p><strong>📊 Estado:</strong> {{ currentLyrics ? 'Letras cargadas' : 'Sin letras' }}</p>
+                        <p><strong>📝 Líneas sincronizadas:</strong> {{ currentLyrics?.syncedLyrics.length || 0 }}</p>
+                        <p><strong>📄 Letras simples:</strong> {{ currentLyrics?.plainLyrics.length || 0 }} caracteres
+                        </p>
+                    </div>
+                    <div class="debug-divider"></div>
+                    <div class="debug-lines">
+                        <div v-if="currentLyrics?.syncedLyrics.length" class="debug-section">
+                            <h5>🎤 Letras sincronizadas (primeras 15 líneas):</h5>
+                            <div v-for="(line, idx) in currentLyrics.syncedLyrics.slice(0, 15)" :key="idx"
+                                class="debug-line">
+                                <span class="debug-time">[{{ formatTime(line.time) }}]</span>
+                                {{ line.text }}
+                            </div>
+                        </div>
+                        <div v-else-if="currentLyrics?.plainLyrics" class="debug-section">
+                            <h5>📖 Letras simples:</h5>
+                            <div class="debug-line">{{ currentLyrics.plainLyrics.substring(0, 500) }}...</div>
+                        </div>
+                        <div v-else class="debug-section">
+                            <h5>⚠️ No hay letras disponibles para esta canción</h5>
+                            <p>Intentando buscar con: "{{ currentTrack?.video_title }}"</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ✅ COMPONENTE DE LETRAS DENTRO DEL REPRODUCTOR -->
+            <LyricsDisplay :lyrics="currentLyrics" :loading="loadingLyrics" :visible="showLyrics"
+                :current-time="currentTime" @close="closeLyrics" />
         </div>
     </Transition>
 </template>
@@ -135,7 +181,6 @@ import { useUserStore } from '@/stores/user';
 import { getArtistFromTitle, searchSongsByArtist } from '@/data/services/youtube/SearchByArtistService';
 import { useApiKeyManager } from '@/composables/useApiKeyManager';
 import { addToRecentlyPlayed } from '@/data/services/local/RecentlyPlayedService';
-// Agregar estas importaciones después de las existentes
 import {
     initLocalAudio,
     playLocalTrack,
@@ -147,6 +192,7 @@ import {
     onLocalAudioTimeUpdate,
     onLocalAudioEnded
 } from '@/data/services/audio/LocalAudioService'
+import { LyricsService, type LyricsData } from '@/data/services/youtube/LyricsService';
 
 /* ==================== TIPOS ==================== */
 interface Position { x: number; y: number }
@@ -205,6 +251,7 @@ const progressValue = ref(0)
 const isRepeatActive = ref(false)
 const isSeeking = ref(false)
 const apiKeyManager = useApiKeyManager()
+
 /* ==================== ESTADO VELO ==================== */
 const isVeilBlurActive = ref(true)
 let blurTimer: number | null = null
@@ -222,7 +269,6 @@ const currentTimeFormatted = computed(() => formatTime(currentTime.value))
 const durationFormatted = computed(() => formatTime(duration.value))
 const transitionName = computed(() => playerStore.isFullScreen ? 'slide-up' : 'slide-down')
 
-// Después de otras variables
 const isLocalPlayback = ref(false)
 let localAudioElement: HTMLAudioElement | null = null
 
@@ -259,6 +305,75 @@ const startEndingBlurCheck = (): void => {
     endingBlurInterval = window.setInterval(checkEndingBlur, 1000)
 }
 
+// ==================== LETRAS Y PRUEBA ====================
+
+// Estado de letras
+const showLyrics = ref(false)
+const currentLyrics = ref<LyricsData | null>(null)
+const loadingLyrics = ref(false)
+
+// Estado de prueba
+const showDebugLyrics = ref(false)
+
+// Función de prueba (usa el formatTime que ya existe)
+const testLyricsDisplay = () => {
+    console.log('🧪 Probando visualización de letras')
+    console.log('📝 Letras cargadas:', currentLyrics.value)
+    console.log('📊 Estado:', {
+        hasLyrics: !!currentLyrics.value,
+        syncedCount: currentLyrics.value?.syncedLyrics.length,
+        plainLength: currentLyrics.value?.plainLyrics.length
+    })
+    showDebugLyrics.value = true
+}
+
+// Alternar modo letras
+const toggleLyrics = () => {
+    showLyrics.value = !showLyrics.value
+    if (showLyrics.value && !currentLyrics.value && currentTrack.value) {
+        loadLyrics()
+    }
+}
+
+const closeLyrics = () => {
+    showLyrics.value = false
+}
+
+// Cargar letras para la canción actual
+const loadLyrics = async () => {
+    if (!currentTrack.value) return
+
+    loadingLyrics.value = true
+    console.log('🎤 Cargando letras para:', currentTrack.value.video_title)
+
+    try {
+        let lyrics = await LyricsService.getSyncedLyrics(
+            currentTrack.value.video_title,
+            currentTrack.value.video_author || ''
+        )
+
+        if (!lyrics) {
+            console.log('No se encontraron letras, intentando solo por título...')
+            lyrics = await LyricsService.getLyricsByTitle(currentTrack.value.video_title)
+        }
+
+        if (lyrics) {
+            console.log('✅ Letras cargadas:', lyrics.title, '-', lyrics.syncedLyrics.length, 'líneas sincronizadas')
+        } else {
+            console.log('❌ No se encontraron letras para esta canción')
+        }
+
+        currentLyrics.value = lyrics
+    } catch (error) {
+        console.error('Error cargando letras:', error)
+        currentLyrics.value = null
+    } finally {
+        loadingLyrics.value = false
+    }
+}
+
+// ==================== FIN LETRAS ====================
+
 /* ==================== IFRAME RESIZE ==================== */
 const forceIframeResize = (): void => {
     if (!playerContainer.value || !ytPlayer) return
@@ -291,7 +406,6 @@ const forceIframeResize = (): void => {
         }
     }
 
-    // Aplicar resize múltiples veces para asegurar
     RESIZE_DELAYS.forEach(delay => {
         setTimeout(applyResize, delay)
     })
@@ -324,10 +438,7 @@ const handlePlayerReady = (event: any): void => {
     event.target.setVolume(100)
     event.target.playVideo()
 
-    // Obtener información del video
     const videoData = event.target.getVideoData()
-
-    // Usar la acción del store para actualizar el autor
     if (videoData && videoData.author) {
         playerStore.updateCurrentTrackAuthor(videoData.author)
     }
@@ -335,10 +446,8 @@ const handlePlayerReady = (event: any): void => {
     startProgressLoop()
     setupResizeObserver()
 
-    // Asegurar que el blur está activo al inicio
     if (playerStore.isFullScreen) {
         activateBlur()
-        // El scheduleBlurRemoval se llamará cuando empiece a reproducir (PLAYING)
     }
 
     forceIframeResize()
@@ -355,7 +464,6 @@ const expandPlaylistWithMoreSongs = async () => {
     try {
         console.log(`🔍 Buscando más canciones de ${artist}...`)
 
-        // Usar executeWithFailover para manejar automáticamente el cambio de keys
         const moreSongs = await apiKeyManager.executeWithFailover(async (key) => {
             return await searchSongsByArtist(artist, key, 10)
         })
@@ -392,7 +500,6 @@ const handlePlayerStateChange = (state: number): void => {
             playerStore.play()
             lottieInstance?.play()
 
-            // 🆕 GUARDAR EN HISTORIAL
             if (currentTrack.value) {
                 addToRecentlyPlayed({
                     video_id: currentTrack.value.video_id,
@@ -404,9 +511,7 @@ const handlePlayerStateChange = (state: number): void => {
             }
 
             if (playerStore.isFullScreen) {
-                if (isSeeking.value) {
-                    // Si es por seek, no hacer nada con el blur
-                } else {
+                if (!isSeeking.value) {
                     scheduleBlurRemoval()
                 }
             }
@@ -423,15 +528,12 @@ const handlePlayerStateChange = (state: number): void => {
             break
 
         case window.YT.PlayerState.ENDED:
-            // Verificar si quedan pocas canciones en la playlist (menos de 3)
             const remainingSongs = playerStore.playlist.length - (playerStore.currentIndex + 1)
 
             if (remainingSongs < 3) {
-                // Expandir la playlist con más canciones del artista
                 expandPlaylistWithMoreSongs()
             }
 
-            // Avanzar a la siguiente canción si hay, o detener si no
             if (playerStore.currentIndex < playerStore.playlist.length - 1) {
                 if (isRepeatActive.value) {
                     ytPlayer?.seekTo(0, true)
@@ -440,20 +542,17 @@ const handlePlayerStateChange = (state: number): void => {
                     playerStore.next()
                 }
             } else {
-                // Si es la última canción y no hay más, detener o repetir
                 if (isRepeatActive.value) {
                     ytPlayer?.seekTo(0, true)
                     ytPlayer?.playVideo()
                 } else {
-                    // Opcional: pausar al final
                     console.log('Fin de la playlist')
-                    // playerStore.pause()
                 }
             }
             break
     }
 }
-// Función para obtener autor antes de cargar el video
+
 const prefetchAuthor = async (videoId: string) => {
     try {
         const response = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`)
@@ -506,10 +605,8 @@ const createPlayer = (videoId: string): void => {
     })
 }
 
-// Función adicional para obtener autor de YouTube (opcional pero recomendado)
 const fetchVideoAuthor = async (videoId: string): Promise<string | null> => {
     try {
-        // Usar una API gratuita como noembed para obtener metadata
         const response = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`)
         const data = await response.json()
         return data.author_name || null
@@ -519,7 +616,6 @@ const fetchVideoAuthor = async (videoId: string): Promise<string | null> => {
     }
 }
 
-// Cuando cargas una playlist, puedes precargar los autores
 const loadPlaylistWithAuthors = async (tracks: Track[]) => {
     for (const track of tracks) {
         if (!track.video_author) {
@@ -559,6 +655,7 @@ const startProgressLoop = (): void => {
     }
     animationFrameId = requestAnimationFrame(update)
 }
+
 /* ==================== LOTTIE ==================== */
 const animationStore = useAnimationStore()
 
@@ -579,14 +676,12 @@ const setupLottie = (): void => {
 /* ==================== CONTROLES ==================== */
 const togglePlayPause = (): void => {
     if (isLocalPlayback.value) {
-        // Música local
         if (isPlaying.value) {
             pauseLocalAudio()
         } else {
             resumeLocalAudio()
         }
     } else if (ytPlayer) {
-        // YouTube
         ytPlayer.getPlayerState() === window.YT.PlayerState.PLAYING
             ? ytPlayer.pauseVideo()
             : ytPlayer.playVideo()
@@ -630,19 +725,15 @@ const toggleExpand = (): void => {
 
 const closeFullScreen = (): void => {
     playerStore.closeFullScreen()
-
-    // Restaurar la última posición guardada o usar la posición actual si existe
     if (lastMiniPosition.value) {
         position.value = lastMiniPosition.value
         lastMiniPosition.value = null
     } else {
-        // Fallback a la posición por defecto
         position.value = {
             x: MINI_PLAYER_OFFSET,
             y: window.innerHeight - PLAYER_HEIGHT - MINI_PLAYER_OFFSET
         }
     }
-
     if (isExpanded.value) nextTick(setupLottie)
 }
 
@@ -673,7 +764,6 @@ const handleKeyPress = (e: KeyboardEvent): void => {
     if (e.code === 'Space') { e.preventDefault(); togglePlayPause() }
 }
 
-
 // Función para reproducir música local
 const playLocalTrackFromStore = async (track: Track) => {
     if (!track.localPath) return
@@ -681,10 +771,8 @@ const playLocalTrackFromStore = async (track: Track) => {
     isLocalPlayback.value = true
 
     try {
-        // Inicializar audio
         const audio = initLocalAudio()
 
-        // Configurar eventos
         onLocalAudioTimeUpdate((time, dur) => {
             if (!isSeeking.value) {
                 currentTime.value = time
@@ -704,7 +792,6 @@ const playLocalTrackFromStore = async (track: Track) => {
 
         await playLocalTrack(track.localPath)
 
-        // Guardar en historial
         addToRecentlyPlayed({
             video_id: track.video_id,
             video_title: track.video_title,
@@ -719,27 +806,22 @@ const playLocalTrackFromStore = async (track: Track) => {
         isLocalPlayback.value = false
     }
 }
+
 /* ==================== WATCHERS ==================== */
 watch(() => playerStore.isFullScreen, async (isFull) => {
     if (isFull) {
-        // Guardar la posición actual del mini player antes de entrar en fullscreen
         lastMiniPosition.value = { ...position.value }
-
         deactivateBlur()
         scheduleBlurRemoval()
-
         const currentVideoId = currentTrack.value?.video_id
         if (currentVideoId) {
             prefetchAuthor(currentVideoId)
         }
-
         await nextTick()
         forceIframeResize()
-
         setTimeout(() => {
             forceIframeResize()
         }, 400)
-
     } else {
         if (isExpanded.value) {
             await nextTick()
@@ -750,18 +832,12 @@ watch(() => playerStore.isFullScreen, async (isFull) => {
 
 watch(() => currentTrack.value, async (newTrack) => {
     if (!newTrack) return
-
-    // Activar blur al cambiar de canción
     if (playerStore.isFullScreen) {
         activateBlur()
     }
-
-    // Detectar si es música local o YouTube
     if (newTrack.isLocal && newTrack.localPath) {
-        // Reproducir música local
         await playLocalTrackFromStore(newTrack)
     } else if (newTrack.video_id && !newTrack.isLocal) {
-        // Reproducir YouTube
         isLocalPlayback.value = false
         prefetchAuthor(newTrack.video_id)
         await loadYouTubeAPI()
@@ -770,16 +846,13 @@ watch(() => currentTrack.value, async (newTrack) => {
     }
 }, { immediate: true })
 
-// Watch para cambiar la animación en tiempo real
 watch(() => animationStore.currentAnimationId, async (newId, oldId) => {
     if (newId !== oldId && !playerStore.isFullScreen && isExpanded.value) {
-        // Pequeño delay para asegurar que el DOM esté listo
         await nextTick()
         setupLottie()
     }
 })
 
-// Watcher para anticipar cuando se acerca al final
 watch(() => playerStore.currentIndex, (newIndex) => {
     const remaining = playerStore.playlist.length - (newIndex + 1)
     if (remaining === 0 && !isExpanding) {
@@ -790,7 +863,6 @@ watch(() => playerStore.currentIndex, (newIndex) => {
 
 watch(() => currentTrack.value, (newTrack) => {
     if (newTrack && playerStore.isPlaying) {
-        // Guardar en historial cuando cambia la canción
         addToRecentlyPlayed({
             video_id: newTrack.video_id,
             video_title: newTrack.video_title,
@@ -800,6 +872,14 @@ watch(() => currentTrack.value, (newTrack) => {
         console.log(`Canción cambiada, guardada en historial: ${newTrack.video_title}`)
     }
 }, { deep: true })
+
+watch(() => currentTrack.value, () => {
+    currentLyrics.value = null
+    if (showLyrics.value) {
+        loadLyrics()
+    }
+})
+
 /* ==================== LIFECYCLE ==================== */
 onMounted(() => {
     window.addEventListener('keydown', handleKeyPress)
@@ -812,13 +892,299 @@ onBeforeUnmount(() => {
     if (resizeObserver) resizeObserver.disconnect()
     clearBlurTimers()
     lottieInstance?.destroy()
-    // No destruimos ytPlayer aquí para mantener el audio
 })
 </script>
 <style scoped>
 @import url('@/assets/css/player-styles.css');
 
+/* Estilos de prueba - fuera del reproductor */
+.debug-lyrics-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 20000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+.debug-lyrics-content {
+    background: #1a1a1a;
+    border: 2px solid #1db954;
+    border-radius: 20px;
+    padding: 2rem;
+    max-width: 90%;
+    width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+.debug-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: #ff4d4d;
+    border: none;
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: all 0.2s ease;
+}
+
+.debug-close:hover {
+    transform: scale(1.1);
+    background: #ff6666;
+}
+
+.debug-lyrics-content h3 {
+    color: white;
+    margin: 0 0 0.5rem 0;
+    font-size: 1.3rem;
+    padding-right: 2rem;
+}
+
+.debug-lyrics-content h4 {
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    font-weight: normal;
+}
+
+.debug-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 1rem 0;
+}
+
+.debug-info {
+    background: rgba(29, 185, 84, 0.1);
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.debug-info p {
+    margin: 0.25rem 0;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.85rem;
+}
+
+.debug-info strong {
+    color: #1db954;
+}
+
+.debug-section h5 {
+    color: #1db954;
+    margin: 0 0 0.75rem 0;
+    font-size: 0.9rem;
+}
+
+.debug-lines {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.debug-line {
+    padding: 0.5rem;
+    color: white;
+    font-size: 0.85rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    font-family: monospace;
+}
+
+.debug-time {
+    color: #1db954;
+    font-weight: bold;
+    margin-right: 0.75rem;
+    font-family: monospace;
+}
+
+.debug-lines::-webkit-scrollbar {
+    width: 6px;
+}
+
+.debug-lines::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+.debug-lines::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
 /* ==================== INFO DEL AUTOR - VERSIÓN SIMPLE Y CENTRADA ==================== */
+/* ==================== LETRAS - DENTRO DEL REPRODUCTOR ==================== */
+.lyrics-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(20px);
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.unified-player.fullscreen-mode .lyrics-container {
+    border-radius: 0;
+}
+
+.lyrics-container.active {
+    transform: translateX(0);
+}
+
+.lyrics-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    flex-shrink: 0;
+}
+
+.close-lyrics {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.close-lyrics:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.1);
+}
+
+.lyrics-header h5 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    padding-right: 2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.artist {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.lyrics-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+}
+
+.synced-lyrics {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.lyrics-line {
+    font-size: 1rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.6);
+    transition: all 0.2s ease;
+    padding: 0.25rem 0;
+}
+
+.lyrics-line.active {
+    color: var(--accent-color);
+    font-size: 1.2rem;
+    font-weight: 500;
+    text-shadow: 0 0 10px rgba(29, 185, 84, 0.3);
+}
+
+/* Botón de letras en el header */
+.lyrics-toggle {
+    margin-left: auto;
+}
+
+.lyrics-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 30px;
+    padding: 6px 12px;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.8rem;
+}
+
+.lyrics-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: var(--accent-color);
+}
+
+.lyrics-btn.active {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+}
+
+/* Modo con letras - el video se reduce */
+.video-section.fullscreen.with-lyrics {
+    width: 60%;
+    transition: width 0.3s ease;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .video-section.fullscreen.with-lyrics {
+        width: 55%;
+    }
+}
+
+@media (max-width: 768px) {
+    .video-section.fullscreen.with-lyrics {
+        width: 100%;
+    }
+
+    .lyrics-btn span {
+        display: none;
+    }
+
+    .lyrics-btn {
+        padding: 6px;
+        border-radius: 50%;
+    }
+
+    .lyrics-line {
+        font-size: 0.9rem;
+    }
+
+    .lyrics-line.active {
+        font-size: 1rem;
+    }
+}
+
 .author-info-section {
     width: 100%;
     margin: 8px 0;

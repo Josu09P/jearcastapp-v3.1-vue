@@ -101,20 +101,29 @@ watch(() => props.lyrics, () => {
 </script>
 
 <style scoped>
+/* En el archivo del reproductor o en el scoped de LyricsDisplay, ajusta */
 .lyrics-container {
-    position: fixed;
+    position: absolute;
     top: 0;
+    left: 0;
     right: 0;
-    width: 40%;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.9);
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
     backdrop-filter: blur(20px);
     transform: translateX(100%);
-    transition: transform 0.3s ease;
-    z-index: 1050;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 200;
     display: flex;
     flex-direction: column;
-    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    overflow: hidden;
+    pointer-events: auto;
+}
+
+.unified-player.fullscreen-mode .lyrics-container {
+    border-radius: 0;
 }
 
 .lyrics-container.active {
@@ -122,43 +131,51 @@ watch(() => props.lyrics, () => {
 }
 
 .lyrics-header {
-    padding: 1.5rem;
+    padding: 1.2rem 1.5rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     position: relative;
+    flex-shrink: 0;
+    background: rgba(0, 0, 0, 0.3);
 }
 
 .close-lyrics {
     position: absolute;
     top: 1rem;
     right: 1rem;
-    background: transparent;
+    background: rgba(255, 255, 255, 0.1);
     border: none;
     color: white;
     font-size: 1.2rem;
     cursor: pointer;
-    padding: 0.5rem;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: all 0.2s ease;
 }
 
 .close-lyrics:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.2);
     transform: scale(1.1);
 }
 
 .lyrics-header h5 {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: 600;
-    margin-bottom: 0.25rem;
+    margin: 0 0 0.25rem 0;
     padding-right: 2rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: white;
 }
 
 .artist {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.6);
+    display: block;
 }
 
 .lyrics-content {
@@ -167,58 +184,14 @@ watch(() => props.lyrics, () => {
     padding: 1.5rem;
 }
 
-.lyrics-loading,
-.lyrics-error {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: rgba(255, 255, 255, 0.5);
-    text-align: center;
-}
-
-.lyrics-loading i,
-.lyrics-error i {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    opacity: 0.5;
-}
-
-.synced-lyrics {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.lyrics-line {
-    font-size: 1rem;
-    line-height: 1.5;
-    color: rgba(255, 255, 255, 0.6);
-    transition: all 0.2s ease;
-    padding: 0.25rem 0;
-}
-
-.lyrics-line.active {
-    color: var(--accent-color);
-    font-size: 1.2rem;
-    font-weight: 500;
-    text-shadow: 0 0 10px rgba(29, 185, 84, 0.3);
-}
-
-.plain-lyrics {
-    white-space: pre-wrap;
-    line-height: 1.6;
-    color: rgba(255, 255, 255, 0.7);
-}
-
-/* Scrollbar */
+/* Scrollbar personalizada */
 .lyrics-content::-webkit-scrollbar {
     width: 6px;
 }
 
 .lyrics-content::-webkit-scrollbar-track {
     background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
 }
 
 .lyrics-content::-webkit-scrollbar-thumb {
@@ -230,24 +203,44 @@ watch(() => props.lyrics, () => {
     background: rgba(255, 255, 255, 0.3);
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
-    .lyrics-container {
-        width: 50%;
-    }
+.synced-lyrics {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
 }
 
-@media (max-width: 768px) {
-    .lyrics-container {
-        width: 100%;
-    }
+.lyrics-line {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.5);
+    transition: all 0.2s ease;
+    padding: 0.25rem 0;
+    cursor: default;
+}
 
-    .lyrics-line {
-        font-size: 0.9rem;
-    }
+.lyrics-line.active {
+    color: var(--accent-color);
+    font-size: 1.1rem;
+    font-weight: 500;
+    text-shadow: 0 0 15px rgba(29, 185, 84, 0.3);
+    transform: scale(1.02);
+}
 
-    .lyrics-line.active {
-        font-size: 1rem;
-    }
+.lyrics-loading,
+.lyrics-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: rgba(255, 255, 255, 0.5);
+    text-align: center;
+    gap: 1rem;
+}
+
+.lyrics-loading i,
+.lyrics-error i {
+    font-size: 3rem;
+    opacity: 0.5;
 }
 </style>
