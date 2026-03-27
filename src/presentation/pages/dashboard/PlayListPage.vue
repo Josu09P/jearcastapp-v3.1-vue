@@ -10,6 +10,7 @@ import { deleteSongFromPlaylist } from '@/domain/usecases/playlists/DeleteSongFr
 import { deletePlaylist } from '@/domain/usecases/playlists/DeletePlayList'
 import { usePlayerStore } from '@/stores/player-store'
 import { useUserDataStore } from '@/stores/userDataStore'
+import DownloadButton from '@/presentation/widgets/DownloadButton.vue'
 
 const userDataStore = useUserDataStore()
 const playerStore = usePlayerStore()
@@ -18,6 +19,7 @@ const playerStore = usePlayerStore()
 const playlists = computed(() => userDataStore.playlists)
 const loadingPlaylists = computed(() => userDataStore.loading.playlists)
 const playlistSongCounts = computed(() => userDataStore.playlistSongCounts)
+const IMAGE_PLAYLIST = 'https://osomviajes.com/wp-content/uploads/2021/11/james-stamler-k3heD_KwH0A-unsplash-1024x683.jpg'
 
 // Estado local
 const songs = ref<PlaylistSongModel[]>([])
@@ -299,7 +301,7 @@ onMounted(() => {
 <template>
     <DashboardLayout>
         <div class="container-fluid px-0">
-            <!-- HEADER con título y controles estilo favoritos -->
+            <!-- HEADER SECTION -->
             <div class="d-flex justify-content-between align-items-center mb-4 px-3">
                 <div class="d-flex align-items-center gap-3">
                     <h4 class="text-white mb-0 fw-bold">Playlists</h4>
@@ -336,25 +338,23 @@ onMounted(() => {
                 </div>
             </div>
 
-            <!-- SECCIÓN DE PLAYLISTS (cards cuadradas estilo Spotify) - SOLO si showAllPlaylists es true -->
+            <!-- SECCIÓN DE PLAYLISTS - SOLO si showAllPlaylists es true -->
             <div v-if="showAllPlaylists" class="playlists-grid px-3 mb-4">
                 <div v-for="playlist in playlists" :key="playlist.id" class="playlist-card-wrapper">
                     <div class="playlist-card" :class="{ 'active': currentPlaylistId === playlist.id }">
 
                         <!-- Imagen de fondo con overlay -->
                         <div class="playlist-image-wrapper" @click="loadSongs(playlist.id!, playlist.name)">
-                            <!-- Imagen personalizada o placeholder -->
-                            <img :src="playlistImages[playlist.id!] || 'https://via.placeholder.com/300x300/1a1a1a/666666?text=Playlist'"
-                                :alt="playlist.name" class="playlist-image" />
+                            <img :src="playlistImages[playlist.id!] || IMAGE_PLAYLIST" :alt="playlist.name"
+                                class="playlist-image" />
 
-                            <!-- Overlay con blur y botón play -->
                             <div class="playlist-overlay">
                                 <button class="play-button" @click.stop="loadSongs(playlist.id!, playlist.name)">
                                     <i class="bi bi-play-fill"></i>
                                 </button>
                             </div>
 
-                            <!-- Badge con cantidad de canciones (✅ usando playlistSongCounts del store) -->
+                            <!-- Badge con cantidad de canciones-->
                             <span class="song-count-badge">
                                 <i class="bi bi-music-note-beamed me-1"></i>
                                 {{ playlistSongCounts[playlist.id!] || 0 }}
@@ -382,7 +382,7 @@ onMounted(() => {
             <!-- CONTENEDOR DEL PLAYER -->
             <div class="text-white rounded shadow mt-4 container-player-jear" id="player-playlist-container"></div>
 
-            <!-- LISTA DE CANCIONES (estilo favoritos) -->
+            <!-- LISTA DE CANCIONES -->
             <div v-if="songs.length > 0" class="mt-4 px-3">
                 <!-- Header de la playlist seleccionada -->
                 <div class="d-flex align-items-center gap-3 mb-3">
@@ -423,7 +423,7 @@ onMounted(() => {
                                 <h6 class="text-white mb-0 text-truncate fw-semibold" style="font-size: 0.9rem;">
                                     {{ song.video_title }}
                                 </h6>
-                                <small class="text-secondary">YouTube Music</small>
+                                <small class="text-secondary" style="font-size: 12px;">JearCast Music</small>
                             </div>
                         </div>
 
@@ -434,11 +434,13 @@ onMounted(() => {
 
                         <!-- Acciones -->
                         <div class="col-1 col-md-2 d-flex justify-content-center align-items-center">
-                            <button @click="deleteSong(song.video_id)" class="btn btn-link p-0 remove-btn">
+                            <button @click="deleteSong(song.video_id)" class="btn btn-link p-0 remove-btn me-2">
                                 <span v-if="deletingMap[song.video_id]"
                                     class="spinner-border spinner-border-sm text-secondary"></span>
                                 <i v-else class="bi bi-trash3 text-secondary"></i>
                             </button>
+                            <DownloadButton :video-id="song.video_id" :title="song.video_title"
+                                :thumbnail="song.video_thumbnail" />
                         </div>
                     </div>
                 </div>

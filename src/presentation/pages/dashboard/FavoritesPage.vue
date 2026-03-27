@@ -5,13 +5,14 @@ import { useUserDataStore } from '@/stores/userDataStore'
 import { removeFavoriteMusic } from '@/domain/usecases/favorites/RemoveFavoriteMusic'
 import Toastify from 'toastify-js'
 import { usePlayerStore } from '@/stores/player-store'
+import DownloadButton from '@/presentation/widgets/DownloadButton.vue'
 
 const userDataStore = useUserDataStore()
 const playerStore = usePlayerStore()
 const sortOption = ref<'recent' | 'alphabetical'>('recent')
 const deletingMap = ref<Record<string, boolean>>({})
 
-// ✅ Usar datos del store (ya cargados en el layout)
+// Usar datos del store
 const favorites = computed(() => userDataStore.favorites)
 const loading = computed(() => userDataStore.loading.favorites)
 
@@ -44,7 +45,7 @@ async function removeFavorite(videoId: string) {
     try {
         await removeFavoriteMusic({ user_id: userId, video_id: videoId })
 
-        // ✅ Invalidar y recargar favoritos
+        // Invalidar y recargar favoritos
         await userDataStore.invalidateAndRefreshFavorites()
 
         Toastify({
@@ -92,9 +93,9 @@ async function refreshFavorites() {
     }).showToast()
 }
 
-// ✅ No cargar datos en onMounted, ya están precargados en el layout
+// CARGADO YA EN LAYOUT PRINCIPAL
 onMounted(() => {
-    console.log('✅ Favoritos: usando datos del store (sin petición)')
+    console.log('Favoritos: usando datos del store (sin petición)')
 })
 </script>
 
@@ -122,7 +123,7 @@ onMounted(() => {
                 </div>
             </div>
 
-            <div class="row px-3 py-2 text-secondary d-none d-md-flex mb-2 border-bottom border-white rounded border-opacity-10"
+            <div class="row px-3 py-2 text-secondary d-none d-md-flex mb-2 border-bottom border-white border-opacity-10"
                 style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">
                 <div class="col-1 text-center">#</div>
                 <div class="col-6">Título</div>
@@ -142,7 +143,7 @@ onMounted(() => {
 
                     <div class="col-10 col-md-6 d-flex align-items-center gap-3">
                         <img :src="fav.video_thumbnail" class="rounded shadow-sm"
-                            style="width: 48px; height: 48px; object-fit: cover" />
+                            style="width: 44px; height: 44px; object-fit: cover" />
                         <div class="text-truncate">
                             <h6 class="text-white mb-0 text-truncate fw-semibold" style="font-size: 0.9rem;">{{
                                 fav.video_title }}</h6>
@@ -154,16 +155,18 @@ onMounted(() => {
                         {{ fav.created_at?.toDate().toLocaleDateString() }}
                     </div>
 
-                    <div class="col-1 col-md-2 d-flex justify-content-center align-items-center">
-                        <button @click="removeFavorite(fav.video_id)" class="btn btn-link p-0 remove-btn me-2"
+                    <!-- En lugar del botón simple, usa el componente -->
+                    <div class="col-1 col-md-2 d-flex justify-content-center align-items-center gap-2">
+                        <button @click="removeFavorite(fav.video_id)" class="btn btn-link p-0 remove-btn"
                             title="Eliminar de favoritos">
                             <span v-if="deletingMap[fav.video_id]"
                                 class="spinner-border spinner-border-sm text-secondary"></span>
-                            <i v-else class="bi bi-heart-fill text-secondary"></i>
+                            <i v-else class="bi bi-heart-fill text-secondary"
+                                style="font-size: 1.12rem !important;"></i>
                         </button>
-                        <button class="btn btn-link p-0" title="Descargar">
-                            <i class="bi bi-arrow-down-circle-fill text-secondary"></i>
-                        </button>
+
+                        <DownloadButton :video-id="fav.video_id" :title="fav.video_title"
+                            :thumbnail="fav.video_thumbnail" />
                     </div>
                 </div>
             </div>

@@ -5,6 +5,7 @@ import type { RecommendedSongModel } from '@/domain/models/RecommendedSongModel'
 import { fetchRecommendedPlaylistsService, fetchSongsFromRecommendedPlaylistService } from '@/data/services/firestore/RecommendedPlaylistFirestore'
 import { usePlayerStore } from '@/stores/player-store'
 import DashboardLayout from '@/presentation/layouts/DashboardLayout.vue'
+import DownloadButton from '@/presentation/widgets/DownloadButton.vue'
 
 const playlists = ref<RecommendedPlaylistModel[]>([])
 const songs = ref<RecommendedSongModel[]>([])
@@ -205,17 +206,19 @@ onMounted(async () => {
                                 <h6 class="text-white mb-0 text-truncate fw-semibold" style="font-size: 0.9rem;">
                                     {{ song.video_title }}
                                 </h6>
-                                <small class="text-secondary">YouTube Music</small>
+                                <small class="text-secondary" style="font-size: 12px;">JearCast Music</small>
                             </div>
                         </div>
 
                         <!-- Acciones (solo play, sin eliminar) -->
                         <div class="col-1 col-md-2 d-flex justify-content-center align-items-center">
-                            <button @click="playSong(index)" class="btn btn-link p-0 play-action-btn"
+                            <button @click="playSong(index)" class="btn btn-link p-0 play-action-btn me-3"
                                 title="Reproducir">
                                 <i class="bi bi-play-circle-fill"
-                                    style="font-size: 1.5rem; color: var(--accent-color) !important"></i>
+                                    style="font-size: 1.15rem; color: var(--accent-color) !important"></i>
                             </button>
+                            <DownloadButton :video-id="song.video_id" :title="song.video_title"
+                                :thumbnail="song.video_thumbnail" />
                         </div>
                     </div>
                 </div>

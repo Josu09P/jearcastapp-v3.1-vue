@@ -113,7 +113,7 @@ function resetAnimation() {
                     </div>
                     <button class="reset-button" @click="resetAnimation" v-if="selectedAnimation !== 'default'">
                         <i class="bi bi-arrow-counterclockwise"></i>
-                        Restaurar por defecto
+                        Restaurar
                     </button>
                 </header>
 

@@ -1,6 +1,6 @@
 <template>
     <DashboardLayout>
-        <section class="container py-4">
+        <section class="container-fluid px-0">
             <!-- SECCIÓN MIXWIDGET -->
             <MixWidget ref="mixWidget" />
             <br>
@@ -73,6 +73,8 @@
                             <button @click.stop="openPlaylistModal(video)" class="action-btn small">
                                 <i class="bi bi-plus-lg"></i>
                             </button>
+                            <DownloadButton :video-id="video.video_id" :title="video.video_title"
+                                :thumbnail="video.video_thumbnail" />
                         </div>
                     </div>
                 </div>
@@ -130,6 +132,7 @@ import { addSongToPlaylistService } from '@/data/services/firestore/PlaylistsFir
 import { createOrGetPlaylist } from '@/domain/usecases/playlists/CreateOrGetPlaylist'
 import Swal from 'sweetalert2'
 import MixWidget from '@/presentation/widgets/recomendations/MixWidget.vue'
+import DownloadButton from '@/presentation/widgets/DownloadButton.vue'
 
 const playerStore = usePlayerStore()
 const userStore = useUserStore()
@@ -424,7 +427,7 @@ const createNewPlaylist = async () => {
     align-items: center;
     justify-content: space-between;
     padding: 0.5rem;
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(51, 51, 51, 0.275);
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 8px;
     transition: all 0.2s ease;
@@ -516,7 +519,7 @@ const createNewPlaylist = async () => {
 .empty-history {
     text-align: center;
     padding: 3rem;
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(80, 80, 80, 0.099);
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 12px;
     color: rgba(255, 255, 255, 0.3);

@@ -490,9 +490,15 @@ const createPlayer = (videoId: string): void => {
             disablekb: 1,
             fs: 0,
             iv_load_policy: 3,
-            cc_load_policy: 0
+            cc_load_policy: 0,
+            quality: 'hd1080',
+            vq: 'hd1080',
+            hl: 'es',
+            autohide: 1,
+            playsinline: 1,
+            suggestedQuality: 'hd1080',
         },
-        host: 'https://www.youtube-nocookie.com',
+        host: 'https://www.youtube.com',
         events: {
             onReady: handlePlayerReady,
             onStateChange: (e: any) => handlePlayerStateChange(e.data)
@@ -818,15 +824,12 @@ onBeforeUnmount(() => {
     margin: 8px 0;
     display: flex;
     justify-content: center;
-    /* Centrar horizontalmente */
 }
 
 .author-info-section.fullscreen {
     margin: 16px 0 12px 0;
-    /* Más espacio en fullscreen */
 }
 
-/* Versión mini player - CENTRADA */
 .author-info-section.mini {
     display: flex;
     justify-content: center;
@@ -854,22 +857,18 @@ onBeforeUnmount(() => {
     justify-content: center;
     gap: 8px;
     padding: 4px 0;
-    /* Sin fondo, sin blur, sin bordes */
     width: fit-content;
     max-width: 90%;
-    /* Limitar ancho en móviles */
 }
 
 .author-icon {
     font-size: 1.1rem;
     color: #b3b3b3;
-    /* Gris suave */
     flex-shrink: 0;
 }
 
 .author-name {
     color: #e0e0e0;
-    /* Blanco suave */
     font-size: 0.9rem;
     font-weight: 400;
     letter-spacing: 0.3px;
@@ -881,13 +880,11 @@ onBeforeUnmount(() => {
 
 .author-badge {
     color: var(--accent-color);
-    /* Verde Spotify */
     font-size: 0.7rem;
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     background: transparent;
-    /* Sin fondo */
     border: none;
     padding: 0;
     flex-shrink: 0;
@@ -895,12 +892,10 @@ onBeforeUnmount(() => {
 
 .author-badge.bg-secondary {
     color: #808080 !important;
-    /* Gris para estado "Cargando" */
     background: transparent !important;
     border: none !important;
 }
 
-/* Versión mini player */
 .author-info-section.mini .author-icon {
     font-size: 0.9rem;
 }
@@ -914,7 +909,6 @@ onBeforeUnmount(() => {
     font-size: 0.6rem;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
     .author-info-section.fullscreen .author-name {
         max-width: 200px;
@@ -929,7 +923,6 @@ onBeforeUnmount(() => {
 
     .author-info-section.fullscreen .author-badge {
         display: inline-block;
-        /* Mantener badge incluso en móviles */
         font-size: 0.65rem;
     }
 

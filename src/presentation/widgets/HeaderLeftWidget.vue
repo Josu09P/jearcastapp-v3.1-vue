@@ -67,6 +67,7 @@ function toggleSidebar() {
 
 <style scoped>
 .sidebar-wrapper {
+  /*border-radius: 10px 0 0 10px !important; PARA ELECTRON-EN DESARROLLO */
   height: 100%;
   backdrop-filter: blur(12px);
   border-right: 1px solid rgba(255, 255, 255, 0.05);

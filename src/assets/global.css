@@ -7,9 +7,19 @@
   color-scheme: dark !important;
 }
 
-body, html, #app {
-  background-color: var(--main-bg-color);
+html, body {
+  height: 100%;
+  margin: 0;
+  /*background: transparent !important; PARA ELECTRON*/
 }
+
+#app {
+  height: 100%;
+  /*
+    border-radius: 12px;
+  overflow: hidden;  PARA ELECTRON*/
+}
+
 
 .text-accent {
   color: var(--accent-color);

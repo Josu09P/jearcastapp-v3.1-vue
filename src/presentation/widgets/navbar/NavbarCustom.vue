@@ -37,6 +37,7 @@ function closeWindow() {
 
 <style scoped>
 .custom-navbar {
+    /* border-radius: 10px 10px 0 0 !important; PARA ELETRON - AUN EN DESARROLLO*/
     position: fixed;
     top: 0;
     left: 0;

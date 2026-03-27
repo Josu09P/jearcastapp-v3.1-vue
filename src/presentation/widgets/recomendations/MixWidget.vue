@@ -2,10 +2,8 @@
     <div class="mix-widget">
         <div class="mix-header">
             <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h5 class="mix-title" style="margin-top: -40px !important;">
-                        <i class="bi bi-stars me-2 fw-bold"></i> Mix para ti
-                    </h5>
+                <div class="container-title-home" style="margin-top: -15px;">
+                    <h4 class="text-white mb-0 fw-bold">Mix para ti</h4>
                     <p class="mix-subtitle">Basado en tus artistas favoritos</p>
                 </div>
                 <div class="d-flex gap-2 align-items-center">
@@ -225,11 +223,8 @@ defineExpose({ refreshMixes, loadMixes })
     margin-bottom: 1.5rem;
 }
 
-.mix-title {
-    color: white;
-    font-size: 1.2rem;
-    font-weight: 500;
-    margin-bottom: 0.25rem;
+.container-title-home h4 {
+    font-size: 21px;
 }
 
 .mix-subtitle {
