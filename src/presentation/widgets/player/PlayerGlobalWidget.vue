@@ -194,7 +194,8 @@ import {
     getLocalAudioCurrentTime,
     getLocalAudioDuration,
     onLocalAudioTimeUpdate,
-    onLocalAudioEnded
+    onLocalAudioEnded,
+    destroyLocalAudio
 } from '@/data/services/audio/LocalAudioService'
 import { LyricsService, type LyricsData } from '@/data/services/youtube/LyricsService';
 import LyricsDisplay from '../LyricsDisplay.vue';
@@ -293,8 +294,6 @@ const clearBlurTimers = (): void => {
 }
 
 // ==================== CONTROLES DE AUDIO ====================
-// ==================== CONTROLES DE AUDIO ====================
-
 // Manejar cambio de volumen
 const handleVolumeChange = (value: number) => {
     console.log('Volumen cambiado a:', value)
@@ -848,16 +847,19 @@ const setupLottie = (): void => {
 const togglePlayPause = (): void => {
     if (isLocalPlayback.value) {
         if (isPlaying.value) {
-            pauseLocalAudio()
+            pauseLocalAudio();
         } else {
-            resumeLocalAudio()
+            resumeLocalAudio();
         }
     } else if (ytPlayer) {
-        ytPlayer.getPlayerState() === window.YT.PlayerState.PLAYING
-            ? ytPlayer.pauseVideo()
-            : ytPlayer.playVideo()
+        const state = ytPlayer.getPlayerState();
+        if (state === window.YT.PlayerState.PLAYING) {
+            ytPlayer.pauseVideo();
+        } else if (state === window.YT.PlayerState.PAUSED || state === window.YT.PlayerState.CUED) {
+            ytPlayer.playVideo();
+        }
     }
-}
+};
 
 const handleSeek = (): void => {
     if (isLocalPlayback.value) {
@@ -884,8 +886,14 @@ const handleSeekEnd = (): void => {
     }
 }
 
-const next = (): void => playerStore.next()
-const prev = (): void => playerStore.prev()
+const next = (): void => {
+    stopAllPlayback();
+    playerStore.next();
+};
+const prev = (): void => {
+    stopAllPlayback();
+    playerStore.prev();
+};
 const toggleShuffle = (): void => playerStore.toggleShuffle()
 const toggleRepeat = (): void => { isRepeatActive.value = !isRepeatActive.value }
 
@@ -935,48 +943,94 @@ const handleKeyPress = (e: KeyboardEvent): void => {
     if (e.code === 'Space') { e.preventDefault(); togglePlayPause() }
 }
 
-// Función para reproducir música local
 const playLocalTrackFromStore = async (track: Track) => {
-    if (!track.localPath) return
+    if (!track.localPath) return;
 
-    isLocalPlayback.value = true
+    // ✅ DETENER YouTube primero
+    if (ytPlayer) {
+        try {
+            ytPlayer.pauseVideo();
+            console.log('YouTube pausado');
+        } catch (e) {
+            console.error('Error pausando YouTube:', e);
+        }
+    }
+
+    // ✅ Destruir instancia de audio local anterior si existe
+    destroyLocalAudio();
+
+    isLocalPlayback.value = true;
 
     try {
-        const audio = initLocalAudio()
+        const audio = initLocalAudio();
 
         onLocalAudioTimeUpdate((time, dur) => {
             if (!isSeeking.value) {
-                currentTime.value = time
-                duration.value = dur
-                progressValue.value = (time / dur) * 100
+                currentTime.value = time;
+                duration.value = dur;
+                progressValue.value = (time / dur) * 100;
             }
-        })
+        });
 
         onLocalAudioEnded(() => {
             if (isRepeatActive.value) {
-                setLocalAudioCurrentTime(0)
-                resumeLocalAudio()
+                setLocalAudioCurrentTime(0);
+                resumeLocalAudio();
             } else {
-                next()
+                next();
             }
-        })
+        });
 
-        await playLocalTrack(track.localPath)
+        await playLocalTrack(track.localPath);
 
         addToRecentlyPlayed({
             video_id: track.video_id,
             video_title: track.video_title,
             video_thumbnail: track.video_thumbnail,
             video_author: track.video_author
-        })
+        });
 
-        startProgressLoop()
+        startProgressLoop();
 
     } catch (error) {
-        console.error('Error reproduciendo local:', error)
-        isLocalPlayback.value = false
+        console.error('Error reproduciendo local:', error);
+        isLocalPlayback.value = false;
     }
-}
+};
+
+// Detener toda reproducción activa
+const stopAllPlayback = () => {
+    // Detener YouTube
+    if (ytPlayer) {
+        try {
+            ytPlayer.pauseVideo();
+        } catch (e) {
+            console.error('Error pausando YouTube:', e);
+        }
+    }
+
+    // Detener audio local
+    if (isLocalPlayback.value) {
+        try {
+            pauseLocalAudio();
+            // Destruir la instancia de audio para limpiar completamente
+            destroyLocalAudio();
+        } catch (e) {
+            console.error('Error deteniendo audio local:', e);
+        }
+    }
+
+    // Resetear estado
+    isLocalPlayback.value = false;
+    playerStore.pause();
+
+    // Limpiar el contenedor de YouTube si es necesario
+    if (playerContainer.value && ytPlayer) {
+        // No destruir el player, solo pausar
+    }
+
+    console.log('Toda reproducción detenida');
+};
 
 /* ==================== WATCHERS ==================== */
 watch(() => playerStore.isFullScreen, async (isFull) => {
@@ -1001,22 +1055,34 @@ watch(() => playerStore.isFullScreen, async (isFull) => {
     }
 })
 
-watch(() => currentTrack.value, async (newTrack) => {
-    if (!newTrack) return
-    if (playerStore.isFullScreen) {
-        activateBlur()
-    }
-    if (newTrack.isLocal && newTrack.localPath) {
-        await playLocalTrackFromStore(newTrack)
-    } else if (newTrack.video_id && !newTrack.isLocal) {
-        isLocalPlayback.value = false
-        prefetchAuthor(newTrack.video_id)
-        await loadYouTubeAPI()
-        await nextTick()
-        createPlayer(newTrack.video_id)
-    }
-}, { immediate: true })
+watch(() => currentTrack.value, async (newTrack, oldTrack) => {
+    if (!newTrack) return;
 
+    // ✅ Si hay una canción anterior reproduciéndose, detenerla
+    if (oldTrack && oldTrack !== newTrack) {
+        stopAllPlayback();
+    }
+
+    if (playerStore.isFullScreen) {
+        activateBlur();
+    }
+
+    if (newTrack.isLocal && newTrack.localPath) {
+        await playLocalTrackFromStore(newTrack);
+    } else if (newTrack.video_id && !newTrack.isLocal) {
+        // Si había audio local reproduciéndose, asegurarse de detenerlo
+        if (isLocalPlayback.value) {
+            destroyLocalAudio();
+            isLocalPlayback.value = false;
+        }
+
+        isLocalPlayback.value = false;
+        prefetchAuthor(newTrack.video_id);
+        await loadYouTubeAPI();
+        await nextTick();
+        createPlayer(newTrack.video_id);
+    }
+}, { immediate: true });
 watch(() => animationStore.currentAnimationId, async (newId, oldId) => {
     if (newId !== oldId && !playerStore.isFullScreen && isExpanded.value) {
         await nextTick()
@@ -1050,6 +1116,20 @@ watch(() => currentTrack.value, () => {
         loadLyrics()
     }
 })
+
+// PARA ACTUALIZAR EL ESTADO DE LOS BOTONES:
+watch([isPlaying, currentTrack, currentTime], () => {
+    if (window.electron?.ipcRenderer?.send) {
+        window.electron.ipcRenderer.send('player-state-change', {
+            state: isPlaying.value ? 'playing' : 'paused',
+            title: currentTrack.value?.video_title || '',
+            artist: currentTrack.value?.video_author || '',
+            thumbnail: currentTrack.value?.video_thumbnail || '',
+            duration: duration.value,
+            position: currentTime.value
+        });
+    }
+}, { deep: true });
 
 /* ==================== LIFECYCLE ==================== */
 onMounted(() => {
