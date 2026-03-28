@@ -6,7 +6,7 @@
         <div class="col-md-4 mb-3">
           <img src="@/assets/img/logo-v3.png" alt="logo-page" width="100" style="filter: brightness(0) invert(1);">
           <p class="small mb-0">
-            Escucha música desde YouTube con una interfaz moderna, inspirada en Spotify para Linux.
+            Escucha música desde YT con una interfaz moderna, inspirada en apps open source para escuchar muscica.
           </p>
         </div>
 
@@ -14,9 +14,9 @@
         <div class="col-md-4 mb-3">
           <h6 class="fw-semibold">Enlaces útiles</h6>
           <ul class="list-unstyled">
-            <li><a href="#guia" class="text-decoration-none">Guía</a></li>
-            <li><a href="#apoyar" class="text-decoration-none">Apoyar al proyecto</a></li>
-            <li><a href="#" class="text-decoration-none" target="_blank">Repositorio GitHub</a></li>
+            <li><a href="https://easypantry.netlify.app" class="text-decoration-none">EasyPantry</a></li>
+            <li><a href="https://github.com/Josu09P/jearcastapp-v3.1-vue.git" class="text-decoration-none"
+                target="_blank">Repositorio GitHub</a></li>
           </ul>
         </div>
 
@@ -38,7 +38,7 @@
 
       <hr class="border-secondary" />
       <div class="text-center small">
-        © 2025 JearCastApp. Desarrollado por Josue Algarate | Proyecto Open Source.
+        © 2026 Desarrollado por EasyPantry.
       </div>
     </div>
   </footer>

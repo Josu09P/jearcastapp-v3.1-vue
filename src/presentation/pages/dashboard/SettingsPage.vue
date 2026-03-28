@@ -325,7 +325,8 @@ const toggleApiKey = async (apiKey: ApiKeyModel) => {
                     </div>
 
                     <div class="card-content">
-                        <p class="theme-description">Personaliza la apariencia de la APP (Themas en desarrollo)</p>
+                        <p class="theme-description">Personaliza la apariencia de la APP (Themas experimental
+                            desarrollo)</p>
                         <button @click="$router.push('/dashboard/themes')" class="theme-link">
                             <span>Ir ya</span>
                             <i class="bi bi-arrow-right"></i>

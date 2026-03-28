@@ -18,7 +18,7 @@ import { useThemeStore, themes } from '@/stores/theme'
 import { storeToRefs } from 'pinia'
 
 const themeStore = useThemeStore()
-// ✅ Usar storeToRefs para mantener la reactividad
+// Usar storeToRefs para mantener la reactividad
 const { currentThemeId } = storeToRefs(themeStore)
 
 const setTheme = (themeId: string) => {

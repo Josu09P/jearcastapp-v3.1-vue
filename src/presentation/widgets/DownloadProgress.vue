@@ -24,20 +24,45 @@ const emit = defineEmits<{
 const show = ref(true)
 const progress = ref(0)
 
+let isCompleted = false
+
 const updateProgress = (data: any) => {
+    console.log('Progreso recibido:', data)
+
     if (data.downloadId === props.downloadId) {
         progress.value = data.percent
-        if (progress.value >= 100) {
+
+        // Solo cerrar cuando está completado
+        if (data.status === 'completed' && !isCompleted) {
+            isCompleted = true
             setTimeout(() => {
                 show.value = false
                 emit('close')
             }, 1000)
         }
+
+        // Si hay error, cerrar después de 2 segundos
+        if (data.status === 'error') {
+            setTimeout(() => {
+                show.value = false
+                emit('close')
+            }, 2000)
+        }
+
+        // Si es cancelado, cerrar inmediatamente
+        if (data.status === 'cancelled') {
+            show.value = false
+            emit('close')
+        }
     }
 }
 
 const cancelDownload = async () => {
-    if (window.electron?.ipcRenderer) {
+    if (window.electron?.cancelDownload) {
+        await window.electron.cancelDownload(props.downloadId)
+        show.value = false
+        emit('close')
+    } else if (window.electron?.ipcRenderer?.invoke) {
         await window.electron.ipcRenderer.invoke('cancel-download', props.downloadId)
         show.value = false
         emit('close')
@@ -45,13 +70,19 @@ const cancelDownload = async () => {
 }
 
 onMounted(() => {
-    if (window.electron?.ipcRenderer) {
+    console.log('DownloadProgress montado para ID:', props.downloadId)
+
+    if (window.electron?.onDownloadProgress) {
+        window.electron.onDownloadProgress(updateProgress)
+    } else if (window.electron?.ipcRenderer?.on) {
         window.electron.ipcRenderer.on('download-progress', updateProgress)
     }
 })
 
 onUnmounted(() => {
-    if (window.electron?.ipcRenderer) {
+    if (window.electron?.removeDownloadProgressListener) {
+        window.electron.removeDownloadProgressListener()
+    } else if (window.electron?.ipcRenderer?.removeAllListeners) {
         window.electron.ipcRenderer.removeAllListeners('download-progress')
     }
 })
@@ -85,7 +116,7 @@ onUnmounted(() => {
 
 .progress-bar {
     height: 100%;
-    background: #1db954;
+    background: var(--accent-color);
     transition: width 0.3s ease;
 }
 

@@ -12,8 +12,8 @@
 
       <div class="collapse navbar-collapse justify-content-end" id="navbarWelcome">
         <ul class="navbar-nav">
-          <router-link to="/auth/login" class="btn btn-outline-primary btn-sm text-light">
-            Saltar todo esto e iniciar sesión →
+          <router-link to="/auth/login" class="btn btn-primary btn-sm text-light">
+            Iniciar sesión
           </router-link>
         </ul>
       </div>
