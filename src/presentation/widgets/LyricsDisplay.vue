@@ -2,7 +2,7 @@
     <div class="lyrics-container" :class="{ 'active': visible, 'two-columns': twoColumnLayout }">
         <div class="lyrics-header">
             <button class="close-lyrics" @click="$emit('close')">
-                <i class="bi bi-x-lg"></i>
+                <i class="bi bi-x-lg" style="font-size: 10px;"></i>
             </button>
             <h5>{{ lyrics?.title || 'Letras' }}</h5>
             <span class="artist">{{ lyrics?.artist }}</span>

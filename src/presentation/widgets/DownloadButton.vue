@@ -65,13 +65,13 @@
             </ul>
         </div>
 
-        <!-- Indicador de progreso (opcional) -->
-        <DownloadProgress v-if="currentDownloadId" :download-id="currentDownloadId" @close="currentDownloadId = null" />
+        <DownloadProgress v-if="currentDownloadId" :download-id="currentDownloadId"
+            @close="() => currentDownloadId = null" />
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import Toastify from 'toastify-js'
 import DownloadProgress from './DownloadProgress.vue'
 
@@ -101,7 +101,12 @@ const showToast = (text: string, isError: boolean = false) => {
     }).showToast()
 }
 
-// Descargar con calidad específica
+// Manejar cierre del progreso
+const handleProgressClose = () => {
+    currentDownloadId.value = null
+    downloading.value = false
+}
+
 const downloadWithQuality = async (quality: number) => {
     if (!isElectron()) {
         showToast('Esta función solo está disponible en la aplicación de escritorio', true)
@@ -110,25 +115,36 @@ const downloadWithQuality = async (quality: number) => {
 
     downloading.value = true
 
+    // Generar ID único
+    const downloadId = `${props.videoId}_${Date.now()}`
+    currentDownloadId.value = downloadId
+
     try {
         showToast(`Descargando en ${quality} kbps...`)
 
-        // Llamar al servicio de descarga de Electron
+        // Llamar con el downloadId
         const result = await window.electron!.ipcRenderer.invoke('download-audio', {
             videoId: props.videoId,
             title: props.title,
-            quality: quality
+            quality: quality,
+            downloadId: downloadId  // ← PASAR EL ID
         })
 
         if (result.success) {
             showToast(`Descargado: ${result.info?.title || props.title} (${quality} kbps)`)
+            setTimeout(() => {
+                if (currentDownloadId.value === downloadId) {
+                    currentDownloadId.value = null
+                }
+                downloading.value = false
+            }, 1500)
         } else {
             throw new Error(result.error)
         }
     } catch (error: any) {
         console.error('Error:', error)
         showToast(`Error: ${error.message}`, true)
-    } finally {
+        currentDownloadId.value = null
         downloading.value = false
     }
 }
@@ -188,6 +204,7 @@ const downloadMetadataOnly = async () => {
 .download-wrapper {
     display: inline-flex;
     align-items: center;
+    position: relative;
 }
 
 .download-trigger {

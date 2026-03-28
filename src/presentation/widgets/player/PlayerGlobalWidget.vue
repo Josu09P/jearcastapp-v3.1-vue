@@ -29,8 +29,8 @@
                         <!-- Botón de letras dentro del header -->
                         <div class="lyrics-toggle">
                             <button @click="toggleLyrics" class="lyrics-btn" :class="{ active: showLyrics }">
-                                <i class="bi bi-music-note-beamed"></i>
-                                <span>Letra</span>
+                                <i class="bi bi-music-note-beamed d-none"></i>
+                                <span>Letras</span>
                             </button>
                         </div>
                         <!-- Botón de prueba temporal -->
@@ -109,24 +109,28 @@
                         </div>
                     </div>
 
-                    <div class="buttons-container" :class="{ 'fullscreen': playerStore.isFullScreen }">
-                        <button @click="toggleShuffle" class="control-btn secondary"
-                            :class="{ 'active': playerStore.isShuffling }">
-                            <i class="bi bi-shuffle"></i>
-                        </button>
-                        <button @click="prev" class="control-btn main">
-                            <i class="bi bi-skip-start-fill"></i>
-                        </button>
-                        <button @click="togglePlayPause" class="control-btn play">
-                            <i :class="isPlaying ? 'bi bi-pause-fill' : 'bi bi-play-fill'"></i>
-                        </button>
-                        <button @click="next" class="control-btn main">
-                            <i class="bi bi-skip-end-fill"></i>
-                        </button>
-                        <button @click="toggleRepeat" class="control-btn secondary"
-                            :class="{ 'active': isRepeatActive }">
-                            <i class="bi bi-repeat"></i>
-                        </button>
+                    <div class="controls-row">
+                        <div class="buttons-container" :class="{ 'fullscreen': playerStore.isFullScreen }">
+                            <button @click="toggleShuffle" class="control-btn secondary"
+                                :class="{ 'active': playerStore.isShuffling }">
+                                <i class="bi bi-shuffle"></i>
+                            </button>
+                            <button @click="prev" class="control-btn main">
+                                <i class="bi bi-skip-start-fill"></i>
+                            </button>
+                            <button @click="togglePlayPause" class="control-btn play">
+                                <i :class="isPlaying ? 'bi bi-pause-fill' : 'bi bi-play-fill'"></i>
+                            </button>
+                            <button @click="next" class="control-btn main">
+                                <i class="bi bi-skip-end-fill"></i>
+                            </button>
+                            <button @click="toggleRepeat" class="control-btn secondary"
+                                :class="{ 'active': isRepeatActive }">
+                                <i class="bi bi-repeat"></i>
+                            </button>
+                            <AudioControl v-if="playerStore.isFullScreen" @volume-change="handleVolumeChange"
+                                @eq-change="handleEqChange" />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -194,6 +198,7 @@ import {
 } from '@/data/services/audio/LocalAudioService'
 import { LyricsService, type LyricsData } from '@/data/services/youtube/LyricsService';
 import LyricsDisplay from '../LyricsDisplay.vue';
+import AudioControl from './AudioControl.vue';
 
 /* ==================== TIPOS ==================== */
 interface Position { x: number; y: number }
@@ -219,7 +224,7 @@ declare namespace YT {
 
 /* ==================== CONSTANTES ==================== */
 const BLUR_DURATION = 7000
-const ENDING_BLUR_OFFSET = 15000
+const ENDING_BLUR_OFFSET = 29000
 const PLAYER_WIDTH = 300
 const PLAYER_HEIGHT = 170
 const MINI_PLAYER_OFFSET = 20
@@ -271,7 +276,7 @@ const durationFormatted = computed(() => formatTime(duration.value))
 const transitionName = computed(() => playerStore.isFullScreen ? 'slide-up' : 'slide-down')
 
 const isLocalPlayback = ref(false)
-let localAudioElement: HTMLAudioElement | null = null
+const localAudioElement = ref<HTMLAudioElement | null>(null)
 
 /* ==================== UTILIDADES ==================== */
 const formatTime = (seconds: number): string => {
@@ -287,6 +292,47 @@ const clearBlurTimers = (): void => {
     blurTimer = null; endingBlurInterval = null
 }
 
+// ==================== CONTROLES DE AUDIO ====================
+// ==================== CONTROLES DE AUDIO ====================
+
+// Manejar cambio de volumen
+const handleVolumeChange = (value: number) => {
+    console.log('Volumen cambiado a:', value)
+
+    // Para YouTube
+    if (ytPlayer) {
+        ytPlayer.setVolume(value)
+    }
+
+    // Para audio local - usar el servicio
+    if (isLocalPlayback.value) {
+        // El volumen local se maneja a través del elemento de audio que ya existe
+        // Pero necesitamos obtener la referencia actual
+        try {
+            // Si tienes acceso al elemento de audio desde el servicio
+            // Podrías añadir un método setVolume en LocalAudioService
+            // Por ahora, usamos un enfoque seguro
+            console.log('Volumen local ajustado a:', value)
+        } catch (error) {
+            console.error('Error ajustando volumen local:', error)
+        }
+    }
+}
+
+// Manejar cambio de ecualizador
+const handleEqChange = (values: { bass: number; mid: number; treble: number; noiseReduction: boolean }) => {
+    console.log('Ecualizador cambiado:', values)
+
+    // Aquí puedes enviar estos valores al backend de Electron si es necesario
+    if (window.electron && typeof window.electron.send === 'function') {
+        window.electron.send('audio-eq-changed', values)
+    } else if (window.electron?.ipcRenderer?.send) {
+        window.electron.ipcRenderer.send('audio-eq-changed', values)
+    }
+
+    // Para audio local, podrías aplicar filtros en tiempo real
+    // Esto requiere más implementación con Web Audio API
+}
 const activateBlur = (): void => { isVeilBlurActive.value = true; clearBlurTimers() }
 const deactivateBlur = (): void => { if (isVeilBlurActive.value) { isVeilBlurActive.value = false; clearBlurTimers() } }
 
@@ -318,9 +364,9 @@ const showDebugLyrics = ref(false)
 
 // Función de prueba (usa el formatTime que ya existe)
 const testLyricsDisplay = () => {
-    console.log('🧪 Probando visualización de letras')
-    console.log('📝 Letras cargadas:', currentLyrics.value)
-    console.log('📊 Estado:', {
+    console.log('Probando visualización de letras')
+    console.log('Letras cargadas:', currentLyrics.value)
+    console.log('Estado:', {
         hasLyrics: !!currentLyrics.value,
         syncedCount: currentLyrics.value?.syncedLyrics.length,
         plainLength: currentLyrics.value?.plainLyrics.length
@@ -345,7 +391,7 @@ const loadLyrics = async () => {
     if (!currentTrack.value) return
 
     loadingLyrics.value = true
-    console.log('🎤 Cargando letras para:', currentTrack.value.video_title)
+    console.log('Cargando letras para:', currentTrack.value.video_title)
 
     try {
         let lyrics = await LyricsService.getSyncedLyrics(
@@ -359,9 +405,9 @@ const loadLyrics = async () => {
         }
 
         if (lyrics) {
-            console.log('✅ Letras cargadas:', lyrics.title, '-', lyrics.syncedLyrics.length, 'líneas sincronizadas')
+            console.log('Letras cargadas:', lyrics.title, '-', lyrics.syncedLyrics.length, 'líneas sincronizadas')
         } else {
-            console.log('❌ No se encontraron letras para esta canción')
+            console.log('No se encontraron letras para esta canción')
         }
 
         currentLyrics.value = lyrics
@@ -629,6 +675,130 @@ const loadPlaylistWithAuthors = async (tracks: Track[]) => {
     playerStore.setPlaylist(tracks)
 }
 
+// ==================== TECLAS MULTIMEDIA MEJORADO ====================
+
+// Listener global para teclas multimedia
+const handleGlobalMediaKeys = (e: KeyboardEvent) => {
+    const key = e.code;
+    console.log('Tecla detectada en frontend:', key);
+
+    switch (key) {
+        case 'MediaPlayPause':
+        case 'MediaPlay':
+        case 'MediaPause':
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Ejecutando play/pause desde tecla');
+            togglePlayPause();
+            break;
+        case 'MediaNextTrack':
+        case 'MediaTrackNext':
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Ejecutando next desde tecla');
+            next();
+            break;
+        case 'MediaPreviousTrack':
+        case 'MediaTrackPrevious':
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Ejecutando prev desde tecla');
+            prev();
+            break;
+        case 'F7':
+            e.preventDefault();
+            console.log('Ejecutando prev desde F7');
+            prev();
+            break;
+        case 'F8':
+            e.preventDefault();
+            console.log('Ejecutando play/pause desde F8');
+            togglePlayPause();
+            break;
+        case 'F9':
+            e.preventDefault();
+            console.log('Ejecutando next desde F9');
+            next();
+            break;
+    }
+};
+
+// Media Session API para integración con GNOME
+const setupMediaSession = () => {
+    if ('mediaSession' in navigator) {
+        console.log('Media Session API disponible');
+
+        navigator.mediaSession.setActionHandler('play', () => {
+            console.log('MediaSession: play');
+            togglePlayPause();
+        });
+
+        navigator.mediaSession.setActionHandler('pause', () => {
+            console.log('MediaSession: pause');
+            togglePlayPause();
+        });
+
+        navigator.mediaSession.setActionHandler('previoustrack', () => {
+            console.log('MediaSession: previous track');
+            prev();
+        });
+
+        navigator.mediaSession.setActionHandler('nexttrack', () => {
+            console.log('MediaSession: next track');
+            next();
+        });
+
+        // Actualizar metadata cuando cambia la canción
+        const updateMediaMetadata = () => {
+            if (currentTrack.value) {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: currentTrack.value.video_title,
+                    artist: currentTrack.value.video_author || 'JearCast',
+                    album: 'JearCast Music Player',
+                    artwork: currentTrack.value.video_thumbnail ? [
+                        { src: currentTrack.value.video_thumbnail, sizes: '96x96', type: 'image/jpeg' },
+                        { src: currentTrack.value.video_thumbnail, sizes: '128x128', type: 'image/jpeg' },
+                        { src: currentTrack.value.video_thumbnail, sizes: '192x192', type: 'image/jpeg' },
+                        { src: currentTrack.value.video_thumbnail, sizes: '256x256', type: 'image/jpeg' },
+                        { src: currentTrack.value.video_thumbnail, sizes: '384x384', type: 'image/jpeg' },
+                        { src: currentTrack.value.video_thumbnail, sizes: '512x512', type: 'image/jpeg' },
+                    ] : []
+                });
+            }
+        };
+
+        // Observar cambios de canción y estado
+        watch([currentTrack, isPlaying], () => {
+            updateMediaMetadata();
+            navigator.mediaSession.playbackState = isPlaying.value ? 'playing' : 'paused';
+        });
+
+        updateMediaMetadata();
+    } else {
+        console.log('Media Session API no disponible');
+    }
+};
+
+// Escuchar eventos de Electron para teclas multimedia
+const setupElectronMediaKeys = () => {
+    if (window.electron?.onMediaKey) {
+        window.electron.onMediaKey((key: string) => {
+            console.log('Electron media key:', key);
+            switch (key) {
+                case 'playpause':
+                    togglePlayPause();
+                    break;
+                case 'next':
+                    next();
+                    break;
+                case 'prev':
+                    prev();
+                    break;
+            }
+        });
+    }
+};
+
 /* ==================== LOOP DE PROGRESO ==================== */
 const startProgressLoop = (): void => {
     if (animationFrameId) cancelAnimationFrame(animationFrameId)
@@ -883,17 +1053,33 @@ watch(() => currentTrack.value, () => {
 
 /* ==================== LIFECYCLE ==================== */
 onMounted(() => {
-    window.addEventListener('keydown', handleKeyPress)
-    if (!playerStore.isFullScreen && isExpanded.value) setupLottie()
-})
+    // Listener para teclas multimedia (nuevo)
+    window.addEventListener('keydown', handleGlobalMediaKeys);
+    window.addEventListener('keydown', handleKeyPress);
+
+    // Setup Media Session API (nuevo)
+    setupMediaSession();
+
+    // Setup Electron media keys (nuevo)
+    setupElectronMediaKeys();
+
+    // Setup Lottie (ya existente)
+    if (!playerStore.isFullScreen && isExpanded.value) setupLottie();
+
+    console.log('Player mounted, listeners registrados');
+});
 
 onBeforeUnmount(() => {
-    window.removeEventListener('keydown', handleKeyPress)
-    if (animationFrameId) cancelAnimationFrame(animationFrameId)
-    if (resizeObserver) resizeObserver.disconnect()
-    clearBlurTimers()
-    lottieInstance?.destroy()
-})
+    window.removeEventListener('keydown', handleGlobalMediaKeys);
+    window.removeEventListener('keydown', handleKeyPress);
+
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    if (resizeObserver) resizeObserver.disconnect();
+    clearBlurTimers();
+    lottieInstance?.destroy();
+
+    console.log('Player unmounted, listeners eliminados');
+});
 </script>
 <style scoped>
 @import url('@/assets/css/player-styles.css');

@@ -57,13 +57,13 @@ export const useUserDataStore = defineStore('userData', {
       if (!userId) return []
 
       if (!force && this.initialized.favorites) {
-        console.log('📦 Usando favoritos del store (ya cargados)')
+        console.log('Usando favoritos del store (ya cargados)')
         return this.favorites
       }
 
       this.loading.favorites = true
       try {
-        console.log('🔄 Cargando favoritos desde Firestore...')
+        console.log('Cargando favoritos desde Firestore...')
         const favorites = await getFavoritesByUser(userId)
         this.favorites = favorites
         this.initialized.favorites = true
@@ -88,17 +88,17 @@ export const useUserDataStore = defineStore('userData', {
       if (!userId) return []
 
       if (!force && this.initialized.playlists) {
-        console.log('📦 Usando playlists del store (ya cargadas)')
+        console.log('Usando playlists del store (ya cargadas)')
         return this.playlists
       }
 
       this.loading.playlists = true
       try {
-        console.log('🔄 Cargando playlists desde Firestore...')
+        console.log('Cargando playlists desde Firestore...')
         const playlists = await getPlaylistsByUser(userId)
         this.playlists = playlists
 
-        // ✅ Cargar conteos de canciones para cada playlist
+        // Cargar conteos de canciones para cada playlist
         for (const playlist of this.playlists) {
           if (playlist.id) {
             try {
@@ -128,7 +128,7 @@ export const useUserDataStore = defineStore('userData', {
       return await this.fetchPlaylists(true)
     },
 
-    // ✅ Método para actualizar el conteo de una playlist específica
+    // Método para actualizar el conteo de una playlist específica
     async updatePlaylistSongCount(playlistId: string) {
       try {
         const playlistSongs = await getSongsFromPlaylist(playlistId)
@@ -143,13 +143,13 @@ export const useUserDataStore = defineStore('userData', {
     // RECOMENDADOS
     async fetchRecommended(force = false) {
       if (!force && this.initialized.recommended) {
-        console.log('📦 Usando recomendados del store (ya cargados)')
+        console.log('Usando recomendados del store (ya cargados)')
         return this.recommended
       }
 
       this.loading.recommended = true
       try {
-        console.log('🔄 Cargando recomendados desde Firestore...')
+        console.log('Cargando recomendados desde Firestore...')
         const recommended = await getRecommendedPlaylists()
         this.recommended = recommended
         this.initialized.recommended = true

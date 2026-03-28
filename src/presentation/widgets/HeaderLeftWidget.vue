@@ -51,7 +51,7 @@ const menuItems = [
   { route: '/dashboard/favorites', label: 'Favoritos', icon: 'bi bi-heart' },
   { route: '/dashboard/play-list', label: 'Playlists', icon: 'bi bi-collection-play' },
   { route: '/dashboard/recommended', label: 'TopPicks', icon: 'bi bi-compass' },
-  { route: '/dashboard/local-music', label: 'Música Local', icon: 'bi bi-mic' },
+  { route: '/dashboard/local-music', label: 'Música Local', icon: 'bi bi-music-note-beamed' },
   { route: '/dashboard/settings', label: 'Ajustes', icon: 'bi bi-sliders2' }
 ]
 

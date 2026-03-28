@@ -193,7 +193,7 @@ const playMix = (mix: MixModel) => {
     }))
 
     playerStore.setPlaylist(playlist, 0)
-    showToast(`🎵 Reproduciendo: ${mix.name}`)
+    showToast(`Reproduciendo: ${mix.name}`)
 }
 
 onMounted(async () => {
