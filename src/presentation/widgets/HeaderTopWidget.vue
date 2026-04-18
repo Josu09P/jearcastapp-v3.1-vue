@@ -4,14 +4,14 @@
       <!-- Logo y botón de menú -->
       <div class="header-left">
         <button class="menu-toggle" @click="toggleSidebar">
-          <i class="bi bi-display" v-if="!isSidebarCollapsed"
+          <i class="bi bi-display-fill" v-if="!isSidebarCollapsed"
             style="font-size: 18px !important; color: white !important;"></i>
-          <i class="bi bi-display-fill" v-else style="font-size: 18px !important; color: white !important;"></i>
+          <i class="bi bi-display" v-else style="font-size: 18px !important; color: white !important;"></i>
         </button>
         <div class="logo">
           <span class="logo-text"
             style="background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;">
-            Steel Music
+            "Listen to Music"
           </span>
         </div>
       </div>
@@ -175,9 +175,18 @@ function toggleSidebar() {
   gap: 0.75rem;
 }
 
+.logo-text {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  /* Bold */
+  text-transform: uppercase;
+  /* Para que salga en mayúsculas como la imagen */
+  letter-spacing: -0.9px;
+  /* Ajuste sutil para que se vea más compacto */
+}
 
 .logo-text {
-  font-size: 1.25rem;
+  font-size: 1.0rem;
   font-weight: 600;
   background: var(--brand-gradient);
   -webkit-background-clip: text;
@@ -258,7 +267,7 @@ function toggleSidebar() {
   align-items: center;
   gap: 0.75rem;
   padding: 0.25rem 0.75rem 0.25rem 0.5rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: transparent !important;
   border-radius: 40px;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }

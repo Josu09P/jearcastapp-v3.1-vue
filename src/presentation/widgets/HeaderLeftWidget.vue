@@ -47,12 +47,12 @@ const activeSection = inject('activeSection') as Ref<string>;
 const changeSection = inject('changeSection') as (section: string) => void;
 
 const menuItems = [
-  { route: '/dashboard', label: 'Inicio', icon: 'bi bi-house-door' },
-  { route: '/dashboard/favorites', label: 'Favoritos', icon: 'bi bi-heart' },
-  { route: '/dashboard/play-list', label: 'Playlists', icon: 'bi bi-collection-play' },
-  { route: '/dashboard/recommended', label: 'TopPicks', icon: 'bi bi-compass' },
+  { route: '/dashboard', label: 'Inicio', icon: 'bi bi-house-door-fill' },
+  { route: '/dashboard/favorites', label: 'Favoritos', icon: 'bi bi-heart-fill' },
+  { route: '/dashboard/play-list', label: 'Playlists', icon: 'bi bi-collection-play-fill' },
+  { route: '/dashboard/recommended', label: 'TopPicks', icon: 'bi bi-compass-fill' },
   { route: '/dashboard/local-music', label: 'Música Local', icon: 'bi bi-music-note-beamed' },
-  { route: '/dashboard/settings', label: 'Ajustes', icon: 'bi bi-sliders2' }
+  { route: '/dashboard/settings', label: 'Ajustes', icon: 'bi bi-gear-fill' }
 ]
 
 const emit = defineEmits(['toggle-sidebar']);
@@ -103,7 +103,17 @@ function toggleSidebar() {
 }
 
 .brand-name {
-  font-size: 1.3rem;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
+  /* Bold */
+  text-transform: uppercase;
+  /* Para que salga en mayúsculas como la imagen */
+  letter-spacing: -0.5px;
+  /* Ajuste sutil para que se vea más compacto */
+}
+
+.brand-name {
+  font-size: 1.1rem;
   font-weight: 600;
   background: var(--brand-gradient);
   -webkit-background-clip: text;
