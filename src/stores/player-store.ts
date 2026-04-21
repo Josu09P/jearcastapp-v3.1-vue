@@ -10,6 +10,11 @@ export type Track = {
   localPath?: string
 }
 
+export type PlaybackContext = {
+  type: 'favorites' | 'playlist' | 'recommended'
+  id?: string
+}
+
 export const usePlayerStore = defineStore('player', {
   state: () => ({
     playlist: [] as Track[],
@@ -19,6 +24,8 @@ export const usePlayerStore = defineStore('player', {
     isFullScreen: false,
     shuffleHistory: [] as number[], // Historial de índices reproducidos
     shuffleQueue: [] as number[], // Cola de reproducción aleatoria
+    playbackContext: null as PlaybackContext | null,
+    hasMoreInContext: false,
   }),
 
   getters: {
@@ -28,18 +35,25 @@ export const usePlayerStore = defineStore('player', {
   },
 
   actions: {
-    setPlaylist(tracks: Track[], startIndex = 0) {
+    setPlaylist(tracks: Track[], startIndex = 0, context: PlaybackContext | null = null, hasMore = false) {
       this.playlist = tracks
       this.currentIndex = startIndex
+      this.playbackContext = context
+      this.hasMoreInContext = hasMore
       this.isPlaying = true
       this.isFullScreen = true
       this.resetShuffleQueue()
     },
 
+    setHasMore(hasMore: boolean) {
+      this.hasMoreInContext = hasMore
+    },
+
     resetShuffleQueue() {
       // Crear una cola aleatoria con todos los índices
       const indices = Array.from({ length: this.playlist.length }, (_, i) => i)
-      this.shuffleQueue = this.shuffleArray(indices)
+      // Evitar que la canción actual sea la primera si es posible (opcional)
+      this.shuffleQueue = this.shuffleArray(indices.filter(i => i !== this.currentIndex))
       this.shuffleHistory = []
     },
 
@@ -64,6 +78,7 @@ export const usePlayerStore = defineStore('player', {
       // Si hay nuevas canciones y estamos en modo aleatorio, actualizar cola
       if (this.isShuffling && tracks.length > 0) {
         const newIndices = Array.from({ length: tracks.length }, (_, i) => oldLength + i)
+        // Mezclar las nuevas y añadirlas al final de la cola actual
         this.shuffleQueue.push(...this.shuffleArray(newIndices))
       }
     },

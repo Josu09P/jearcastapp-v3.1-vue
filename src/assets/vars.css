@@ -1,81 +1,94 @@
 /*=================================================
-VAR -> COLORS GLOBALS
+VAR -> COLORS GLOBALS (MODIFICADO PARA MÁS ELEGANCIA)
 ===================================================*/
 :root {
-    --main-bg-color: #050505;
+    --main-bg-color: #0f0f0f;
+    /* Un poco más claro que el negro puro #050505 */
     --accent-color: #1db954;
     --accent-color-rgb: 29, 185, 84;
     --accent-gradient-start: #fff;
     --accent-gradient-end: #1db954;
     --brand-gradient: linear-gradient(135deg, #fff, #1db954);
     --main-bg-gradient: none;
-    --primary-bg: rgba(255, 255, 255, 0.1);
+    --primary-bg: rgba(255, 255, 255, 0.08);
     --hover-bg: rgba(255, 255, 255, 0.05);
-    --overlay-bg: rgba(0, 0, 0, 0.9);
-    --overlay-block-bg: rgb(0, 0, 0);
-    --player-bg: rgba(18, 18, 18, 0.95);
+    --overlay-bg: rgba(0, 0, 0, 0.85);
+    --overlay-block-bg: rgb(15, 15, 15);
+    --player-bg: rgba(20, 20, 20, 0.95);
     --bootstrap-green: #198754;
-    --button-bg: rgba(255, 255, 255, 0.05);
+    --button-bg: rgba(255, 255, 255, 0.06);
     --button-hover-bg: rgba(255, 255, 255, 0.1);
     --text-color: #ffffff;
     --text-secondary: #b3b3b3;
     --blur-efect-global: blur(40px);
+    --app-radius: 13px;
+    --component-radius: 12px;
 }
 
 /*=================================================
-THEMES - DEFINICIONES (GRADIENTES LINEALES SUAVES)
+THEMES - DEFINICIONES (GRADIENTES SUAVES Y ELEGANTES)
 ===================================================*/
+/* He subido el brillo de los colores base para que el gradiente se note más sin perder la oscuridad */
+
 .theme-default {
-    --main-bg-color: linear-gradient(135deg, #0f1a12 0%, #050505 100%);
+    --main-bg-color: linear-gradient(145deg, #262626 0%, #0f0f0f 100%);
+    --accent-color: #1db954;
+    --accent-color-rgb: 29, 185, 84;
+    --brand-gradient: linear-gradient(135deg, #fff, #1db954);
+}
+
+/*TEMA CLARO*/
+.theme-default-1 {
+    --main-bg-color: linear-gradient(145deg, #525252 0%, #0f0f0f 100%);
     --accent-color: #1db954;
     --accent-color-rgb: 29, 185, 84;
     --brand-gradient: linear-gradient(135deg, #fff, #1db954);
 }
 
 .theme-blue {
-    --main-bg-color: linear-gradient(135deg, #07111a 0%, #050505 100%);
+    --main-bg-color: linear-gradient(145deg, #0d1a26 0%, #0f0f0f 100%);
     --accent-color: #1e88e5;
     --accent-color-rgb: 30, 136, 229;
     --brand-gradient: linear-gradient(135deg, #fff, #1e88e5);
 }
 
 .theme-pink {
-    --main-bg-color: linear-gradient(135deg, #1a0710 0%, #050505 100%);
+    --main-bg-color: linear-gradient(145deg, #260d1b 0%, #0f0f0f 100%);
     --accent-color: #e91e63;
     --accent-color-rgb: 233, 30, 99;
     --brand-gradient: linear-gradient(135deg, #fff, #e91e63);
 }
 
 .theme-purple {
-    --main-bg-color: linear-gradient(135deg, #12071a 0%, #050505 100%);
+    --main-bg-color: linear-gradient(145deg, #1d0d26 0%, #0f0f0f 100%);
     --accent-color: #9c27b0;
     --accent-color-rgb: 156, 39, 176;
     --brand-gradient: linear-gradient(135deg, #fff, #9c27b0);
 }
 
 .theme-orange {
-    --main-bg-color: linear-gradient(135deg, #1a1007 0%, #050505 100%);
+    --main-bg-color: linear-gradient(145deg, #26170d 0%, #0f0f0f 100%);
     --accent-color: #ff9800;
     --accent-color-rgb: 255, 152, 0;
     --brand-gradient: linear-gradient(135deg, #fff, #ff9800);
 }
 
 .theme-red {
-    --main-bg-color: linear-gradient(135deg, #1a0707 0%, #050505 100%);
+    --main-bg-color: linear-gradient(145deg, #260d0d 0%, #0f0f0f 100%);
     --accent-color: #f44336;
     --accent-color-rgb: 244, 67, 54;
     --brand-gradient: linear-gradient(135deg, #fff, #f44336);
 }
 
 .theme-cyan {
-    --main-bg-color: linear-gradient(135deg, #071a1a 0%, #050505 100%);
+    --main-bg-color: linear-gradient(145deg, #0d2626 0%, #0f0f0f 100%);
     --accent-color: #00bcd4;
     --accent-color-rgb: 0, 188, 212;
     --brand-gradient: linear-gradient(135deg, #fff, #00bcd4);
 }
 
 .theme-teal {
-    --main-bg-color: linear-gradient(135deg, #071a11 0%, #050505 100%);
+    --main-bg-color: linear-gradient(145deg, #0d261a 0%, #0f0f0f 100%);
     --accent-color: #009688;
     --accent-color-rgb: 0, 150, 136;
     --brand-gradient: linear-gradient(135deg, #fff, #009688);

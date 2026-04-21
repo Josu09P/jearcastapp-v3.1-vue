@@ -617,15 +617,22 @@ const createNewPlaylist = async () => {
 /* Responsive */
 @media (max-width: 768px) {
     .stats-grid {
-        gap: 0.5rem;
+        grid-template-columns: 1fr;
+        max-width: 100%;
+        gap: 0.75rem;
     }
 
     .stat-card {
-        padding: 0.75rem;
+        padding: 1rem 1.5rem;
+        justify-content: space-between; /* Separa el icono de la info para llenar el espacio */
+    }
+
+    .stat-info {
+        text-align: right; /* Alinea el texto a la derecha para equilibrar con el icono a la izquierda */
     }
 
     .stat-value {
-        font-size: 1.2rem;
+        font-size: 1.4rem;
     }
 }
 

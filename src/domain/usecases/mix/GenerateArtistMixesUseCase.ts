@@ -5,12 +5,12 @@ import type { MixModel } from '@/domain/models/MixModel'
 
 export const generateArtistMixes = async (
   userId: string,
-  apiKey: string,
   limit: number = 4,
 ): Promise<MixModel[]> => {
   try {
-    // 1. Obtener favoritos del usuario
-    const favorites = await getFavoritesByUser(userId)
+    // 1. Obtener favoritos del usuario (devuelve FavoritesResponse)
+    const response = await getFavoritesByUser(userId)
+    const favorites = Array.isArray(response) ? response : (response as any).favorites || []
 
     if (favorites.length === 0) {
       console.log('No hay favoritos para generar mixes')
@@ -32,7 +32,7 @@ export const generateArtistMixes = async (
 
     for (const artist of topArtists) {
       try {
-        const mix = await createArtistMix(artist, apiKey)
+        const mix = await createArtistMix(artist)
         mixes.push(mix)
       } catch (error) {
         console.error(`Error creando mix para ${artist.name}:`, error)

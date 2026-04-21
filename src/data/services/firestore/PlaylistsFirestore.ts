@@ -5,11 +5,17 @@ import {
   where,
   getDocs,
   addDoc,
-  serverTimestamp
+  serverTimestamp,
+  orderBy,
+  limit,
+  startAfter,
+  type QueryDocumentSnapshot,
+  type DocumentData
 } from 'firebase/firestore'
 
 import type { PlaylistSongModel } from '@/domain/models/PlaylistSongModel'
 import type { PlaylistModel } from '@/domain/models/PlayListModel'
+
 // Crear o recuperar una playlist
 export async function createOrGetPlaylistService(data: PlaylistModel): Promise<string> {
   const ref = collection(db, 'playlists')
@@ -46,10 +52,34 @@ export async function addSongToPlaylistService(playlistId: string, song: Playlis
   })
 }
 
-// Obtener canciones de una playlist
-export async function fetchSongsByPlaylistIdService(playlistId: string): Promise<PlaylistSongModel[]> {
-  const ref = collection(db, `playlists/${playlistId}/songs`)
-  const snapshot = await getDocs(ref)
+export interface PlaylistSongsResponse {
+  songs: PlaylistSongModel[]
+  lastVisible: QueryDocumentSnapshot<DocumentData> | null
+}
 
-  return snapshot.docs.map(doc => doc.data() as PlaylistSongModel)
+// Obtener canciones de una playlist con paginación
+export async function fetchSongsByPlaylistIdService(
+  playlistId: string,
+  pageSize: number = 50,
+  lastVisibleDoc: QueryDocumentSnapshot<DocumentData> | null = null
+): Promise<PlaylistSongsResponse> {
+  const ref = collection(db, `playlists/${playlistId}/songs`)
+  
+  let q = query(
+    ref, 
+    orderBy('added_at', 'desc'),
+    limit(pageSize)
+  )
+
+  if (lastVisibleDoc) {
+    q = query(q, startAfter(lastVisibleDoc))
+  }
+
+  const snapshot = await getDocs(q)
+  const songs = snapshot.docs.map(doc => doc.data() as PlaylistSongModel)
+
+  return {
+    songs,
+    lastVisible: snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null
+  }
 }

@@ -1,7 +1,20 @@
 import { db } from '@/data/firebase/firebase.config'
 import type { RecommendedPlaylistModel } from '@/domain/models/RecommendedPlaylistModel'
 import type { RecommendedSongModel } from '@/domain/models/RecommendedSongModel'
-import { collection, CollectionReference, deleteDoc, doc, getDocs, query, QueryDocumentSnapshot, where, type DocumentData } from 'firebase/firestore'
+import { 
+  collection, 
+  CollectionReference, 
+  deleteDoc, 
+  doc, 
+  getDocs, 
+  query, 
+  QueryDocumentSnapshot, 
+  where, 
+  type DocumentData, 
+  limit, 
+  startAfter, 
+  orderBy 
+} from 'firebase/firestore'
 
 export async function fetchRecommendedPlaylistsService(): Promise<RecommendedPlaylistModel[]> {
   const ref = collection(db, 'recommended_playlists')
@@ -13,11 +26,27 @@ export async function fetchRecommendedPlaylistsService(): Promise<RecommendedPla
   }))
 }
 
-export async function fetchSongsFromRecommendedPlaylistService(playlistId: string): Promise<RecommendedSongModel[]> {
-  const ref = collection(db, `recommended_playlists/${playlistId}/songs`)
-  const snapshot = await getDocs(ref)
+export interface RecommendedSongsResponse {
+  songs: RecommendedSongModel[]
+  lastVisible: QueryDocumentSnapshot<DocumentData> | null
+}
 
-  return snapshot.docs.map((doc) => {
+export async function fetchSongsFromRecommendedPlaylistService(
+  playlistId: string,
+  pageSize: number = 50,
+  lastVisibleDoc: QueryDocumentSnapshot<DocumentData> | null = null
+): Promise<RecommendedSongsResponse> {
+  const ref = collection(db, `recommended_playlists/${playlistId}/songs`)
+  
+  let q = query(ref, orderBy('video_title'), limit(pageSize))
+
+  if (lastVisibleDoc) {
+    q = query(q, startAfter(lastVisibleDoc))
+  }
+
+  const snapshot = await getDocs(q)
+
+  const songs = snapshot.docs.map((doc) => {
     const data = doc.data()
     return {
       video_id: data.video_id,
@@ -25,6 +54,11 @@ export async function fetchSongsFromRecommendedPlaylistService(playlistId: strin
       video_thumbnail: data.video_thumbnail
     }
   })
+
+  return {
+    songs,
+    lastVisible: snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null
+  }
 }
 
 interface PlaylistSongDocument extends DocumentData {

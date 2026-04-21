@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import type { RecommendedPlaylistModel } from '@/domain/models/RecommendedPlaylistModel'
 import type { RecommendedSongModel } from '@/domain/models/RecommendedSongModel'
 import { fetchRecommendedPlaylistsService, fetchSongsFromRecommendedPlaylistService } from '@/data/services/firestore/RecommendedPlaylistFirestore'
@@ -15,7 +15,33 @@ const loadingSongs = ref(false)
 const sortOption = ref<'recent' | 'alphabetical'>('recent')
 const showAllPlaylists = ref(true)
 
+// --- Optimización de Renderizado (Lazy Loading) ---
+const displayLimit = ref(20)
+const visibleSongs = computed(() => {
+    return sortedSongs.value.slice(0, displayLimit.value)
+})
+
+const loadMore = (entries: IntersectionObserverEntry[]) => {
+    if (entries[0].isIntersecting && displayLimit.value < songs.value.length) {
+        displayLimit.value += 20
+    }
+}
+
+let observer: IntersectionObserver | null = null
+const setupObserver = () => {
+    const sentinel = document.getElementById('songs-sentinel-recommended')
+    if (sentinel) {
+        if (observer) observer.disconnect()
+        observer = new IntersectionObserver(loadMore, { threshold: 0.1 })
+        observer.observe(sentinel)
+    }
+}
+// --------------------------------------------------
+
 const LOCAL_RECOMMENDED_KEY = 'lastRecommendedPlaylistId'
+
+// Importar imagen de fondo
+import musicBg from '@/assets/img/music.jpg'
 
 // ==================== UTILIDADES ====================
 const getLastRecommendedPlaylistId = (): string | null => {
@@ -34,18 +60,36 @@ const showAllPlaylistsView = () => {
     currentPlaylistName.value = ''
     showAllPlaylists.value = true
     songs.value = []
+    displayLimit.value = 20
     localStorage.removeItem(LOCAL_RECOMMENDED_KEY)
 }
+
+const userDataStore = useUserDataStore()
 
 // ==================== CANCIONES ====================
 const loadSongs = async (playlistId: string, playlistName: string) => {
     saveRecommendedPlaylistId(playlistId, playlistName)
     loadingSongs.value = true
+    displayLimit.value = 20
 
     try {
-        songs.value = await fetchSongsFromRecommendedPlaylistService(playlistId)
+        songs.value = await userDataStore.fetchSongsFromRecommended(playlistId)
+        setTimeout(() => setupObserver(), 100)
     } catch (error) {
         console.error('Error cargando canciones:', error)
+    } finally {
+        loadingSongs.value = false
+    }
+}
+
+const loadMoreFromFirebase = async () => {
+    if (!currentPlaylistId.value) return
+    loadingSongs.value = true
+    try {
+        const newSongs = await userDataStore.loadMoreSongsFromRecommended(currentPlaylistId.value)
+        songs.value = [...songs.value, ...newSongs]
+    } catch (e) {
+        console.error(e)
     } finally {
         loadingSongs.value = false
     }
@@ -76,12 +120,16 @@ const playSong = (index: number) => {
         video_title: song.video_title,
         video_thumbnail: song.video_thumbnail
     }))
-    const playerStore = usePlayerStore()
-    playerStore.setPlaylist(playlist, index)
+    playerStore.setPlaylist(
+        playlist, 
+        index, 
+        { type: 'recommended', id: currentPlaylistId.value! }, 
+        userDataStore.hasMoreRecommendedSongs
+    )
 }
 
 const playAll = () => {
-    if (sortedSongs.value.length > 0) {
+    if (visibleSongs.value.length > 0) {
         playSong(0)
     }
 }
@@ -98,21 +146,40 @@ onMounted(async () => {
         }
     }
 })
+
+onUnmounted(() => {
+    if (observer) observer.disconnect()
+})
 </script>
 
 <template>
     <DashboardLayout>
         <div class="container-fluid px-0">
-            <!-- HEADER con título y controles -->
-            <div class="d-flex justify-content-between align-items-center mb-4 px-3">
+            <!-- HERO SECTION CON IMAGEN DE FONDO (music.jpg) -->
+            <div v-if="!showAllPlaylists" class="recommended-hero mb-4" :style="{ backgroundImage: `url(${musicBg})` }">
+                <div class="hero-overlay">
+                    <div class="hero-content px-4">
+                        <span class="badge bg-accent mb-2">Playlist Recomendada</span>
+                        <h1 class="display-4 fw-bold text-white mb-2">{{ currentPlaylistName }}</h1>
+                        <div class="d-flex align-items-center gap-3 text-white-50">
+                            <span><i class="bi bi-music-note-beamed me-1"></i> {{ songs.length }} Canciones</span>
+                        </div>
+                        <div class="mt-4 d-flex gap-2">
+                            <button @click="playAll" class="btn btn-accent rounded-pill px-4 py-2 fw-bold">
+                                <i class="bi bi-play-fill me-1"></i> Reproducir
+                            </button>
+                            <button @click="showAllPlaylistsView" class="btn btn-outline-light rounded-pill px-4">
+                                <i class="bi bi-arrow-left me-1"></i> Volver
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HEADER con título y controles (Solo se muestra cuando se ven todas las playlists) -->
+            <div v-if="showAllPlaylists" class="d-flex justify-content-between align-items-center mb-4 px-3">
                 <div class="d-flex align-items-center gap-3">
                     <h4 class="text-white mb-0 fw-bold">Recomendados</h4>
-
-                    <!-- Botón "Ver todas" cuando hay una playlist seleccionada -->
-                    <button v-if="!showAllPlaylists" @click="showAllPlaylistsView"
-                        class="btn btn-sm btn-outline-light rounded-pill px-3 btn-ver-todas">
-                        <i class="bi bi-arrow-left me-1"></i> Ver todas
-                    </button>
                 </div>
 
                 <div class="d-flex gap-2">
@@ -135,9 +202,8 @@ onMounted(async () => {
 
                         <!-- Imagen de fondo con overlay -->
                         <div class="playlist-image-wrapper">
-                            <!-- Imagen de la playlist o placeholder -->
-                            <img :src="'https://via.placeholder.com/300x300/1a1a1a/666666?text=Playlist'"
-                                :alt="playlist.name" class="playlist-image" />
+                            <!-- Imagen de la playlist local -->
+                            <img :src="musicBg" :alt="playlist.name" class="playlist-image" />
 
                             <!-- Overlay con blur y botón play -->
                             <div class="playlist-overlay">
@@ -166,7 +232,7 @@ onMounted(async () => {
             <!-- CONTENEDOR DEL PLAYER -->
             <div class="text-white rounded shadow mt-4 container-player-jear" id="player-recommended-container"></div>
 
-            <!-- LISTA DE CANCIONES (estilo favoritos) -->
+            <!-- LISTA DE CANCIONES (estilo favoritos/playlists) -->
             <div v-if="songs.length > 0" class="mt-4 px-3">
                 <!-- Header de la playlist seleccionada -->
                 <div class="d-flex align-items-center gap-3 mb-3">
@@ -174,8 +240,11 @@ onMounted(async () => {
                     <span class="badge bg-secondary bg-opacity-25 text-white">
                         {{ songs.length }} {{ songs.length === 1 ? 'canción' : 'canciones' }}
                     </span>
-                    <button @click="playAll" class="btn btn-sm btn-outline-light rounded-pill px-3 btn-ver-todas">
-                        <i class="bi bi-play-fill me-1"></i> Reproducir todo
+                    <button @click="playAll"
+                        class="btn btn-sm btn-outline-light rounded-pill px-3 play-all-button d-flex align-items-center gap-1">
+                        <i class="bi bi-play-fill"></i>
+                        <span class="d-none d-sm-inline">Reproducir todo</span>
+                        <span class="d-inline d-sm-none">Todo</span>
                     </button>
                 </div>
 
@@ -183,36 +252,39 @@ onMounted(async () => {
                 <div class="row px-3 py-2 text-secondary d-none d-md-flex mb-2 border-bottom border-white border-opacity-10"
                     style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">
                     <div class="col-1 text-center">#</div>
-                    <div class="col-9">Título</div>
+                    <div class="col-9 col-md-8">Título</div>
                     <div class="col-2 text-center">Acciones</div>
                 </div>
 
                 <!-- Lista de canciones -->
                 <div class="px-0">
-                    <div v-for="(song, index) in sortedSongs" :key="song.video_id"
+                    <div v-for="(song, index) in visibleSongs" :key="song.video_id"
                         class="song-row row align-items-center p-2 mx-0 mb-1" @dblclick="playSong(index)">
 
                         <!-- Columna # / Play -->
-                        <div class="col-1 text-secondary index-col text-center">
+                        <div class="col-1 d-none d-sm-flex text-secondary index-col text-center">
                             <span class="number">{{ index + 1 }}</span>
                             <i class="bi bi-play-fill play-icon text-white" @click="playSong(index)"></i>
                         </div>
 
                         <!-- Info canción -->
-                        <div class="col-10 col-md-9 d-flex align-items-center gap-3">
-                            <img :src="song.video_thumbnail" class="rounded shadow-sm"
-                                style="width: 48px; height: 48px; object-fit: cover" />
+                        <div class="col-9 col-sm-8 col-md-8 d-flex align-items-center gap-2 gap-sm-3">
+                            <img :src="song.video_thumbnail" class="rounded shadow-sm flex-shrink-0"
+                                style="width: 40px; height: 40px; width: 48px; height: 48px; object-fit: cover" />
                             <div class="text-truncate">
-                                <h6 class="text-white mb-0 text-truncate fw-semibold" style="font-size: 0.9rem;">
+                                <h6 class="text-white mb-0 text-truncate fw-semibold"
+                                    style="font-size: 0.85rem; font-size: 0.9rem;">
                                     {{ song.video_title }}
                                 </h6>
-                                <small class="text-secondary" style="font-size: 12px;">JearCast Music</small>
+                                <small class="text-secondary d-none d-sm-block" style="font-size: 11px;">JearCast
+                                    Music</small>
                             </div>
                         </div>
 
-                        <!-- Acciones (solo play, sin eliminar) -->
-                        <div class="col-1 col-md-2 d-flex justify-content-center align-items-center">
-                            <button @click="playSong(index)" class="btn btn-link p-0 play-action-btn me-3"
+                        <!-- Acciones -->
+                        <div
+                            class="col-3 col-sm-3 col-md-2 d-flex justify-content-end justify-content-md-center align-items-center gap-1">
+                            <button @click="playSong(index)" class="btn btn-link p-0 play-action-btn me-2"
                                 title="Reproducir">
                                 <i class="bi bi-play-circle-fill"
                                     style="font-size: 1.15rem; color: var(--accent-color) !important"></i>
@@ -220,6 +292,18 @@ onMounted(async () => {
                             <DownloadButton :video-id="song.video_id" :title="song.video_title"
                                 :thumbnail="song.video_thumbnail" />
                         </div>
+                    </div>
+                    <!-- Centinela para scroll infinito -->
+                    <div id="songs-sentinel-recommended" style="height: 20px;"></div>
+
+                    <!-- Botón Cargar Más de Firebase -->
+                    <div v-if="userDataStore.hasMoreRecommendedSongs && !showAllPlaylists" class="text-center py-4">
+                        <button @click="loadMoreFromFirebase" :disabled="loadingSongs"
+                            class="btn btn-outline-light rounded-pill px-5 btn-load-more">
+                            <span v-if="loadingSongs" class="spinner-border spinner-border-sm me-2"></span>
+                            <i v-else class="bi bi-plus-circle me-2"></i>
+                            Cargar más canciones
+                        </button>
                     </div>
                 </div>
             </div>
@@ -239,6 +323,99 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+/* ==================== HERO SECTION (music.jpg) ==================== */
+.recommended-hero {
+    height: 300px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    border-radius: 0 0 1rem 1rem;
+    overflow: hidden;
+    margin-top: -1.5rem;
+}
+
+.recommended-hero::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: inherit;
+    background-size: inherit;
+    background-position: inherit;
+    filter: blur(8px);
+    transform: scale(1.1);
+    z-index: 0;
+}
+
+.hero-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom,
+            rgba(0, 0, 0, 0.2) 0%,
+            rgba(0, 0, 0, 0.8) 100%);
+    display: flex;
+    align-items: flex-end;
+    padding-bottom: 2rem;
+    z-index: 1;
+}
+
+.bg-accent {
+    background-color: var(--accent-color) !important;
+}
+
+.btn-accent {
+    background-color: var(--accent-color);
+    color: white;
+    border: 1px solid var(--accent-color);
+    transition: all 0.3s ease;
+}
+
+.btn-accent:hover {
+    background-color: transparent;
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+    transform: translateY(-2px);
+}
+
+.btn-outline-light {
+    background-color: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-light:hover {
+    background-color: white;
+    color: black;
+    border-color: white;
+    transform: translateY(-2px);
+}
+
+.play-all-button {
+    transition: background-color 0.3s, color 0.3s;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.btn-load-more {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.btn-load-more:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+    transform: translateY(-2px);
+}
+
 /* ==================== PLAYLISTS GRID (CARDS CUADRADAS) ==================== */
 .playlists-grid {
     display: grid;
@@ -283,17 +460,79 @@ onMounted(async () => {
     position: relative;
     width: 100%;
     aspect-ratio: 1/1;
-    border-radius: 0.5rem;
-    overflow: hidden;
+    border-radius: 0.8rem;
     background: #1a1a1a;
     margin-bottom: 0.75rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2;
+    overflow: hidden;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+}
+
+/* Efecto de tarjetas apiladas (Perspectiva 3D fija) */
+.playlist-card-wrapper {
+    position: relative;
+    padding-top: 14px;
+    padding-right: 14px;
+    transition: transform 0.4s ease;
+}
+
+/* Capas traseras siempre visibles */
+.playlist-card-wrapper::before,
+.playlist-card-wrapper::after {
+    content: "";
+    position: absolute;
+    border-radius: 0.8rem;
+    z-index: 0;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    width: calc(100% - 14px);
+    aspect-ratio: 1/1;
+}
+
+/* Tarjeta más lejana (ya visible) */
+.playlist-card-wrapper::after {
+    top: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.04);
+    z-index: -2;
+    transform: scale(0.96);
+}
+
+/* Tarjeta intermedia (ya visible) */
+.playlist-card-wrapper::before {
+    top: 7px;
+    right: 7px;
+    background: rgba(255, 255, 255, 0.08);
+    z-index: -1;
+    transform: scale(0.98);
+}
+
+/* Hover: Se expanden más hacia afuera */
+.playlist-card-wrapper:hover {
+    transform: translate(-4px, 4px);
+}
+
+.playlist-card-wrapper:hover::after {
+    top: -8px;
+    right: -8px;
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.playlist-card-wrapper:hover::before {
+    top: -2px;
+    right: -2px;
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .playlist-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.3s ease;
+    border-radius: 0.8rem;
+    transition: transform 0.4s ease;
 }
 
 .playlist-card:hover .playlist-image {
@@ -311,6 +550,7 @@ onMounted(async () => {
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
     opacity: 0;
+    border-radius: 0.8rem !important;
     transition: opacity 0.3s ease;
     display: flex;
     align-items: center;

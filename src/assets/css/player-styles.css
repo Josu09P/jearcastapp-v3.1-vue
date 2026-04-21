@@ -2,7 +2,7 @@
 :root {
     --player-width: v-bind(PLAYER_WIDTH + 'px');
     --player-height: v-bind(PLAYER_HEIGHT + 'px');
-    --player-radius: 1.3rem;
+    --player-radius: var(--app-radius); /* Usamos el radio de la app */
     --transition-duration: 0.3s;
 }
 
@@ -12,22 +12,26 @@
     z-index: 5000;
     transition: all var(--transition-duration) cubic-bezier(0.16, 1, 0.3, 1);
     will-change: transform, width, height, top, left;
+    
+    /* Agregado para consistencia global */
+    border-radius: var(--app-radius);
+    overflow: hidden; 
 }
 
 /* ==================== MODO MINI ==================== */
 .unified-player.mini-mode {
     width: var(--player-width) !important;
     height: var(--player-height) !important;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    background-color: rgba(65, 65, 65, 0.568);
-    border: 0.5px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--player-radius);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    background-color: rgba(30, 30, 30, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--app-radius) !important; /* Forzar el radio de la app */
     color: white;
     padding: 12px;
     cursor: default;
     user-select: none;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); /* Sombra más sutil */
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -40,7 +44,8 @@
     left: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
-    border-radius: 0;
+    border-radius: var(--app-radius); /* Igual que la app */
+    overflow: hidden; /* Recorta el video y el blur de fondo */
     padding: 0;
     background: #000;
     backdrop-filter: none;
@@ -107,6 +112,26 @@
     position: relative;
     z-index: 20;
     flex: 0 0 auto;
+    width: 100%;
+    padding: 10px 15px;
+}
+
+.title-container {
+    flex: 1;
+    min-width: 0; /* Crucial para que text-truncate funcione en flexbox */
+    text-align: center;
+}
+
+@media (max-width: 600px) {
+    .header-fullscreen {
+        gap: 10px !important;
+        padding: 8px 10px;
+    }
+
+    .btn-close-fs, .lyrics-btn {
+        width: 36px !important;
+        height: 36px !important;
+    }
 }
 
 .btn-close-fs {
@@ -182,14 +207,37 @@
 }
 
 .video-wrapper.fullscreen {
-    width: auto;
+    width: fit-content;
     height: auto;
-    max-width: 95vw;
-    max-height: 80vh;
-    aspect-ratio: 16/9;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    max-width: min(90vw, 1100px); /* Límite de ancho para que no sea gigante */
+    max-height: 70vh; /* Límite de alto para dejar espacio a controles y header */
+    aspect-ratio: 16/9; /* Mantener siempre la forma de video */
+    
+    /* Sombra equilibrada y envolvente (Efecto Elevado) */
+    box-shadow: 0 0 50px -10px rgba(0, 0, 0, 0.9), 
+                0 0 20px rgba(255, 255, 255, 0.05);
+    
     opacity: 1;
-    margin: 0 auto;
+    margin: auto; /* Centrado perfecto */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+@media (max-width: 600px) {
+    .video-wrapper.fullscreen {
+        max-width: 95vw;
+        max-height: 40vh;
+        box-shadow: 0 0 30px rgba(0, 0, 0, 0.8); /* Sombra más ajustada para móviles */
+    }
+}
+
+/* Asegurar que el iframe o elemento interno no fuerce un ancho mayor al calculado */
+.video-wrapper.fullscreen > * {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
 }
 
 .video-wrapper.mini-hidden {
@@ -265,6 +313,7 @@
     z-index: 15;
     cursor: default;
     transition: backdrop-filter 0.5s ease, background 0.5s ease;
+    border-radius: 12px; /* Coincide con el video-wrapper */
 }
 
 .video-veil.blur-active {

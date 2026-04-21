@@ -1,12 +1,12 @@
 <template>
     <div class="mix-widget">
         <div class="mix-header">
-            <div class="d-flex justify-content-between align-items-center">
-                <div class="container-title-home" style="margin-top: -15px;">
-                    <h4 class="text-white mb-0 fw-bold">Mix para ti</h4>
-                    <p class="mix-subtitle">Basado en tus artistas favoritos</p>
+            <div class="d-flex justify-content-between align-items-center gap-2">
+                <div class="container-title-home min-width-0" style="margin-top: -15px;">
+                    <h4 class="text-white mb-0 fw-bold text-truncate">Mix para ti</h4>
+                    <p class="mix-subtitle text-truncate">Basado en tus favoritos</p>
                 </div>
-                <div class="d-flex gap-2 align-items-center">
+                <div class="d-flex gap-2 align-items-center flex-shrink-0">
                     <span v-if="mixes.length > 0 && !loading" class="cached-badge" title="Guardado en caché">
                         <i class="bi bi-database"></i>
                     </span>
@@ -63,6 +63,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { generateArtistMixes } from '@/domain/usecases/mix/GenerateArtistMixesUseCase'
+import { generateDiscoveryMix } from '@/domain/usecases/mix/GenerateDiscoveryMixUseCase'
 import type { MixModel } from '@/domain/models/MixModel'
 import { useUserStore } from '@/stores/user'
 import { usePlayerStore } from '@/stores/player-store'
@@ -91,8 +92,9 @@ const showToast = (text: string, isError: boolean = false) => {
 const generateFavoritesHash = async (): Promise<string> => {
     try {
         if (!userStore.id) return ''
-        const favorites = await getFavoritesByUser(userStore.id)
-        const hash = favorites.map(f => f.video_id).sort().join(',')
+        const response = await getFavoritesByUser(userStore.id)
+        const favorites = Array.isArray(response) ? response : (response as any).favorites || []
+        const hash = favorites.map((f: any) => f.video_id).sort().join(',')
         return hash
     } catch (error) {
         console.error('Error generando hash:', error)
@@ -134,7 +136,7 @@ const clearCache = () => {
 
 // Cargar mixes
 const loadMixes = async (forceRefresh: boolean = false) => {
-    if (!userStore.id || !userStore.apikeyYoutube) {
+    if (!userStore.id) {
         loading.value = false
         return
     }
@@ -155,15 +157,23 @@ const loadMixes = async (forceRefresh: boolean = false) => {
         }
 
         console.log('Generando nuevos mixes...')
-        const generatedMixes = await generateArtistMixes(userStore.id, userStore.apikeyYoutube, MAX_MIXES)
-        mixes.value = generatedMixes
+        
+        // 1. Generar Mix de Descubrimiento (SCRAPING - Basado en historial reciente)
+        const discoveryMix = await generateDiscoveryMix()
+        
+        // 2. Generar Mixes por Artista (SCRAPING - Basado en favoritos)
+        const generatedMixes = await generateArtistMixes(userStore.id, MAX_MIXES)
+        
+        // Combinar (Discovery siempre primero si existe)
+        const finalMixes = discoveryMix ? [discoveryMix, ...generatedMixes] : generatedMixes
+        mixes.value = finalMixes
 
-        if (generatedMixes.length > 0) {
-            saveMixesToCache(generatedMixes)
+        if (finalMixes.length > 0) {
+            saveMixesToCache(finalMixes)
         }
 
-        if (generatedMixes.length === 0) {
-            showToast('Agrega más favoritos para obtener mixes personalizados')
+        if (finalMixes.length === 0) {
+            showToast('Escucha algunas canciones para generar mixes personalizados')
         }
     } catch (error) {
         console.error('Error generando mixes:', error)
@@ -465,12 +475,6 @@ defineExpose({ refreshMixes, loadMixes })
 }
 
 @media (max-width: 480px) {
-    .mix-header .d-flex {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-    }
-
     .mix-item {
         padding: 0.5rem;
     }

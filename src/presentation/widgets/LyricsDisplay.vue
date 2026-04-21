@@ -114,7 +114,7 @@ watch(() => props.lyrics, () => {
     bottom: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.95);
+    background: rgba(0, 0, 0, 0.482) !important;
     backdrop-filter: blur(20px);
     transform: translateX(100%);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -124,13 +124,13 @@ watch(() => props.lyrics, () => {
     border-radius: 12px;
     overflow: hidden;
     pointer-events: auto;
-    padding-top: 30px !important;
+    padding-top: 12px !important;
 }
 
 /* Modo two-columns (cuando está en el layout de dos columnas) */
 .lyrics-container.two-columns {
     position: relative;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.785);
     backdrop-filter: blur(20px);
     border-radius: 0;
     transform: none;
@@ -151,11 +151,11 @@ watch(() => props.lyrics, () => {
 
 /* Header */
 .lyrics-header {
-    padding: 1.2rem 1.5rem;
+    padding: 0.8rem 1.5rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     position: relative;
     flex-shrink: 0;
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0);
 }
 
 .lyrics-container.two-columns .lyrics-header {

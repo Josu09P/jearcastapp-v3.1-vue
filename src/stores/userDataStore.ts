@@ -6,13 +6,24 @@ import { getRecommendedPlaylists } from '@/domain/usecases/recommended/GetRecomm
 
 interface UserDataState {
   favorites: any[]
+  lastVisibleFavorite: any | null
+  hasMoreFavorites: boolean
+
   playlists: any[]
   playlistSongCounts: Record<string, number>
+  lastVisiblePlaylistSong: any | null
+  hasMorePlaylistSongs: boolean
+
   recommended: any[]
+  lastVisibleRecommendedSong: any | null
+  hasMoreRecommendedSongs: boolean
+
   loading: {
     favorites: boolean
     playlists: boolean
     recommended: boolean
+    playlistSongs: boolean
+    recommendedSongs: boolean
   }
   initialized: {
     favorites: boolean
@@ -24,13 +35,24 @@ interface UserDataState {
 export const useUserDataStore = defineStore('userData', {
   state: (): UserDataState => ({
     favorites: [],
+    lastVisibleFavorite: null,
+    hasMoreFavorites: true,
+
     playlists: [],
     playlistSongCounts: {},
+    lastVisiblePlaylistSong: null,
+    hasMorePlaylistSongs: true,
+
     recommended: [],
+    lastVisibleRecommendedSong: null,
+    hasMoreRecommendedSongs: true,
+
     loading: {
       favorites: false,
       playlists: false,
       recommended: false,
+      playlistSongs: false,
+      recommendedSongs: false,
     },
     initialized: {
       favorites: false,
@@ -51,23 +73,23 @@ export const useUserDataStore = defineStore('userData', {
       }
     },
 
-    // FAVORITOS
+    // FAVORITOS CON PAGINACIÓN
     async fetchFavorites(force = false) {
       const userId = this.getUserId()
       if (!userId) return []
 
       if (!force && this.initialized.favorites) {
-        console.log('Usando favoritos del store (ya cargados)')
         return this.favorites
       }
 
       this.loading.favorites = true
       try {
-        console.log('Cargando favoritos desde Firestore...')
-        const favorites = await getFavoritesByUser(userId)
-        this.favorites = favorites
+        const response = await getFavoritesByUser(userId, 50)
+        this.favorites = response.favorites
+        this.lastVisibleFavorite = response.lastVisible
+        this.hasMoreFavorites = response.favorites.length === 50
         this.initialized.favorites = true
-        return favorites
+        return this.favorites
       } catch (error) {
         console.error('Error cargando favoritos:', error)
         throw error
@@ -76,13 +98,108 @@ export const useUserDataStore = defineStore('userData', {
       }
     },
 
+    async loadMoreFavorites() {
+      if (this.loading.favorites || !this.hasMoreFavorites) return []
+
+      const userId = this.getUserId()
+      if (!userId || !this.lastVisibleFavorite) return []
+
+      this.loading.favorites = true
+      try {
+        const response = await getFavoritesByUser(userId, 50, this.lastVisibleFavorite)
+        this.favorites = [...this.favorites, ...response.favorites]
+        this.lastVisibleFavorite = response.lastVisible
+        this.hasMoreFavorites = response.favorites.length === 50
+        return response.favorites
+      } catch (error) {
+        console.error('Error cargando más favoritos:', error)
+        return []
+      } finally {
+        this.loading.favorites = false
+      }
+    },
+
     async invalidateAndRefreshFavorites() {
       this.initialized.favorites = false
       this.favorites = []
+      this.lastVisibleFavorite = null
+      this.hasMoreFavorites = true
       return await this.fetchFavorites(true)
     },
 
-    // PLAYLISTS
+    // PLAYLISTS - CANCIONES CON PAGINACIÓN
+    async fetchSongsFromPlaylist(playlistId: string, force = false) {
+      this.loading.playlistSongs = true
+      this.lastVisiblePlaylistSong = null
+      this.hasMorePlaylistSongs = true
+
+      try {
+        const response = await getSongsFromPlaylist(playlistId, 50)
+        this.lastVisiblePlaylistSong = response.lastVisible
+        this.hasMorePlaylistSongs = response.songs.length === 50
+        return response.songs
+      } catch (error) {
+        console.error('Error cargando canciones:', error)
+        return []
+      } finally {
+        this.loading.playlistSongs = false
+      }
+    },
+
+    async loadMoreSongsFromPlaylist(playlistId: string) {
+      if (this.loading.playlistSongs || !this.hasMorePlaylistSongs) return []
+
+      this.loading.playlistSongs = true
+      try {
+        const response = await getSongsFromPlaylist(playlistId, 50, this.lastVisiblePlaylistSong)
+        this.lastVisiblePlaylistSong = response.lastVisible
+        this.hasMorePlaylistSongs = response.songs.length === 50
+        return response.songs
+      } catch (error) {
+        console.error('Error cargando más canciones:', error)
+        return []
+      } finally {
+        this.loading.playlistSongs = false
+      }
+    },
+
+    // RECOMENDADOS - CANCIONES CON PAGINACIÓN
+    async fetchSongsFromRecommended(playlistId: string) {
+      this.loading.recommendedSongs = true
+      this.lastVisibleRecommendedSong = null
+      this.hasMoreRecommendedSongs = true
+
+      try {
+        const response = await fetchSongsFromRecommendedPlaylistService(playlistId, 50)
+        this.lastVisibleRecommendedSong = response.lastVisible
+        this.hasMoreRecommendedSongs = response.songs.length === 50
+        return response.songs
+      } catch (error) {
+        console.error('Error cargando canciones recomendadas:', error)
+        return []
+      } finally {
+        this.loading.recommendedSongs = false
+      }
+    },
+
+    async loadMoreSongsFromRecommended(playlistId: string) {
+      if (this.loading.recommendedSongs || !this.hasMoreRecommendedSongs) return []
+
+      this.loading.recommendedSongs = true
+      try {
+        const response = await fetchSongsFromRecommendedPlaylistService(playlistId, 50, this.lastVisibleRecommendedSong)
+        this.lastVisibleRecommendedSong = response.lastVisible
+        this.hasMoreRecommendedSongs = response.songs.length === 50
+        return response.songs
+      } catch (error) {
+        console.error('Error cargando más canciones recomendadas:', error)
+        return []
+      } finally {
+        this.loading.recommendedSongs = false
+      }
+    },
+
+    // ... (RESTO DE ACCIONES EXISTENTES) ...
     async fetchPlaylists(force = false) {
       const userId = this.getUserId()
       if (!userId) return []
@@ -102,8 +219,10 @@ export const useUserDataStore = defineStore('userData', {
         for (const playlist of this.playlists) {
           if (playlist.id) {
             try {
-              const playlistSongs = await getSongsFromPlaylist(playlist.id)
-              this.playlistSongCounts[playlist.id] = playlistSongs.length
+              // Ajustado para obtener solo el conteo inicial (puede no ser exacto si hay > 50, 
+              // pero para el badge suele bastar o podemos optimizar luego)
+              const response = await getSongsFromPlaylist(playlist.id, 50)
+              this.playlistSongCounts[playlist.id] = response.songs.length
             } catch (e) {
               console.error(`Error cargando canciones para playlist ${playlist.id}:`, e)
               this.playlistSongCounts[playlist.id] = 0
@@ -131,9 +250,9 @@ export const useUserDataStore = defineStore('userData', {
     // Método para actualizar el conteo de una playlist específica
     async updatePlaylistSongCount(playlistId: string) {
       try {
-        const playlistSongs = await getSongsFromPlaylist(playlistId)
-        this.playlistSongCounts[playlistId] = playlistSongs.length
-        return playlistSongs.length
+        const response = await getSongsFromPlaylist(playlistId, 50)
+        this.playlistSongCounts[playlistId] = response.songs.length
+        return response.songs.length
       } catch (e) {
         console.error(`Error actualizando conteo para playlist ${playlistId}:`, e)
         return 0
@@ -168,7 +287,6 @@ export const useUserDataStore = defineStore('userData', {
       return await this.fetchRecommended(true)
     },
   },
-
   getters: {
     getPlaylistSongCount: (state) => (playlistId: string) => {
       return state.playlistSongCounts[playlistId] || 0

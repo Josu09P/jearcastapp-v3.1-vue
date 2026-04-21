@@ -178,8 +178,6 @@ function toggleSidebar() {
 .logo-text {
   font-family: 'Montserrat', sans-serif;
   font-weight: 700;
-  /* Bold */
-  text-transform: uppercase;
   /* Para que salga en mayúsculas como la imagen */
   letter-spacing: -0.9px;
   /* Ajuste sutil para que se vea más compacto */
@@ -308,15 +306,15 @@ function toggleSidebar() {
 .logout-btn {
   display: flex;
   align-items: center;
+  justify-content: center; /* Centrado perfecto */
   width: 40px;
   height: 40px;
   margin: 0 auto;
   gap: 0.5rem;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 30px;
-  padding-left: 13px;
-  padding-right: 10px;
+  border-radius: 50%; /* Más circular */
+  padding: 0; /* Limpiamos paddings previos */
   color: rgba(255, 255, 255, 0.7);
   font-size: 0.85rem;
   cursor: pointer;

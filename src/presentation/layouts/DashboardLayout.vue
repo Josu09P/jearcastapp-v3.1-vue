@@ -49,34 +49,41 @@ onMounted(async () => {
 <style scoped>
 .app-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  /* Cambiado de min-height a height */
   background: var(--main-bg-color);
   background-attachment: fixed;
-  overflow-x: hidden;
+  overflow: hidden;
+  /* El layout no debe scrollear, solo sus hijos */
 }
 
 .sidebar {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   width: 260px;
-  height: 100vh;
+  height: 100%;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 1000;
+  visibility: visible;
+  opacity: 1;
 }
 
 .sidebar.collapsed {
-  transform: translateX(-260px);
+  transform: translateX(-100%);
+  visibility: hidden;
+  opacity: 0;
 }
 
 .main-content {
   flex: 1;
   margin-left: 260px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   width: calc(100% - 260px);
+  overflow-y: auto;
 }
 
 .main-content.expanded {
@@ -104,13 +111,18 @@ onMounted(async () => {
   }
 
   .sidebar {
-    transform: translateX(-260px);
-    background: transparent;
+    transform: translateX(-100%);
+    background: rgba(255, 255, 255, 0);
     backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    opacity: 0;
+    visibility: hidden;
   }
 
   .sidebar.collapsed {
     transform: translateX(0);
+    opacity: 1;
+    visibility: visible;
   }
 
   .main-content {

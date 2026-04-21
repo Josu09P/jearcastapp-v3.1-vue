@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import DashboardLayout from '@/presentation/layouts/DashboardLayout.vue'
 import Toastify from 'toastify-js'
 import Swal from 'sweetalert2'
@@ -15,11 +15,14 @@ import DownloadButton from '@/presentation/widgets/DownloadButton.vue'
 const userDataStore = useUserDataStore()
 const playerStore = usePlayerStore()
 
+// Importar imagen de fondo
+import musicBg from '@/assets/img/music.jpg'
+
 // Usar datos del store (ya cargados en el layout)
 const playlists = computed(() => userDataStore.playlists)
 const loadingPlaylists = computed(() => userDataStore.loading.playlists)
 const playlistSongCounts = computed(() => userDataStore.playlistSongCounts)
-const IMAGE_PLAYLIST = 'https://osomviajes.com/wp-content/uploads/2021/11/james-stamler-k3heD_KwH0A-unsplash-1024x683.jpg'
+const IMAGE_PLAYLIST = musicBg
 
 // Estado local
 const songs = ref<PlaylistSongModel[]>([])
@@ -31,8 +34,39 @@ const loadingSongs = ref(false)
 const sortOption = ref<'recent' | 'alphabetical'>('recent')
 const showAllPlaylists = ref(true)
 
+// --- Optimización de Renderizado (Lazy Loading) ---
+const displayLimit = ref(20)
+const visibleSongs = computed(() => {
+    return sortedSongs.value.slice(0, displayLimit.value)
+})
+
+const loadMore = (entries: IntersectionObserverEntry[]) => {
+    if (entries[0].isIntersecting && displayLimit.value < songs.value.length) {
+        displayLimit.value += 20
+    }
+}
+
+let observer: IntersectionObserver | null = null
+const setupObserver = () => {
+    const sentinel = document.getElementById('songs-sentinel')
+    if (sentinel) {
+        if (observer) observer.disconnect()
+        observer = new IntersectionObserver(loadMore, { threshold: 0.1 })
+        observer.observe(sentinel)
+    }
+}
+// --------------------------------------------------
+
 const LOCAL_PLAYLIST_KEY = 'jearcast_selectedPlaylistId'
 const PLAYLIST_IMAGES_KEY = 'jearcast_playlist_images'
+
+// Determinar la imagen de la playlist actual para el Hero
+const currentPlaylistImage = computed(() => {
+    if (currentPlaylistId.value && playlistImages.value[currentPlaylistId.value]) {
+        return playlistImages.value[currentPlaylistId.value]
+    }
+    return musicBg
+})
 
 // ==================== UTILIDADES ====================
 const getUserId = (): string | null => {
@@ -55,6 +89,51 @@ const loadPlaylistImages = () => {
 const savePlaylistImage = (playlistId: string, imageData: string) => {
     playlistImages.value[playlistId] = imageData
     localStorage.setItem(PLAYLIST_IMAGES_KEY, JSON.stringify(playlistImages.value))
+}
+
+// Comprimir imagen antes de guardar (Reducir a máximo 500px para ahorrar LocalStorage)
+const compressAndSaveImage = (playlistId: string, file: File) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+            const canvas = document.createElement('canvas')
+            let width = img.width
+            let height = img.height
+            const maxSide = 500
+
+            if (width > height) {
+                if (width > maxSide) {
+                    height *= maxSide / width
+                    width = maxSide
+                }
+            } else {
+                if (height > maxSide) {
+                    width *= maxSide / height
+                    height = maxSide
+                }
+            }
+
+            canvas.width = width
+            canvas.height = height
+            const ctx = canvas.getContext('2d')
+            ctx?.drawImage(img, 0, 0, width, height)
+
+            // Guardar con calidad reducida (0.7) para optimizar espacio
+            const compressedData = canvas.toDataURL('image/jpeg', 0.7)
+            savePlaylistImage(playlistId, compressedData)
+
+            Toastify({
+                text: 'Imagen optimizada y guardada',
+                duration: 3000,
+                className: 'toast-glass',
+                gravity: 'top',
+                position: 'right'
+            }).showToast()
+        }
+        img.src = e.target?.result as string
+    }
+    reader.readAsDataURL(file)
 }
 
 // ==================== SELECCIÓN DE IMAGEN ====================
@@ -83,20 +162,7 @@ const selectPlaylistImage = async (playlistId: string) => {
         })
 
         if (file) {
-            const reader = new FileReader()
-            reader.onload = (e) => {
-                const imageData = e.target?.result as string
-                savePlaylistImage(playlistId, imageData)
-
-                Toastify({
-                    text: 'Imagen guardada correctamente',
-                    duration: 3000,
-                    className: 'toast-glass',
-                    gravity: 'top',
-                    position: 'right'
-                }).showToast()
-            }
-            reader.readAsDataURL(file)
+            compressAndSaveImage(playlistId, file)
         }
     } catch (error) {
         console.error('Error al seleccionar imagen:', error)
@@ -127,6 +193,7 @@ function showAllPlaylistsView() {
     currentPlaylistName.value = ''
     showAllPlaylists.value = true
     songs.value = []
+    displayLimit.value = 20 // Reset limit
     localStorage.removeItem(LOCAL_PLAYLIST_KEY)
 }
 
@@ -134,9 +201,11 @@ function showAllPlaylistsView() {
 async function loadSongs(playlistId: string, playlistName: string) {
     saveSelectedPlaylist(playlistId, playlistName)
     loadingSongs.value = true
+    displayLimit.value = 20
 
     try {
-        songs.value = await getSongsFromPlaylist(playlistId)
+        songs.value = await userDataStore.fetchSongsFromPlaylist(playlistId)
+        setTimeout(() => setupObserver(), 100)
     } catch (e) {
         Toastify({
             text: 'Error cargando canciones',
@@ -144,6 +213,19 @@ async function loadSongs(playlistId: string, playlistName: string) {
             gravity: 'top',
             position: 'right'
         }).showToast()
+    } finally {
+        loadingSongs.value = false
+    }
+}
+
+async function loadMoreFromFirebase() {
+    if (!currentPlaylistId.value) return
+    loadingSongs.value = true
+    try {
+        const newSongs = await userDataStore.loadMoreSongsFromPlaylist(currentPlaylistId.value)
+        songs.value = [...songs.value, ...newSongs]
+    } catch (e) {
+        console.error(e)
     } finally {
         loadingSongs.value = false
     }
@@ -175,7 +257,12 @@ function playSong(index: number) {
         video_title: song.video_title,
         video_thumbnail: song.video_thumbnail
     }))
-    playerStore.setPlaylist(playlist, index)
+    playerStore.setPlaylist(
+        playlist, 
+        index, 
+        { type: 'playlist', id: currentPlaylistId.value! }, 
+        userDataStore.hasMorePlaylistSongs
+    )
 }
 
 function playAll() {
@@ -296,21 +383,41 @@ onMounted(() => {
 
     console.log('Playlists: usando datos del store (sin petición)')
 })
+
+onUnmounted(() => {
+    if (observer) observer.disconnect()
+})
 </script>
 
 <template>
     <DashboardLayout>
         <div class="container-fluid px-0">
-            <!-- HEADER SECTION -->
-            <div class="d-flex justify-content-between align-items-center mb-4 px-3">
+            <!-- HERO SECTION CON IMAGEN DE FONDO DINÁMICA -->
+            <div v-if="!showAllPlaylists" class="playlist-hero mb-4"
+                :style="{ backgroundImage: `url(${currentPlaylistImage})` }">
+                <div class="hero-overlay">
+                    <div class="hero-content px-4">
+                        <span class="badge bg-accent mb-2">Tu Playlist</span>
+                        <h1 class="display-4 fw-bold text-white mb-2">{{ currentPlaylistName }}</h1>
+                        <div class="d-flex align-items-center gap-3 text-white-50">
+                            <span><i class="bi bi-music-note-beamed me-1"></i> {{ songs.length }} Canciones</span>
+                        </div>
+                        <div class="mt-4 d-flex gap-2">
+                            <button @click="playAll" class="btn btn-accent rounded-pill px-4 py-2 fw-bold">
+                                <i class="bi bi-play-fill me-1"></i> Reproducir
+                            </button>
+                            <button @click="showAllPlaylistsView" class="btn btn-outline-light rounded-pill px-4">
+                                <i class="bi bi-arrow-left me-1"></i> Volver
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HEADER SECTION (Solo visible cuando se ven todas) -->
+            <div v-if="showAllPlaylists" class="d-flex justify-content-between align-items-center mb-4 px-3">
                 <div class="d-flex align-items-center gap-3">
                     <h4 class="text-white mb-0 fw-bold">Playlists</h4>
-
-                    <!-- Botón "Ver todas" cuando hay una playlist seleccionada -->
-                    <button v-if="!showAllPlaylists" @click="showAllPlaylistsView"
-                        class="btn btn-sm rounded-pill px-3 filter-button-playlists text-white">
-                        <i class="bi bi-arrow-left me-1"></i> Ver todas
-                    </button>
                 </div>
 
                 <div class="d-flex gap-2">
@@ -329,12 +436,6 @@ onMounted(() => {
                         <span v-if="loadingPlaylists" class="spinner-border spinner-border-sm me-2"></span>
                         <i v-else class="bi bi-arrow-clockwise"></i>
                     </button>
-
-                    <!-- Indicador de caché -->
-                    <span v-if="!loadingPlaylists && playlists.length > 0" class="cached-badge" title="Datos en caché"
-                        style="border: 1px solid rgba(255, 255, 255, 0.08);">
-                        <i class="bi bi-database"></i>
-                    </span>
                 </div>
             </div>
 
@@ -390,8 +491,11 @@ onMounted(() => {
                     <span class="badge bg-secondary bg-opacity-25 text-white">
                         {{ songs.length }} {{ songs.length === 1 ? 'canción' : 'canciones' }}
                     </span>
-                    <button @click="playAll" class="btn btn-sm btn-outline-light rounded-pill px-3 play-all-button">
-                        <i class="bi bi-play-fill me-1"></i> Reproducir todo
+                    <button @click="playAll"
+                        class="btn btn-sm btn-outline-light rounded-pill px-3 play-all-button d-flex align-items-center gap-1">
+                        <i class="bi bi-play-fill"></i>
+                        <span class="d-none d-sm-inline">Reproducir todo</span>
+                        <span class="d-inline d-sm-none">Todo</span>
                     </button>
                 </div>
 
@@ -406,24 +510,26 @@ onMounted(() => {
 
                 <!-- Lista de canciones -->
                 <div class="px-0">
-                    <div v-for="(song, index) in sortedSongs" :key="song.video_id"
+                    <div v-for="(song, index) in visibleSongs" :key="song.video_id"
                         class="song-row row align-items-center p-2 mx-0 mb-1" @dblclick="playSong(index)">
 
-                        <!-- Columna # / Play -->
-                        <div class="col-1 text-secondary index-col text-center">
+                        <!-- Columna # / Play (Ocultar en móviles muy pequeños si es necesario) -->
+                        <div class="col-1 d-none d-sm-flex text-secondary index-col text-center">
                             <span class="number">{{ index + 1 }}</span>
                             <i class="bi bi-play-fill play-icon text-white" @click="playSong(index)"></i>
                         </div>
 
-                        <!-- Info canción -->
-                        <div class="col-10 col-md-6 d-flex align-items-center gap-3">
-                            <img :src="song.video_thumbnail" class="rounded shadow-sm"
-                                style="width: 48px; height: 48px; object-fit: cover" />
+                        <!-- Info canción (Más espacio en móviles) -->
+                        <div class="col-9 col-sm-8 col-md-6 d-flex align-items-center gap-2 gap-sm-3">
+                            <img :src="song.video_thumbnail" class="rounded shadow-sm flex-shrink-0"
+                                style="width: 40px; height: 40px; width: 48px; height: 48px; object-fit: cover" />
                             <div class="text-truncate">
-                                <h6 class="text-white mb-0 text-truncate fw-semibold" style="font-size: 0.9rem;">
+                                <h6 class="text-white mb-0 text-truncate fw-semibold"
+                                    style="font-size: 0.85rem; font-size: 0.9rem;">
                                     {{ song.video_title }}
                                 </h6>
-                                <small class="text-secondary" style="font-size: 12px;">JearCast Music</small>
+                                <small class="text-secondary d-none d-sm-block" style="font-size: 11px;">JearCast
+                                    Music</small>
                             </div>
                         </div>
 
@@ -432,16 +538,29 @@ onMounted(() => {
                             {{ song.added_at?.toDate().toLocaleDateString() || 'Fecha desconocida' }}
                         </div>
 
-                        <!-- Acciones -->
-                        <div class="col-1 col-md-2 d-flex justify-content-center align-items-center">
-                            <button @click="deleteSong(song.video_id)" class="btn btn-link p-0 remove-btn me-2">
+                        <!-- Acciones (Más espacio para botones) -->
+                        <div
+                            class="col-3 col-sm-3 col-md-2 d-flex justify-content-end justify-content-md-center align-items-center gap-1">
+                            <button @click="deleteSong(song.video_id)" class="btn btn-link p-0 remove-btn me-1">
                                 <span v-if="deletingMap[song.video_id]"
                                     class="spinner-border spinner-border-sm text-secondary"></span>
-                                <i v-else class="bi bi-trash3 text-secondary"></i>
+                                <i v-else class="bi bi-trash3 text-secondary" style="font-size: 14px;"></i>
                             </button>
                             <DownloadButton :video-id="song.video_id" :title="song.video_title"
                                 :thumbnail="song.video_thumbnail" />
                         </div>
+                    </div>
+                    <!-- Centinela para scroll infinito -->
+                    <div id="songs-sentinel" style="height: 20px;"></div>
+
+                    <!-- Botón Cargar Más de Firebase -->
+                    <div v-if="userDataStore.hasMorePlaylistSongs && !showAllPlaylists" class="text-center py-4">
+                        <button @click="loadMoreFromFirebase" :disabled="loadingSongs"
+                            class="btn btn-outline-light rounded-pill px-5 btn-load-more">
+                            <span v-if="loadingSongs" class="spinner-border spinner-border-sm me-2"></span>
+                            <i v-else class="bi bi-plus-circle me-2"></i>
+                            Cargar más canciones
+                        </button>
                     </div>
                 </div>
             </div>
@@ -461,6 +580,101 @@ onMounted(() => {
 </template>
 <style scoped>
 @import url('@/assets/css/playlist-styles.css');
+
+.btn-load-more {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.btn-load-more:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+    transform: translateY(-2px);
+}
+
+/* ==================== HERO SECTION (music.jpg) ==================== */
+.playlist-hero {
+    height: 300px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    border-radius: 0 0 1rem 1rem;
+    overflow: hidden;
+    margin-top: -1.5rem;
+}
+
+.playlist-hero::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: inherit;
+    background-size: inherit;
+    background-position: inherit;
+    filter: blur(8px);
+    /* Efecto blur suave */
+    transform: scale(1.1);
+    /* Evitar bordes blancos por el blur */
+    z-index: 0;
+}
+
+.hero-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom,
+            rgba(0, 0, 0, 0.1) 0%,
+            rgba(0, 0, 0, 0.8) 100%);
+    display: flex;
+    align-items: flex-end;
+    padding-bottom: 2rem;
+    z-index: 1;
+}
+
+.bg-accent {
+    background-color: var(--accent-color) !important;
+}
+
+.btn-accent {
+    background-color: var(--accent-color);
+    color: white;
+    border: 1px solid var(--accent-color);
+    transition: all 0.3s ease;
+}
+
+.btn-accent:hover {
+    background-color: transparent;
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+    transform: translateY(-2px);
+}
+
+.btn-outline-light {
+    background-color: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-outline-light:hover {
+    background-color: white;
+    color: black;
+    border-color: white;
+    transform: translateY(-2px);
+}
+
+/* Ajuste para el botón volver específico */
+.btn-outline-light.rounded-pill.px-4:hover {
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #000;
+}
 
 .refresh-button-playlists {
     transition: background-color 0.3s, color 0.3s;

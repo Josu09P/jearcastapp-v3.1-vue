@@ -12,35 +12,27 @@
 
             <!-- Contenedor principal -->
             <div class="player-content" :class="{ 'fullscreen': playerStore.isFullScreen }">
-                <!-- HEADER - Fullscreen -->
-                <div v-if="playerStore.isFullScreen"
-                    class="header-fullscreen d-flex justify-content-between align-items-center">
-                    <button @click="closeFullScreen" class="btn-close-fs">
+                <!-- HEADER - Fullscreen (Alineado en una sola línea) -->
+                <div v-if="playerStore.isFullScreen" class="header-fullscreen d-flex align-items-center gap-2 gap-md-3">
+
+                    <!-- Botón Cerrar/Mini -->
+                    <button @click="closeFullScreen" class="btn-close-fs flex-shrink-0">
                         <i class="bi bi-chevron-down"></i>
                     </button>
-                    <div class="text-center" style="margin-top: 20px;">
-                        <small class="text-uppercase tracking-widest text-secondary opacity-75">
-                            Reproduciendo ahora
-                        </small>
-                        <h5 class="mb-0 text-white fw-bold">{{ currentTrack?.video_title }}</h5>
+
+                    <!-- Título Centrado -->
+                    <div class="title-container">
+                        <h6 class="mb-0 text-white fw-bold text-truncate"
+                            style="font-size: clamp(0.9rem, 2vw, 1.1rem);">
+                            {{ currentTrack?.video_title }}
+                        </h6>
                     </div>
-                    <div class="d-flex gap-2 align-items-center">
-                        <div style="width: 40px;"></div>
-                        <!-- Botón de letras dentro del header -->
-                        <div class="lyrics-toggle">
-                            <button @click="toggleLyrics" class="lyrics-btn" :class="{ active: showLyrics }">
-                                <i class="bi bi-music-note-beamed d-none"></i>
-                                <span>Letras</span>
-                            </button>
-                        </div>
-                        <!-- Botón de prueba temporal -->
-                        <div class="lyrics-toggle d-none">
-                            <button @click="testLyricsDisplay" class="lyrics-btn"
-                                style="background: #ff4d4d; border-color: #ff4d4d;">
-                                <i class="bi bi-bug"></i>
-                                <span>Test</span>
-                            </button>
-                        </div>
+
+                    <!-- Botón Letras -->
+                    <div class="lyrics-toggle flex-shrink-0">
+                        <button @click="toggleLyrics" class="lyrics-btn" :class="{ active: showLyrics }" title="Letras">
+                            <i class="bi bi-card-text" style="font-size: clamp(1rem, 1.5vw, 1.2rem);"></i>
+                        </button>
                     </div>
                 </div>
 
@@ -182,9 +174,13 @@ import { usePlayerStore, type Track } from '@/stores/player-store'
 import lottie from 'lottie-web'
 import { useAnimationStore } from '@/stores/animation-store';
 import { useUserStore } from '@/stores/user';
+import { useUserDataStore } from '@/stores/userDataStore';
 import { getArtistFromTitle, searchSongsByArtist } from '@/data/services/youtube/SearchByArtistService';
+import { youtubeScraperService } from '@/data/services/youtube/YouTubeScraperService';
 import { useApiKeyManager } from '@/composables/useApiKeyManager';
-import { addToRecentlyPlayed } from '@/data/services/local/RecentlyPlayedService';
+import { getRecentlyPlayed, addToRecentlyPlayed } from '@/data/services/local/RecentlyPlayedService';
+import { getFavoritesByUser } from '@/domain/usecases/favorites/GetFavoritesByUser';
+import { detectMainArtist, calculateSimilarity } from '@/domain/usecases/mix/GetVibeFromTitle';
 import {
     initLocalAudio,
     playLocalTrack,
@@ -233,9 +229,55 @@ const RESIZE_DELAYS = [0, 50, 100, 200, 300] as const
 
 /* ==================== STORE ==================== */
 const playerStore = usePlayerStore()
+const userDataStore = useUserDataStore()
 const currentTrack = computed(() => playerStore.currentTrack)
 const isPlaying = computed(() => playerStore.isPlaying)
 const userStore = useUserStore()
+
+/* ==================== COLA DINÁMICA (AUTO-LOAD) ==================== */
+watch(() => playerStore.currentIndex, async (newIndex) => {
+    const threshold = 10; // Cargar más cuando falten 10 canciones
+    const totalSongs = playerStore.playlist.length;
+    const context = playerStore.playbackContext;
+
+    if (playerStore.hasMoreInContext && (totalSongs - newIndex <= threshold) && context) {
+        console.log('Reproductor: Umbral alcanzado. Cargando más canciones silenciosamente...');
+
+        let newSongsData: any[] = [];
+
+        try {
+            if (context.type === 'favorites') {
+                newSongsData = await userDataStore.loadMoreFavorites();
+            } else if (context.type === 'playlist' && context.id) {
+                newSongsData = await userDataStore.loadMoreSongsFromPlaylist(context.id);
+            } else if (context.type === 'recommended' && context.id) {
+                newSongsData = await userDataStore.loadMoreSongsFromRecommended(context.id);
+            }
+
+            if (newSongsData.length > 0) {
+                const newTracks: Track[] = newSongsData.map(s => ({
+                    video_id: s.video_id,
+                    video_title: s.video_title,
+                    video_thumbnail: s.video_thumbnail
+                }));
+
+                playerStore.addToPlaylist(newTracks);
+
+                // Actualizar bandera hasMore basado en el store de datos
+                let hasMore = false;
+                if (context.type === 'favorites') hasMore = userDataStore.hasMoreFavorites;
+                if (context.type === 'playlist') hasMore = userDataStore.hasMorePlaylistSongs;
+                if (context.type === 'recommended') hasMore = userDataStore.hasMoreRecommendedSongs;
+
+                playerStore.setHasMore(hasMore);
+                console.log(`Reproductor: Se añadieron ${newTracks.length} canciones nuevas a la cola.`);
+            }
+        } catch (error) {
+            console.error('Error en cola dinámica:', error);
+        }
+    }
+});
+/* =================================================================== */
 
 /* ==================== REFS ==================== */
 const playerContainer = ref<HTMLDivElement | null>(null)
@@ -266,6 +308,7 @@ let endingBlurInterval: number | null = null
 
 /* ==================== YT PLAYER ==================== */
 let ytPlayer: YT.Player | null = null
+const isChangingTrack = ref(false)
 let animationFrameId: number | null = null
 let lottieInstance: any = null
 let resizeObserver: ResizeObserver | null = null
@@ -278,6 +321,25 @@ const transitionName = computed(() => playerStore.isFullScreen ? 'slide-up' : 's
 
 const isLocalPlayback = ref(false)
 const localAudioElement = ref<HTMLAudioElement | null>(null)
+
+// --- Truco para evitar pausa en segundo plano ---
+let silentAudioContext: AudioContext | null = null;
+const startSilentAudio = () => {
+    if (silentAudioContext) return;
+    try {
+        silentAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const oscillator = silentAudioContext.createOscillator();
+        const gainNode = silentAudioContext.createGain();
+        gainNode.gain.value = 0; // Silencio absoluto
+        oscillator.connect(gainNode);
+        gainNode.connect(silentAudioContext.destination);
+        oscillator.start();
+        console.log('Manteniendo proceso vivo...');
+    } catch (e) {
+        console.error('No se pudo iniciar audio silencioso:', e);
+    }
+};
+// ------------------------------------------------
 
 /* ==================== UTILIDADES ==================== */
 const formatTime = (seconds: number): string => {
@@ -427,8 +489,12 @@ const forceIframeResize = (): void => {
     const applyResize = () => {
         if (!playerContainer.value || !ytPlayer) return
 
-        const containerWidth = playerContainer.value.clientWidth
-        const containerHeight = playerContainer.value.clientHeight
+        // Obtener el contenedor padre que tiene el tamaño real disponible
+        const wrapper = playerContainer.value.parentElement
+        if (!wrapper) return
+
+        const containerWidth = wrapper.clientWidth
+        const containerHeight = wrapper.clientHeight
 
         if (containerWidth > 0 && containerHeight > 0) {
             ytPlayer.setSize(containerWidth, containerHeight)
@@ -441,10 +507,8 @@ const forceIframeResize = (): void => {
                     width: '100%',
                     height: '100%',
                     position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    pointerEvents: 'none',
+                    top: '0',
+                    left: '0',
                     border: '0',
                     objectFit: 'contain'
                 })
@@ -455,6 +519,13 @@ const forceIframeResize = (): void => {
     RESIZE_DELAYS.forEach(delay => {
         setTimeout(applyResize, delay)
     })
+}
+
+// Manejador de resize de ventana
+const handleWindowResize = () => {
+    if (playerStore.isFullScreen) {
+        forceIframeResize()
+    }
 }
 
 /* ==================== YOUTUBE API ==================== */
@@ -501,40 +572,108 @@ const handlePlayerReady = (event: any): void => {
 
 const expandPlaylistWithMoreSongs = async () => {
     if (isExpanding) return
-    if (!currentTrack.value?.video_title) return
+    if (!currentTrack.value?.video_id) return
 
     isExpanding = true
-    const artist = getArtistFromTitle(currentTrack.value.video_title)
+    const currentVideoId = currentTrack.value.video_id
+    const currentTitle = currentTrack.value.video_title
+    const currentArtist = detectMainArtist(currentTrack.value.video_author, currentTitle)
     const currentPlaylist = playerStore.playlist
 
     try {
-        console.log(`🔍 Buscando más canciones de ${artist}...`)
+        console.log(`🔍 [Discovery] Analizando vibra para: "${currentTitle}" [${currentArtist || 'Autor desconocido'}]`)
 
-        const moreSongs = await apiKeyManager.executeWithFailover(async (key) => {
-            return await searchSongsByArtist(artist, key, 10)
-        })
-
-        if (!moreSongs || moreSongs.length === 0) {
-            console.log(`No se encontraron más canciones de ${artist}`)
-            return
-        }
-
+        // 1. INTENTO PRIMARIO: Scraping (Gratis y Preciso para Electron) - COSTO: 0
+        let rawResults = await youtubeScraperService.getRelatedVideos(currentVideoId)
+        
         const existingIds = new Set(currentPlaylist.map(song => song.video_id))
-        const newSongs = moreSongs
-            .filter((song: any) => !existingIds.has(song.videoId))
-            .map((song: any) => ({
-                video_id: song.videoId,
-                video_title: song.title,
-                video_thumbnail: song.thumbnail
-            }))
+        let candidates: any[] = []
 
-        if (newSongs.length > 0) {
-            playerStore.addToPlaylist(newSongs)
-            console.log(`✅ Agregadas ${newSongs.length} canciones nuevas de ${artist}`)
-            console.log(`Playlist ahora tiene ${playerStore.playlist.length} canciones`)
+        if (rawResults.length > 0) {
+            candidates = rawResults
+                .filter(v => !existingIds.has(v.videoId))
+                .map(v => ({
+                    video_id: v.videoId,
+                    video_title: v.title,
+                    video_thumbnail: v.thumbnail,
+                    video_author: v.author,
+                    score: (currentArtist && v.author.toLowerCase().includes(currentArtist.toLowerCase()) ? 100 : 0) + 
+                           calculateSimilarity(currentTitle, v.title) * 10
+                }))
+                .sort((a, b) => b.score - a.score)
         }
+
+        // 2. INTENTO SECUNDARIO: Biblioteca Local (Favoritos/Historial) - COSTO: 0
+        // Si el scraping falló (CORS) o no dio resultados, buscamos en lo que YA tienes
+        if (candidates.length === 0) {
+            console.log('⚠️ [Discovery] Buscando coincidencias en tu biblioteca local para ahorrar tokens...')
+            const history = getRecentlyPlayed()
+            const favsResponse = await getFavoritesByUser(userStore.id || '')
+            const favorites = Array.isArray(favsResponse) ? favsResponse : (favsResponse as any).favorites || []
+            const pool = [...history, ...favorites]
+
+            candidates = pool
+                .filter(item => !existingIds.has(item.video_id))
+                .map(item => ({
+                    video_id: item.video_id,
+                    video_title: item.video_title,
+                    video_thumbnail: item.video_thumbnail,
+                    video_author: item.video_author,
+                    score: (currentArtist && item.video_author?.toLowerCase().includes(currentArtist.toLowerCase()) ? 50 : 0) +
+                           calculateSimilarity(currentTitle, item.video_title) * 10
+                }))
+                .filter(item => item.score > 10) // Solo si son realmente similares
+                .sort((a, b) => b.score - a.score)
+        }
+
+        // 3. INTENTO TERCIARIO: API Oficial (Último recurso) - COSTO: 100 tokens
+        // SOLO si no hay resultados locales suficientes (menos de 2) y tenemos API Key
+        if (candidates.length < 2 && userStore.apikeyYoutube && currentArtist) {
+            console.warn(`🚀 [Discovery] Biblioteca local vacía. Usando API como último recurso para: ${currentArtist}`)
+            const apiResults = await searchSongsByArtist(currentArtist, userStore.apikeyYoutube, 10)
+            const apiTracks = apiResults
+                .filter(v => !existingIds.has(v.videoId))
+                .map(v => ({
+                    video_id: v.videoId,
+                    video_title: v.title,
+                    video_thumbnail: v.thumbnail,
+                    video_author: v.video_author || currentArtist,
+                    score: 100
+                }))
+            candidates = [...candidates, ...apiTracks]
+        }
+
+        // 4. SELECCIÓN FINAL (Inyectar 5 canciones)
+        let toAdd = candidates.slice(0, 5)
+
+        // EMERGENCIA ABSOLUTA: Si no hay nada similar, meter algo aleatorio de favoritos para que no se detenga
+        if (toAdd.length === 0) {
+            const favsResponse = await getFavoritesByUser(userStore.id || '')
+            const favorites = Array.isArray(favsResponse) ? favsResponse : (favsResponse as any).favorites || []
+            if (favorites.length > 0) {
+                console.log('🚨 [Discovery] Modo Emergencia: Añadiendo favoritos aleatorios.')
+                toAdd = favorites
+                    .filter(f => !existingIds.has(f.video_id))
+                    .sort(() => Math.random() - 0.5)
+                    .slice(0, 3)
+                    .map(f => ({
+                        video_id: f.video_id,
+                        video_title: f.video_title,
+                        video_thumbnail: f.video_thumbnail,
+                        video_author: f.video_author
+                    }))
+            }
+        }
+
+        if (toAdd.length > 0) {
+            playerStore.addToPlaylist(toAdd)
+            console.log(`✅ [Discovery] Playlist expandida con ${toAdd.length} canciones. Próximo artista: ${toAdd[0].video_author}`)
+        } else {
+            console.error('❌ [Discovery] No fue posible encontrar música. Agregue más favoritos.')
+        }
+
     } catch (error) {
-        console.error('Error expandiendo playlist:', error)
+        console.error('Error crítico en el motor de descubrimiento:', error)
     } finally {
         isExpanding = false
     }
@@ -613,6 +752,22 @@ const prefetchAuthor = async (videoId: string) => {
 
 const createPlayer = (videoId: string): void => {
     if (!playerContainer.value) return
+
+    // ✅ Teoría #3: Reutilización vs Destrucción
+    // Si ya existe el reproductor y está listo, simplemente cargamos el nuevo video
+    if (ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
+        try {
+            ytPlayer.loadVideoById({
+                videoId: videoId,
+                suggestedQuality: 'hd1080'
+            });
+            console.log('🔄 Reutilizando YT Player para:', videoId);
+            return;
+        } catch (e) {
+            console.warn('⚠️ Error al reutilizar ytPlayer, recreando...', e);
+            // Si falla por alguna razón (ej. el objeto está en un estado inválido), continuamos y lo recreamos
+        }
+    }
 
     if (ytPlayer) {
         ytPlayer.destroy();
@@ -1056,31 +1211,58 @@ watch(() => playerStore.isFullScreen, async (isFull) => {
 })
 
 watch(() => currentTrack.value, async (newTrack, oldTrack) => {
-    if (!newTrack) return;
+    if (!newTrack || isChangingTrack.value) return;
 
-    // ✅ Si hay una canción anterior reproduciéndose, detenerla
-    if (oldTrack && oldTrack !== newTrack) {
-        stopAllPlayback();
-    }
+    try {
+        isChangingTrack.value = true;
 
-    if (playerStore.isFullScreen) {
-        activateBlur();
-    }
-
-    if (newTrack.isLocal && newTrack.localPath) {
-        await playLocalTrackFromStore(newTrack);
-    } else if (newTrack.video_id && !newTrack.isLocal) {
-        // Si había audio local reproduciéndose, asegurarse de detenerlo
-        if (isLocalPlayback.value) {
-            destroyLocalAudio();
-            isLocalPlayback.value = false;
+        // ✅ Si hay una canción anterior reproduciéndose, detenerla
+        if (oldTrack && oldTrack !== newTrack) {
+            stopAllPlayback();
         }
 
-        isLocalPlayback.value = false;
-        prefetchAuthor(newTrack.video_id);
-        await loadYouTubeAPI();
-        await nextTick();
-        createPlayer(newTrack.video_id);
+        if (playerStore.isFullScreen) {
+            activateBlur();
+        }
+
+        if (newTrack.isLocal && newTrack.localPath) {
+            await playLocalTrackFromStore(newTrack);
+        } else if (newTrack.video_id && !newTrack.isLocal) {
+            // Si había audio local reproduciéndose, asegurarse de detenerlo
+            if (isLocalPlayback.value) {
+                destroyLocalAudio();
+                isLocalPlayback.value = false;
+            }
+
+            isLocalPlayback.value = false;
+            prefetchAuthor(newTrack.video_id);
+            await loadYouTubeAPI();
+            await nextTick();
+            createPlayer(newTrack.video_id);
+        }
+
+        // ✅ Consolidación de efectos secundarios
+        // 1. Guardar en historial (antes esparcido en otro watch)
+        if (playerStore.isPlaying) {
+            addToRecentlyPlayed({
+                video_id: newTrack.video_id,
+                video_title: newTrack.video_title,
+                video_thumbnail: newTrack.video_thumbnail,
+                video_author: newTrack.video_author
+            });
+        }
+
+        // 2. Resetear y cargar letras (antes esparcido en otro watch)
+        currentLyrics.value = null;
+        if (showLyrics.value) {
+            loadLyrics();
+        }
+
+    } finally {
+        // Pequeño delay para evitar rebotes ultra-rápidos
+        setTimeout(() => {
+            isChangingTrack.value = false;
+        }, 100);
     }
 }, { immediate: true });
 watch(() => animationStore.currentAnimationId, async (newId, oldId) => {
@@ -1092,30 +1274,12 @@ watch(() => animationStore.currentAnimationId, async (newId, oldId) => {
 
 watch(() => playerStore.currentIndex, (newIndex) => {
     const remaining = playerStore.playlist.length - (newIndex + 1)
-    if (remaining === 0 && !isExpanding) {
-        console.log('Quedan 0 canciones, precargando más...')
+    // ✅ Precargar cuando queden 2 canciones (antes era 0), para evitar que se detenga por asincronía
+    if (remaining <= 2 && !isExpanding) {
+        console.log(`Quedan ${remaining} canciones, precargando más para evitar silencios...`)
         expandPlaylistWithMoreSongs()
     }
 }, { deep: true })
-
-watch(() => currentTrack.value, (newTrack) => {
-    if (newTrack && playerStore.isPlaying) {
-        addToRecentlyPlayed({
-            video_id: newTrack.video_id,
-            video_title: newTrack.video_title,
-            video_thumbnail: newTrack.video_thumbnail,
-            video_author: newTrack.video_author
-        })
-        console.log(`Canción cambiada, guardada en historial: ${newTrack.video_title}`)
-    }
-}, { deep: true })
-
-watch(() => currentTrack.value, () => {
-    currentLyrics.value = null
-    if (showLyrics.value) {
-        loadLyrics()
-    }
-})
 
 // PARA ACTUALIZAR EL ESTADO DE LOS BOTONES:
 watch([isPlaying, currentTrack, currentTime], () => {
@@ -1136,6 +1300,10 @@ onMounted(() => {
     // Listener para teclas multimedia (nuevo)
     window.addEventListener('keydown', handleGlobalMediaKeys);
     window.addEventListener('keydown', handleKeyPress);
+    window.addEventListener('resize', handleWindowResize);
+
+    // Iniciar audio silencioso para evitar pausa en segundo plano
+    startSilentAudio();
 
     // Setup Media Session API (nuevo)
     setupMediaSession();
@@ -1152,13 +1320,33 @@ onMounted(() => {
 onBeforeUnmount(() => {
     window.removeEventListener('keydown', handleGlobalMediaKeys);
     window.removeEventListener('keydown', handleKeyPress);
+    window.removeEventListener('resize', handleWindowResize);
+
+    // ✅ Limpieza crítica de AudioContext
+    if (silentAudioContext) {
+        silentAudioContext.close().then(() => {
+            console.log('AudioContext cerrado correctamente');
+            silentAudioContext = null;
+        });
+    }
+
+    // ✅ Destruir instancia de YouTube
+    if (ytPlayer) {
+        try {
+            ytPlayer.destroy();
+            ytPlayer = null;
+            console.log('YouTube Player destruido');
+        } catch (e) {
+            console.error('Error al destruir YouTube Player:', e);
+        }
+    }
 
     if (animationFrameId) cancelAnimationFrame(animationFrameId);
     if (resizeObserver) resizeObserver.disconnect();
     clearBlurTimers();
     lottieInstance?.destroy();
 
-    console.log('Player unmounted, listeners eliminados');
+    console.log('Player unmounted, limpieza completa realizada');
 });
 </script>
 <style scoped>
@@ -1387,32 +1575,33 @@ onBeforeUnmount(() => {
 
 /* Botón de letras en el header */
 .lyrics-toggle {
-    margin-left: auto;
+    display: flex;
+    align-items: center;
 }
 
 .lyrics-btn {
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
-    padding: 6px 12px;
+    cursor: pointer !important;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
     color: white;
+    width: clamp(28px, 4vw, 36px);
+    height: clamp(28px, 4vw, 36px);
+    border-radius: 50%;
     display: flex;
     align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 0.8rem;
+    justify-content: center;
+    transition: all 0.3s ease, transform 0.2s;
 }
 
 .lyrics-btn:hover {
     background: rgba(255, 255, 255, 0.2);
-    border-color: var(--accent-color);
+    transform: translateY(-2px);
 }
 
 .lyrics-btn.active {
     background: var(--accent-color);
-    border-color: var(--accent-color);
     color: white;
+    box-shadow: 0 0 15px rgba(var(--accent-color-rgb), 0.4);
 }
 
 /* Modo con letras - el video se reduce */
@@ -1431,15 +1620,6 @@ onBeforeUnmount(() => {
 @media (max-width: 768px) {
     .video-section.fullscreen.with-lyrics {
         width: 100%;
-    }
-
-    .lyrics-btn span {
-        display: none;
-    }
-
-    .lyrics-btn {
-        padding: 6px;
-        border-radius: 50%;
     }
 
     .lyrics-line {

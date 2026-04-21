@@ -7,8 +7,20 @@ interface CacheItem<T> {
 class CacheService {
   private cache = new Map<string, CacheItem<any>>()
   private readonly DEFAULT_TTL = 5 * 60 * 1000 // 5 minutos por defecto
+  private readonly MAX_SIZE = 200 // Límite máximo para evitar fugas de memoria
 
   set<T>(key: string, data: T, ttl: number = this.DEFAULT_TTL): void {
+    // Si ya existe, lo eliminamos para que al re-insertar quede al final (más reciente)
+    if (this.cache.has(key)) {
+      this.cache.delete(key)
+    } else if (this.cache.size >= this.MAX_SIZE) {
+      // Si llegamos al límite, eliminamos el más antiguo (el primero insertado)
+      const oldestKey = this.cache.keys().next().value
+      if (oldestKey !== undefined) {
+        this.cache.delete(oldestKey)
+      }
+    }
+
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
