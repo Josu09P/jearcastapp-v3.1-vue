@@ -53,6 +53,7 @@ const apiKeyManager = useApiKeyManager()
 // Usar las variables reactivas del manager directamente en el template
 const apiKeys = computed(() => apiKeyManager.apiKeys.value)
 const currentApiKeyIndex = computed(() => apiKeyManager.currentApiKeyIndex.value)
+const quotaExceeded = computed(() => apiKeyManager.quotaExceeded.value)
 
 const onSearch = async () => {
     if (!query.value) return
