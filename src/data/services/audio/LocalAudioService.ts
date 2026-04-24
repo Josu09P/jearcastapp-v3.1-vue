@@ -11,30 +11,28 @@ export const initLocalAudio = (): HTMLAudioElement => {
   return getAudioInstance()
 }
 
-export const playLocalTrack = (path: string): Promise<void> => {
+export const playStream = (url: string): Promise<void> => {
   return new Promise((resolve, reject) => {
     const audio = getAudioInstance()
-
-    audio.src = `file://${path}`
+    audio.src = url
     audio.load()
 
     const onCanPlay = () => {
-      audio.play()
-      audio.removeEventListener('canplay', onCanPlay)
-      audio.removeEventListener('error', onError)
-      resolve()
+      audio.play().then(resolve).catch(reject)
     }
 
     const onError = (e: any) => {
-      console.error('Error reproduciendo audio local:', e)
-      audio.removeEventListener('canplay', onCanPlay)
-      audio.removeEventListener('error', onError)
-      reject(new Error('No se pudo reproducir el archivo'))
+      console.error('Error reproduciendo stream:', e)
+      reject(new Error('No se pudo reproducir el stream'))
     }
 
-    audio.addEventListener('canplay', onCanPlay)
-    audio.addEventListener('error', onError)
+    audio.addEventListener('canplayonce', onCanPlay, { once: true })
+    audio.addEventListener('error', onError, { once: true })
   })
+}
+
+export const playLocalTrack = (path: string): Promise<void> => {
+  return playStream(`file://${path}`)
 }
 
 export const pauseLocalAudio = (): void => {
@@ -71,13 +69,19 @@ export const onLocalAudioTimeUpdate = (
 ): void => {
   const audio = getAudioInstance()
   audio.ontimeupdate = () => {
-    callback(audio.currentTime, audio.duration)
+    if (audio.duration > 0) {
+      callback(audio.currentTime, audio.duration)
+    }
   }
 }
 
 export const onLocalAudioEnded = (callback: () => void): void => {
   const audio = getAudioInstance()
-  audio.onended = callback
+  audio.onended = () => {
+    // Limpiamos el evento tras ejecutarse para evitar bucles
+    audio.onended = null
+    callback()
+  }
 }
 
 export const destroyLocalAudio = (): void => {

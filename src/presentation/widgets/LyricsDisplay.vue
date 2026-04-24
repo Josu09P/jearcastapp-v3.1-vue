@@ -258,10 +258,10 @@ watch(() => props.lyrics, () => {
 }
 
 .lyrics-line.active {
-    color: var(--accent-color, #1db954);
+    color: var(--accent-color, #3e965d);
     font-size: 1.2rem;
     font-weight: 600;
-    text-shadow: 0 0 20px rgba(29, 185, 84, 0.4);
+    text-shadow: 0 0 20px rgba(62, 150, 93, 0.4);
     transform: scale(1.02);
 }
 

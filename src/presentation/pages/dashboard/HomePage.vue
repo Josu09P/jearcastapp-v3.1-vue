@@ -263,7 +263,7 @@ onMounted(async () => {
         getRecommendedPlaylists()
     ])
 
-    totalFavorites.value = favorites.length
+    totalFavorites.value = favorites.favorites.length
     totalPlaylists.value = playlistsData.length
     totalRecommended.value = recommended.length
     playlists.value = playlistsData

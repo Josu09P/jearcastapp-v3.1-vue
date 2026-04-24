@@ -231,7 +231,7 @@ onMounted(() => {
 
 .volume-btn.active,
 .eq-btn.active {
-    color: var(--accent-color, #1db954);
+    color: var(--accent-color, #3e965d);
 }
 
 /* Panel de volumen */
@@ -278,7 +278,7 @@ onMounted(() => {
     -webkit-appearance: none;
     width: 12px;
     height: 12px;
-    background: var(--accent-color, #1db954);
+    background: var(--accent-color, #3e965d);
     border-radius: 50%;
     cursor: pointer;
 }
@@ -473,7 +473,7 @@ onMounted(() => {
 }
 
 input:checked+.toggle-slider {
-    background-color: var(--accent-color, #1db954);
+    background-color: var(--accent-color, #3e965d);
 }
 
 input:checked+.toggle-slider:before {

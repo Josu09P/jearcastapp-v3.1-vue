@@ -4,6 +4,7 @@ import type { RecommendedPlaylistModel } from '@/domain/models/RecommendedPlayli
 import type { RecommendedSongModel } from '@/domain/models/RecommendedSongModel'
 import { fetchRecommendedPlaylistsService, fetchSongsFromRecommendedPlaylistService } from '@/data/services/firestore/RecommendedPlaylistFirestore'
 import { usePlayerStore } from '@/stores/player-store'
+import { useUserDataStore } from '@/stores/userDataStore'
 import DashboardLayout from '@/presentation/layouts/DashboardLayout.vue'
 import DownloadButton from '@/presentation/widgets/DownloadButton.vue'
 
@@ -64,6 +65,7 @@ const showAllPlaylistsView = () => {
     localStorage.removeItem(LOCAL_RECOMMENDED_KEY)
 }
 
+const playerStore = usePlayerStore()
 const userDataStore = useUserDataStore()
 
 // ==================== CANCIONES ====================

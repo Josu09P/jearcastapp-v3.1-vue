@@ -258,9 +258,9 @@ function playSong(index: number) {
         video_thumbnail: song.video_thumbnail
     }))
     playerStore.setPlaylist(
-        playlist, 
-        index, 
-        { type: 'playlist', id: currentPlaylistId.value! }, 
+        playlist,
+        index,
+        { type: 'playlist', id: currentPlaylistId.value! },
         userDataStore.hasMorePlaylistSongs
     )
 }
@@ -403,7 +403,7 @@ onUnmounted(() => {
                             <span><i class="bi bi-music-note-beamed me-1"></i> {{ songs.length }} Canciones</span>
                         </div>
                         <div class="mt-4 d-flex gap-2">
-                            <button @click="playAll" class="btn btn-accent rounded-pill px-4 py-2 fw-bold">
+                            <button @click="playAll" class="btn btn-accent rounded-pill px-4 py-2 fw-semibold">
                                 <i class="bi bi-play-fill me-1"></i> Reproducir
                             </button>
                             <button @click="showAllPlaylistsView" class="btn btn-outline-light rounded-pill px-4">

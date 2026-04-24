@@ -195,8 +195,8 @@ const playTrack = (index: number) => {
 
 .btn-select-folder {
     padding: 0.6rem 1.5rem;
-    background: var(--accent-color-rg) !important;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(var(--accent-color-rgb), 0.1) !important;
+    border: 1px solid var(--accent-color);
     border-radius: 30px;
     color: var(--accent-color);
     cursor: pointer;
@@ -204,7 +204,8 @@ const playTrack = (index: number) => {
 }
 
 .btn-select-folder:hover {
-    background: var(--accent-color-rg);
+    background: var(--accent-color) !important;
+    color: white !important;
     transform: translateY(-2px);
 }
 

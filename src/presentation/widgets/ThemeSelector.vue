@@ -1,7 +1,7 @@
 <template>
     <div class="theme-selector">
         <div class="theme-grid">
-            <div v-for="theme in themes" :key="theme.id" class="theme-card"
+            <div v-for="theme in filteredThemes" :key="theme.id" class="theme-card"
                 :class="{ 'is-selected': currentThemeId === theme.id }" @click="setTheme(theme.id)">
                 <div class="theme-preview" :class="theme.class"></div>
                 <div class="theme-info">
@@ -16,10 +16,19 @@
 <script setup lang="ts">
 import { useThemeStore, themes } from '@/stores/theme'
 import { storeToRefs } from 'pinia'
+import { computed } from 'vue'
+
+const props = defineProps<{
+    type?: 'gradient' | 'solid'
+}>()
 
 const themeStore = useThemeStore()
-// Usar storeToRefs para mantener la reactividad
 const { currentThemeId } = storeToRefs(themeStore)
+
+const filteredThemes = computed(() => {
+    if (!props.type) return themes
+    return themes.filter(t => t.type === props.type)
+})
 
 const setTheme = (themeId: string) => {
     themeStore.setTheme(themeId)
@@ -28,16 +37,24 @@ const setTheme = (themeId: string) => {
 // Obtener el código de color del tema
 const getThemeColor = (themeId: string): string => {
     const colors: Record<string, string> = {
-        default: '#1db954',
-        blue: '#1e88e5',
-        pink: '#e91e63',
-        purple: '#9c27b0',
-        orange: '#ff9800',
-        red: '#f44336',
-        cyan: '#00bcd4',
-        teal: '#009688'
+        default: '#3e965d',
+        blue: '#4a86b9',
+        pink: '#c45a82',
+        purple: '#8e6bb0',
+        orange: '#d68f3e',
+        red: '#bc5a5a',
+        cyan: '#4b9fa8',
+        teal: '#468b81',
+        'solid-green': '#3e965d',
+        'solid-blue': '#4a86b9',
+        'solid-pink': '#c45a82',
+        'solid-purple': '#8e6bb0',
+        'solid-orange': '#d68f3e',
+        'solid-red': '#bc5a5a',
+        'solid-cyan': '#4b9fa8',
+        'solid-teal': '#468b81'
     }
-    return colors[themeId] || '#1db954'
+    return colors[themeId] || '#3e965d'
 }
 </script>
 <style scoped>
@@ -135,6 +152,16 @@ const getThemeColor = (themeId: string): string => {
 .theme-preview.theme-teal {
     background: radial-gradient(circle at 20% 30%, rgba(26, 58, 42, 0.95), rgba(5, 5, 5, 1));
 }
+
+/* SOLID PREVIEWS */
+.theme-preview.theme-solid-green { background: #262626; border-bottom: 4px solid #3e965d; }
+.theme-preview.theme-solid-blue { background: #0d1a26; border-bottom: 4px solid #4a86b9; }
+.theme-preview.theme-solid-pink { background: #260d1b; border-bottom: 4px solid #c45a82; }
+.theme-preview.theme-solid-purple { background: #1d0d26; border-bottom: 4px solid #8e6bb0; }
+.theme-preview.theme-solid-orange { background: #26170d; border-bottom: 4px solid #d68f3e; }
+.theme-preview.theme-solid-red { background: #260d0d; border-bottom: 4px solid #bc5a5a; }
+.theme-preview.theme-solid-cyan { background: #0d2626; border-bottom: 4px solid #4b9fa8; }
+.theme-preview.theme-solid-teal { background: #0d261a; border-bottom: 4px solid #468b81; }
 
 
 /* Responsive */

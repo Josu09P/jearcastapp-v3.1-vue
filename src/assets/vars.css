@@ -4,11 +4,11 @@ VAR -> COLORS GLOBALS (MODIFICADO PARA MÁS ELEGANCIA)
 :root {
     --main-bg-color: #0f0f0f;
     /* Un poco más claro que el negro puro #050505 */
-    --accent-color: #1db954;
-    --accent-color-rgb: 29, 185, 84;
+    --accent-color: #3e965d;
+    --accent-color-rgb: 62, 150, 93;
     --accent-gradient-start: #fff;
-    --accent-gradient-end: #1db954;
-    --brand-gradient: linear-gradient(135deg, #fff, #1db954);
+    --accent-gradient-end: #3e965d;
+    --brand-gradient: linear-gradient(135deg, #fff, #3e965d);
     --main-bg-gradient: none;
     --primary-bg: rgba(255, 255, 255, 0.08);
     --hover-bg: rgba(255, 255, 255, 0.05);
@@ -28,68 +28,127 @@ VAR -> COLORS GLOBALS (MODIFICADO PARA MÁS ELEGANCIA)
 /*=================================================
 THEMES - DEFINICIONES (GRADIENTES SUAVES Y ELEGANTES)
 ===================================================*/
-/* He subido el brillo de los colores base para que el gradiente se note más sin perder la oscuridad */
 
 .theme-default {
-    --main-bg-color: linear-gradient(145deg, #262626 0%, #0f0f0f 100%);
-    --accent-color: #1db954;
-    --accent-color-rgb: 29, 185, 84;
-    --brand-gradient: linear-gradient(135deg, #fff, #1db954);
+    --main-bg-color: linear-gradient(145deg, #262626 0%, #1a1a1a 45%, #0f0f0f 100%);
+    --accent-color: #3e965d;
+    --accent-color-rgb: 62, 150, 93;
+    --brand-gradient: linear-gradient(135deg, #fff, #3e965d);
 }
 
 /*TEMA CLARO*/
 .theme-default-1 {
-    --main-bg-color: linear-gradient(145deg, #525252 0%, #0f0f0f 100%);
-    --accent-color: #1db954;
-    --accent-color-rgb: 29, 185, 84;
-    --brand-gradient: linear-gradient(135deg, #fff, #1db954);
+    --main-bg-color: linear-gradient(145deg, #525252 0%, #2a2a2a 50%, #0f0f0f 100%);
+    --accent-color: #3e965d;
+    --accent-color-rgb: 62, 150, 93;
+    --brand-gradient: linear-gradient(135deg, #fff, #3e965d);
 }
 
 .theme-blue {
-    --main-bg-color: linear-gradient(145deg, #0d1a26 0%, #0f0f0f 100%);
-    --accent-color: #1e88e5;
-    --accent-color-rgb: 30, 136, 229;
-    --brand-gradient: linear-gradient(135deg, #fff, #1e88e5);
+    --main-bg-color: linear-gradient(145deg, #0d1a26 0%, #07101a 45%, #0f0f0f 100%);
+    --accent-color: #4a86b9;
+    --accent-color-rgb: 74, 134, 185;
+    --brand-gradient: linear-gradient(135deg, #fff, #4a86b9);
 }
 
 .theme-pink {
-    --main-bg-color: linear-gradient(145deg, #260d1b 0%, #0f0f0f 100%);
-    --accent-color: #e91e63;
-    --accent-color-rgb: 233, 30, 99;
-    --brand-gradient: linear-gradient(135deg, #fff, #e91e63);
+    --main-bg-color: linear-gradient(145deg, #260d1b 0%, #1a0812 45%, #0f0f0f 100%);
+    --accent-color: #c45a82;
+    --accent-color-rgb: 196, 90, 130;
+    --brand-gradient: linear-gradient(135deg, #fff, #c45a82);
 }
 
 .theme-purple {
-    --main-bg-color: linear-gradient(145deg, #1d0d26 0%, #0f0f0f 100%);
-    --accent-color: #9c27b0;
-    --accent-color-rgb: 156, 39, 176;
-    --brand-gradient: linear-gradient(135deg, #fff, #9c27b0);
+    --main-bg-color: linear-gradient(145deg, #1d0d26 0%, #12081a 45%, #0f0f0f 100%);
+    --accent-color: #8e6bb0;
+    --accent-color-rgb: 142, 107, 176;
+    --brand-gradient: linear-gradient(135deg, #fff, #8e6bb0);
 }
 
 .theme-orange {
-    --main-bg-color: linear-gradient(145deg, #26170d 0%, #0f0f0f 100%);
-    --accent-color: #ff9800;
-    --accent-color-rgb: 255, 152, 0;
-    --brand-gradient: linear-gradient(135deg, #fff, #ff9800);
+    --main-bg-color: linear-gradient(145deg, #26170d 0%, #1a0f08 45%, #0f0f0f 100%);
+    --accent-color: #d68f3e;
+    --accent-color-rgb: 214, 143, 62;
+    --brand-gradient: linear-gradient(135deg, #fff, #d68f3e);
 }
 
 .theme-red {
-    --main-bg-color: linear-gradient(145deg, #260d0d 0%, #0f0f0f 100%);
-    --accent-color: #f44336;
-    --accent-color-rgb: 244, 67, 54;
-    --brand-gradient: linear-gradient(135deg, #fff, #f44336);
+    --main-bg-color: linear-gradient(145deg, #260d0d 0%, #1a0808 45%, #0f0f0f 100%);
+    --accent-color: #bc5a5a;
+    --accent-color-rgb: 188, 90, 90;
+    --brand-gradient: linear-gradient(135deg, #fff, #bc5a5a);
 }
 
 .theme-cyan {
-    --main-bg-color: linear-gradient(145deg, #0d2626 0%, #0f0f0f 100%);
-    --accent-color: #00bcd4;
-    --accent-color-rgb: 0, 188, 212;
-    --brand-gradient: linear-gradient(135deg, #fff, #00bcd4);
+    --main-bg-color: linear-gradient(145deg, #0d2626 0%, #081a1a 45%, #0f0f0f 100%);
+    --accent-color: #4b9fa8;
+    --accent-color-rgb: 75, 159, 168;
+    --brand-gradient: linear-gradient(135deg, #fff, #4b9fa8);
 }
 
 .theme-teal {
-    --main-bg-color: linear-gradient(145deg, #0d261a 0%, #0f0f0f 100%);
-    --accent-color: #009688;
-    --accent-color-rgb: 0, 150, 136;
-    --brand-gradient: linear-gradient(135deg, #fff, #009688);
+    --main-bg-color: linear-gradient(145deg, #0d261a 0%, #081a12 45%, #0f0f0f 100%);
+    --accent-color: #468b81;
+    --accent-color-rgb: 70, 139, 129;
+    --brand-gradient: linear-gradient(135deg, #fff, #468b81);
+}
+
+/*=================================================
+THEMES - SOLIDOS (COLORES PLANOS Y ELEGANTES)
+===================================================*/
+
+.theme-solid-green {
+    --main-bg-color: #262626;
+    --accent-color: #3e965d;
+    --accent-color-rgb: 62, 150, 93;
+    --brand-gradient: linear-gradient(135deg, #fff, #3e965d);
+}
+
+.theme-solid-blue {
+    --main-bg-color: #0d1a26;
+    --accent-color: #4a86b9;
+    --accent-color-rgb: 74, 134, 185;
+    --brand-gradient: linear-gradient(135deg, #fff, #4a86b9);
+}
+
+.theme-solid-pink {
+    --main-bg-color: #260d1b;
+    --accent-color: #c45a82;
+    --accent-color-rgb: 196, 90, 130;
+    --brand-gradient: linear-gradient(135deg, #fff, #c45a82);
+}
+
+.theme-solid-purple {
+    --main-bg-color: #1d0d26;
+    --accent-color: #8e6bb0;
+    --accent-color-rgb: 142, 107, 176;
+    --brand-gradient: linear-gradient(135deg, #fff, #8e6bb0);
+}
+
+.theme-solid-orange {
+    --main-bg-color: #26170d;
+    --accent-color: #d68f3e;
+    --accent-color-rgb: 214, 143, 62;
+    --brand-gradient: linear-gradient(135deg, #fff, #d68f3e);
+}
+
+.theme-solid-red {
+    --main-bg-color: #260d0d;
+    --accent-color: #bc5a5a;
+    --accent-color-rgb: 188, 90, 90;
+    --brand-gradient: linear-gradient(135deg, #fff, #bc5a5a);
+}
+
+.theme-solid-cyan {
+    --main-bg-color: #0d2626;
+    --accent-color: #4b9fa8;
+    --accent-color-rgb: 75, 159, 168;
+    --brand-gradient: linear-gradient(135deg, #fff, #4b9fa8);
+}
+
+.theme-solid-teal {
+    --main-bg-color: #0d261a;
+    --accent-color: #468b81;
+    --accent-color-rgb: 70, 139, 129;
+    --brand-gradient: linear-gradient(135deg, #fff, #468b81);
 }

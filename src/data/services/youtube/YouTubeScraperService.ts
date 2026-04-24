@@ -96,6 +96,41 @@ class YouTubeScraperService {
     return [];
   }
 
+  /**
+   * Obtiene el URL directo del stream de audio para saltar bloqueos de IFrame.
+   * Utiliza instancias públicas de Invidious como puente (Proxy).
+   */
+  async getDirectStreamUrl(videoId: string): Promise<string | null> {
+    const instances = [
+      'https://inv.vern.cc',
+      'https://invidious.lunar.icu',
+      'https://invidious.projectsegfau.lt',
+      'https://yewtu.be'
+    ]
+
+    for (const instance of instances) {
+      try {
+        console.log(`[StreamBridge] Intentando extraer stream desde: ${instance}`)
+        const response = await fetch(`${instance}/api/v1/videos/${videoId}?fields=adaptiveFormats`)
+        if (!response.ok) continue
+
+        const data = await response.json()
+        // Buscar el formato de audio con mejor calidad (m4a o webm)
+        const audioFormat = data.adaptiveFormats
+          .filter((f: any) => f.type.includes('audio'))
+          .sort((a: any, b: any) => parseInt(b.bitrate) - parseInt(a.bitrate))[0]
+
+        if (audioFormat && audioFormat.url) {
+          console.log(`✅ [StreamBridge] Stream extraído con éxito desde ${instance}`)
+          return audioFormat.url
+        }
+      } catch (e) {
+        console.warn(`[StreamBridge] Fallo en instancia ${instance}:`, e)
+      }
+    }
+    return null
+  }
+
   async searchWithoutToken(query: string): Promise<ScrapedVideo[]> {
     try {
       const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`

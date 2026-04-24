@@ -29,7 +29,7 @@
 }
 
 .playlist-card.active .playlist-image-wrapper {
-    box-shadow: 0 0 0 2px #1db954;
+    box-shadow: 0 0 0 2px var(--accent-color);
 }
 
 /* ==================== IMAGEN DE LA PLAYLIST ==================== */

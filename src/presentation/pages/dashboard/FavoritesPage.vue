@@ -121,9 +121,9 @@ function playFavorite(index: number) {
         video_thumbnail: fav.video_thumbnail,
     }))
     playerStore.setPlaylist(
-        playlist, 
-        index, 
-        { type: 'favorites' }, 
+        playlist,
+        index,
+        { type: 'favorites' },
         userDataStore.hasMoreFavorites
     )
 }
@@ -176,7 +176,7 @@ onUnmounted(() => {
                                 Canciones</span>
                         </div>
                         <div class="mt-4 d-flex gap-2">
-                            <button @click="playAll" class="btn btn-accent rounded-pill px-4 py-2 fw-bold">
+                            <button @click="playAll" class="btn btn-accent rounded-pill px-4 py-2 fw-semibold">
                                 <i class="bi bi-play-fill me-1"></i> Reproducir todo
                             </button>
                         </div>

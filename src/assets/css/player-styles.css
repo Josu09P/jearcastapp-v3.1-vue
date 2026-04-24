@@ -200,7 +200,7 @@
     position: relative;
     width: 100%;
     height: 100%;
-    border-radius: 12px;
+    border-radius: 18px;
     overflow: hidden;
     background: #000;
     transition: opacity 0.3s ease;
@@ -313,7 +313,7 @@
     z-index: 15;
     cursor: default;
     transition: backdrop-filter 0.5s ease, background 0.5s ease;
-    border-radius: 12px; /* Coincide con el video-wrapper */
+    border-radius: 18px; /* Coincide con el video-wrapper */
 }
 
 .video-veil.blur-active {
@@ -425,7 +425,7 @@
 }
 
 .control-btn.secondary.active {
-    color: #1db954;
+    color: var(--accent-color);
 }
 
 /* ==================== BOTONES MINI PLAYER ==================== */
@@ -523,7 +523,7 @@
 
 /* Para Chrome/Safari, el progreso se controla con el color del track */
 .progress-container input[type="range"]::-webkit-slider-runnable-track {
-    background: linear-gradient(to right, #4c4e4d 0%, #1db954 var(--progress-value, 0%), rgba(255, 255, 255, 0.2) var(--progress-value, 0%));
+    background: linear-gradient(to right, #4c4e4d 0%, var(--accent-color) var(--progress-value, 0%), rgba(255, 255, 255, 0.2) var(--progress-value, 0%));
 }
 
 /* Estilo para cuando está en fullscreen (opcional, aún más delgado si quieres) */

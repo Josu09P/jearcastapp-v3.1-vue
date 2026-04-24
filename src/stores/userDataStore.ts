@@ -3,6 +3,7 @@ import { getFavoritesByUser } from '@/domain/usecases/favorites/GetFavoritesByUs
 import { getPlaylistsByUser } from '@/domain/usecases/playlists/GetPlaylistsByUser'
 import { getSongsFromPlaylist } from '@/domain/usecases/playlists/GetSongsFromPlaylist'
 import { getRecommendedPlaylists } from '@/domain/usecases/recommended/GetRecommendedPlaylists'
+import { fetchSongsFromRecommendedPlaylistService } from '@/data/services/firestore/RecommendedPlaylistFirestore'
 
 interface UserDataState {
   favorites: any[]

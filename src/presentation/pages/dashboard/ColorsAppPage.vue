@@ -93,13 +93,28 @@ function resetAnimation() {
             <section class="themes-section">
                 <header class="section-header">
                     <div class="header-content">
-                        <h4 class="title">Apariencia</h4>
-                        <p class="subtitle">Personaliza el color de acento de tu interfaz</p>
+                        <h4 class="title">Apariencia (Gradientes)</h4>
+                        <p class="subtitle">Personaliza el color de acento con degradados elegantes</p>
                     </div>
                 </header>
 
-                <!-- Aquí va el ThemeSelector -->
-                <ThemeSelector />
+                <!-- Aquí va el ThemeSelector para Gradientes -->
+                <ThemeSelector type="gradient" />
+            </section>
+
+            <div class="section-divider"></div>
+
+            <!-- NUEVA SECCIÓN: COLORES SÓLIDOS -->
+            <section class="themes-section">
+                <header class="section-header">
+                    <div class="header-content">
+                        <h4 class="title">Colores Sólidos</h4>
+                        <p class="subtitle">Fondos minimalistas y consistentes</p>
+                    </div>
+                </header>
+
+                <!-- Aquí va el ThemeSelector para Sólidos -->
+                <ThemeSelector type="solid" />
             </section>
 
             <div class="section-divider"></div>
@@ -210,7 +225,7 @@ function resetAnimation() {
     /* ✅ Cambiado de #1db954 a variable */
     color: var(--accent-color);
     /* ✅ Cambiado de #1db954 a variable */
-    background: rgba(var(--accent-color-rgb, 29, 185, 84), 0.05);
+    background: rgba(var(--accent-color-rgb, 62, 150, 93), 0.05);
 }
 
 
@@ -241,7 +256,7 @@ function resetAnimation() {
 .animation-card.is-selected {
     border-color: var(--accent-color);
     /* ✅ Cambiado de #1db954 a variable */
-    background: rgba(var(--accent-color-rgb, 29, 185, 84), 0.05);
+    background: rgba(var(--accent-color-rgb, 62, 150, 93), 0.05);
 }
 
 .animation-preview {

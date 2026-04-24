@@ -67,7 +67,7 @@
                             <p>{{ currentTrack?.video_title }}</p>
                             <small>{{ currentTrack?.video_author }}</small>
                         </div>
-                        <div v-if="playerStore.isFullScreen" class="video-veil"
+                        <div class="video-veil"
                             :class="{ 'blur-active': isVeilBlurActive }"></div>
                     </div>
 
@@ -184,6 +184,7 @@ import { detectMainArtist, calculateSimilarity } from '@/domain/usecases/mix/Get
 import {
     initLocalAudio,
     playLocalTrack,
+    playStream,
     pauseLocalAudio,
     resumeLocalAudio,
     setLocalAudioCurrentTime,
@@ -196,6 +197,18 @@ import {
 import { LyricsService, type LyricsData } from '@/data/services/youtube/LyricsService';
 import LyricsDisplay from '../LyricsDisplay.vue';
 import AudioControl from './AudioControl.vue';
+import Toastify from 'toastify-js';
+import 'toastify-js/src/toastify.css';
+
+const showToast = (text: string, isError: boolean = false) => {
+    Toastify({
+        text,
+        duration: 3000,
+        gravity: 'top',
+        position: 'right',
+        className: isError ? 'toast-glass bg-danger' : 'toast-glass'
+    }).showToast()
+}
 
 /* ==================== TIPOS ==================== */
 interface Position { x: number; y: number }
@@ -212,16 +225,17 @@ declare namespace YT {
     enum PlayerState { UNSTARTED = -1, ENDED = 0, PLAYING = 1, PAUSED = 2, BUFFERING = 3, CUED = 5 }
     class Player {
         constructor(elementId: string | HTMLElement, options: any)
-        playVideo(): void; pauseVideo(): void; mute(): void; unMute(): void
+        playVideo(): void; pauseVideo(): void; stopVideo(): void; mute(): void; unMute(): void
         setVolume(volume: number): void; setSize(width: number, height: number): void
         destroy(): void; getCurrentTime(): number; getDuration(): number
         getPlayerState(): PlayerState; seekTo(seconds: number, allowSeekAhead: boolean): void
+        loadVideoById(options: { videoId: string, startSeconds?: number, suggestedQuality?: string }): void
     }
 }
 
 /* ==================== CONSTANTES ==================== */
 const BLUR_DURATION = 7000
-const ENDING_BLUR_OFFSET = 29000
+const ENDING_BLUR_OFFSET = 22000
 const PLAYER_WIDTH = 300
 const PLAYER_HEIGHT = 170
 const MINI_PLAYER_OFFSET = 20
@@ -395,10 +409,17 @@ const handleEqChange = (values: { bass: number; mid: number; treble: number; noi
     // Esto requiere más implementación con Web Audio API
 }
 const activateBlur = (): void => { isVeilBlurActive.value = true; clearBlurTimers() }
-const deactivateBlur = (): void => { if (isVeilBlurActive.value) { isVeilBlurActive.value = false; clearBlurTimers() } }
+const deactivateBlur = (): void => { 
+    // Ahora permitimos desactivar el blur en cualquier modo para que sea dinámico
+    if (isVeilBlurActive.value) { 
+        isVeilBlurActive.value = false; 
+        clearBlurTimers() 
+    } 
+}
 
 const scheduleBlurRemoval = (): void => {
     clearBlurTimers()
+    // Programamos la eliminación en cualquier modo
     blurTimer = window.setTimeout(deactivateBlur, BLUR_DURATION)
 }
 
@@ -563,9 +584,8 @@ const handlePlayerReady = (event: any): void => {
     startProgressLoop()
     setupResizeObserver()
 
-    if (playerStore.isFullScreen) {
-        activateBlur()
-    }
+    // Siempre activar blur al estar listo para ocultar carga inicial
+    activateBlur()
 
     forceIframeResize()
 }
@@ -591,8 +611,8 @@ const expandPlaylistWithMoreSongs = async () => {
 
         if (rawResults.length > 0) {
             candidates = rawResults
-                .filter(v => !existingIds.has(v.videoId))
-                .map(v => ({
+                .filter((v: any) => !existingIds.has(v.videoId))
+                .map((v: any) => ({
                     video_id: v.videoId,
                     video_title: v.title,
                     video_thumbnail: v.thumbnail,
@@ -613,8 +633,8 @@ const expandPlaylistWithMoreSongs = async () => {
             const pool = [...history, ...favorites]
 
             candidates = pool
-                .filter(item => !existingIds.has(item.video_id))
-                .map(item => ({
+                .filter((item: any) => !existingIds.has(item.video_id))
+                .map((item: any) => ({
                     video_id: item.video_id,
                     video_title: item.video_title,
                     video_thumbnail: item.video_thumbnail,
@@ -622,7 +642,7 @@ const expandPlaylistWithMoreSongs = async () => {
                     score: (currentArtist && item.video_author?.toLowerCase().includes(currentArtist.toLowerCase()) ? 50 : 0) +
                            calculateSimilarity(currentTitle, item.video_title) * 10
                 }))
-                .filter(item => item.score > 10) // Solo si son realmente similares
+                .filter((item: any) => item.score > 10) // Solo si son realmente similares
                 .sort((a, b) => b.score - a.score)
         }
 
@@ -632,8 +652,8 @@ const expandPlaylistWithMoreSongs = async () => {
             console.warn(`🚀 [Discovery] Biblioteca local vacía. Usando API como último recurso para: ${currentArtist}`)
             const apiResults = await searchSongsByArtist(currentArtist, userStore.apikeyYoutube, 10)
             const apiTracks = apiResults
-                .filter(v => !existingIds.has(v.videoId))
-                .map(v => ({
+                .filter((v: any) => !existingIds.has(v.videoId))
+                .map((v: any) => ({
                     video_id: v.videoId,
                     video_title: v.title,
                     video_thumbnail: v.thumbnail,
@@ -653,10 +673,10 @@ const expandPlaylistWithMoreSongs = async () => {
             if (favorites.length > 0) {
                 console.log('🚨 [Discovery] Modo Emergencia: Añadiendo favoritos aleatorios.')
                 toAdd = favorites
-                    .filter(f => !existingIds.has(f.video_id))
+                    .filter((f: any) => !existingIds.has(f.video_id))
                     .sort(() => Math.random() - 0.5)
                     .slice(0, 3)
-                    .map(f => ({
+                    .map((f: any) => ({
                         video_id: f.video_id,
                         video_title: f.video_title,
                         video_thumbnail: f.video_thumbnail,
@@ -695,21 +715,30 @@ const handlePlayerStateChange = (state: number): void => {
                 console.log(`💾 Guardado en historial: ${currentTrack.value.video_title}`)
             }
 
-            if (playerStore.isFullScreen) {
-                if (!isSeeking.value) {
+            // Quitar blur después de un tiempo si no estamos en el final de la canción
+            if (!isSeeking.value) {
+                const remainingTime = duration.value - currentTime.value
+                if (remainingTime > ENDING_BLUR_OFFSET / 1000) {
                     scheduleBlurRemoval()
+                } else {
+                    activateBlur()
                 }
             }
 
-            if (playerStore.isFullScreen) startEndingBlurCheck()
+            startEndingBlurCheck()
             break
 
         case window.YT.PlayerState.PAUSED:
             playerStore.pause()
             lottieInstance?.pause()
-            if (playerStore.isFullScreen) {
-                activateBlur()
-            }
+            // ✅ Velo instantáneo al pausar en cualquier modo
+            activateBlur()
+            break
+
+        case window.YT.PlayerState.BUFFERING:
+            // ✅ Velo instantáneo al cargar o fallo de internet (Ruedita de YouTube)
+            // Esto cumple con la petición de activarse ante fallos o congelamientos
+            activateBlur()
             break
 
         case window.YT.PlayerState.ENDED:
@@ -801,9 +830,109 @@ const createPlayer = (videoId: string): void => {
         host: 'https://www.youtube.com',
         events: {
             onReady: handlePlayerReady,
-            onStateChange: (e: any) => handlePlayerStateChange(e.data)
+            onStateChange: (e: any) => handlePlayerStateChange(e.data),
+            onError: (e: any) => handleYouTubeError(e.data)
         }
     })
+}
+
+/**
+ * Maneja errores del reproductor de YouTube.
+ * Los códigos 101 y 150 indican que el video no se puede reproducir en el país o en reproductores externos.
+ */
+const handleYouTubeError = async (errorCode: number) => {
+    console.error(`❌ [YT-ERROR] Error detectado: ${errorCode}`);
+    
+    if ([101, 150].includes(errorCode) && currentTrack.value) {
+        console.warn('⚠️ Video restringido geográficamente. Iniciando protocolo de recuperación...');
+        
+        // Intentar Capa 1: Stream Bridge
+        const success = await playThroughStreamBridge(currentTrack.value.video_id);
+        
+        // Si falla la capa 1 (como en el navegador por CORS), intentar Capa 2: Espejo
+        if (!success) {
+            console.log('🔄 Capa 1 fallida. Intentando Capa 2: Búsqueda de Espejo...');
+            await findAndPlayMirror();
+        }
+    } else {
+        console.error('Error no recuperable. Saltando a la siguiente canción.');
+        playerStore.next();
+    }
+}
+
+const findAndPlayMirror = async () => {
+    if (!currentTrack.value) return;
+    
+    const query = `${currentTrack.value.video_author} ${currentTrack.value.video_title} lyrics`;
+    console.log(`🔍 [MirrorSystem] Buscando espejo para: "${query}"`);
+
+    try {
+        let mirrorId = null;
+
+        // 1. Intentar con Scraper (Costo 0 - Funcionará en Electron)
+        try {
+            const results = await youtubeScraperService.searchWithoutToken(query);
+            const mirror = results.find((v: any) => v.videoId !== currentTrack.value?.video_id);
+            if (mirror) mirrorId = mirror.videoId;
+        } catch (e) {
+            console.warn('[MirrorSystem] Scraper bloqueado por CORS en navegador.');
+        }
+
+        // 2. Fallback a API Oficial (Si el scraper falla, ej: en el navegador)
+        if (!mirrorId && userStore.apikeyYoutube) {
+            console.log('[MirrorSystem] Usando API oficial para encontrar espejo...');
+            const apiResults = await searchSongsByArtist(query, userStore.apikeyYoutube, 5);
+            const mirror = apiResults.find((v: any) => v.videoId !== currentTrack.value?.video_id);
+            if (mirror) mirrorId = mirror.videoId;
+        }
+        
+        if (mirrorId) {
+            showToast('Video original no disponible. Cargando versión alternativa...', false);
+            console.log(`✅ [MirrorSystem] Espejo encontrado: ${mirrorId}`);
+            if (currentTrack.value) {
+                currentTrack.value.video_id = mirrorId;
+                createPlayer(mirrorId);
+            }
+        } else {
+            showToast('Música no disponible por restricciones de YouTube.', true);
+            playerStore.next();
+        }
+    } catch (e) {
+        console.error('Error crítico en el sistema de espejos:', e);
+        playerStore.next();
+    }
+}
+
+const playThroughStreamBridge = async (videoId: string): Promise<boolean> => {
+    try {
+        const streamUrl = await youtubeScraperService.getDirectStreamUrl(videoId);
+        
+        if (streamUrl) {
+            console.log('✅ [StreamBridge] Reproduciendo stream directo...');
+            isLocalPlayback.value = true;
+            initLocalAudio();
+            
+            onLocalAudioTimeUpdate((time, dur) => {
+                if (!isSeeking.value && dur > 0) {
+                    currentTime.value = time;
+                    duration.value = dur;
+                    progressValue.value = (time / dur) * 100;
+                }
+            });
+
+            onLocalAudioEnded(() => {
+                isLocalPlayback.value = false;
+                playerStore.next();
+            });
+
+            await playStream(streamUrl);
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Fallo en el puente de audio:', error);
+        return false;
+    }
 }
 
 const fetchVideoAuthor = async (videoId: string): Promise<string | null> => {
@@ -1031,14 +1160,23 @@ const handleSeek = (): void => {
     }
 }
 
-const handleSeekStart = (): void => { isSeeking.value = true }
+const handleSeekStart = (): void => { 
+    isSeeking.value = true 
+    activateBlur()
+}
+
 const handleSeekEnd = (): void => {
     isSeeking.value = false
     handleSeek()
-    if (isPlaying.value && playerStore.isFullScreen) {
-        deactivateBlur();
-        scheduleBlurRemoval()
-    }
+    // Forzamos un pequeño delay para que el reproductor se sincronice antes de quitar el blur
+    setTimeout(() => {
+        if (!isSeeking.value && isPlaying.value) {
+            const remainingTime = duration.value - currentTime.value
+            if (remainingTime > ENDING_BLUR_OFFSET / 1000) {
+                scheduleBlurRemoval()
+            }
+        }
+    }, 500)
 }
 
 const next = (): void => {
@@ -1191,8 +1329,16 @@ const stopAllPlayback = () => {
 watch(() => playerStore.isFullScreen, async (isFull) => {
     if (isFull) {
         lastMiniPosition.value = { ...position.value }
-        deactivateBlur()
-        scheduleBlurRemoval()
+        
+        // Al entrar a fullscreen, siempre mostramos el velo primero
+        activateBlur()
+        
+        // Y programamos que se quite solo si no estamos al final de la canción
+        const remainingTime = duration.value - currentTime.value
+        if (remainingTime > ENDING_BLUR_OFFSET / 1000) {
+            scheduleBlurRemoval()
+        }
+
         const currentVideoId = currentTrack.value?.video_id
         if (currentVideoId) {
             prefetchAuthor(currentVideoId)
@@ -1203,6 +1349,15 @@ watch(() => playerStore.isFullScreen, async (isFull) => {
             forceIframeResize()
         }, 400)
     } else {
+        // Al volver a mini, dejamos que el velo siga su curso natural
+        // Si ya pasaron los 7s de inicio, se mantendrá desvanecido permitiendo ver el video en pequeño
+        const remainingTime = duration.value - currentTime.value
+        if (remainingTime <= ENDING_BLUR_OFFSET / 1000) {
+            activateBlur()
+        } else if (isVeilBlurActive.value) {
+            scheduleBlurRemoval()
+        }
+        
         if (isExpanded.value) {
             await nextTick()
             setupLottie()
@@ -1221,9 +1376,8 @@ watch(() => currentTrack.value, async (newTrack, oldTrack) => {
             stopAllPlayback();
         }
 
-        if (playerStore.isFullScreen) {
-            activateBlur();
-        }
+        // Siempre activar blur al cambiar de canción
+        activateBlur();
 
         if (newTrack.isLocal && newTrack.localPath) {
             await playLocalTrackFromStore(newTrack);
@@ -1368,7 +1522,7 @@ onBeforeUnmount(() => {
 
 .debug-lyrics-content {
     background: #1a1a1a;
-    border: 2px solid #1db954;
+    border: 2px solid var(--accent-color);
     border-radius: 20px;
     padding: 2rem;
     max-width: 90%;
@@ -1433,11 +1587,11 @@ onBeforeUnmount(() => {
 }
 
 .debug-info strong {
-    color: #1db954;
+    color: var(--accent-color);
 }
 
 .debug-section h5 {
-    color: #1db954;
+    color: var(--accent-color);
     margin: 0 0 0.75rem 0;
     font-size: 0.9rem;
 }
@@ -1456,7 +1610,7 @@ onBeforeUnmount(() => {
 }
 
 .debug-time {
-    color: #1db954;
+    color: var(--accent-color);
     font-weight: bold;
     margin-right: 0.75rem;
     font-family: monospace;

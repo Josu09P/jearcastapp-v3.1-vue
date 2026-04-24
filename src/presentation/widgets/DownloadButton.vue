@@ -3,11 +3,11 @@
         <!-- Botón de descarga principal -->
         <div class="dropdown">
             <button class="btn btn-link p-0 download-trigger" type="button" data-bs-toggle="dropdown"
-                aria-expanded="false" :disabled="downloading"
-                :title="downloading ? 'Descargando...' : 'Descargar música'">
-                <i v-if="!downloading" class="bi bi-arrow-down-circle-fill text-secondary"
+                aria-expanded="false" :disabled="isDownloading"
+                :title="isDownloading ? 'Descargando...' : 'Descargar música'">
+                <i v-if="!isDownloading" class="bi bi-arrow-down-circle-fill text-secondary"
                     style="font-size: 1.14rem !important;"></i>
-                <span v-if="downloading" class="spinner-border spinner-border-sm"></span>
+                <span v-if="isDownloading" class="spinner-border spinner-border-sm"></span>
             </button>
 
             <ul class="dropdown-menu dropdown-menu-dark bg-dark border-secondary">
@@ -16,32 +16,12 @@
                     <i class="bi bi-mic me-2"></i>
                     Calidad de audio
                 </li>
-                <li>
-                    <a class="dropdown-item" href="#" @click.prevent="setQualityAndDownload(128)">
-                        <i class="bi bi-volume-down me-2 text-secondary"></i>
-                        128 kbps (Baja)
-                        <span class="quality-badge">~3MB/min</span>
-                    </a>
-                </li>
-                <li>
-                    <a class="dropdown-item" href="#" @click.prevent="setQualityAndDownload(192)">
-                        <i class="bi bi-volume-up me-2 text-secondary"></i>
-                        192 kbps (Media)
-                        <span class="quality-badge">~4.5MB/min</span>
-                    </a>
-                </li>
-                <li>
-                    <a class="dropdown-item" href="#" @click.prevent="setQualityAndDownload(256)">
-                        <i class="bi bi-volume-up me-2 text-info"></i>
-                        256 kbps (Alta)
-                        <span class="quality-badge">~6MB/min</span>
-                    </a>
-                </li>
-                <li>
-                    <a class="dropdown-item active" href="#" @click.prevent="setQualityAndDownload(320)">
-                        <i class="bi bi-volume-up-fill me-2 text-success"></i>
-                        320 kbps (Mejor)
-                        <span class="quality-badge">~7.5MB/min</span>
+                <li v-for="quality in qualities" :key="quality.value">
+                    <a class="dropdown-item" :class="{ active: selectedQuality === quality.value }" href="#"
+                        @click.prevent="setQualityAndDownload(quality.value)">
+                        <i :class="quality.icon + ' me-2 ' + quality.color"></i>
+                        {{ quality.label }}
+                        <span class="quality-badge">{{ quality.size }}</span>
                     </a>
                 </li>
 
@@ -65,13 +45,13 @@
             </ul>
         </div>
 
-        <DownloadProgress v-if="currentDownloadId" :download-id="currentDownloadId"
-            @close="() => currentDownloadId = null" />
+        <DownloadProgress v-if="currentDownloadId" :key="currentDownloadId" :download-id="currentDownloadId"
+            @close="handleProgressClose" @cancelled="handleDownloadCancelled" />
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import Toastify from 'toastify-js'
 import DownloadProgress from './DownloadProgress.vue'
 
@@ -81,14 +61,24 @@ const props = defineProps<{
     thumbnail?: string
 }>()
 
-const downloading = ref(false)
+// Estados
+const isDownloading = ref(false)
 const currentDownloadId = ref<string | null>(null)
 const selectedQuality = ref(320)
+const downloadInProgress = ref(false) // NUEVO: Prevenir doble click
+
+// Calidades disponibles
+const qualities = [
+    { value: 128, label: '128 kbps (Baja)', icon: 'bi-volume-down', color: 'text-secondary', size: '~3MB/min' },
+    { value: 192, label: '192 kbps (Media)', icon: 'bi-volume-up', color: 'text-secondary', size: '~4.5MB/min' },
+    { value: 256, label: '256 kbps (Alta)', icon: 'bi-volume-up', color: 'text-info', size: '~6MB/min' },
+    { value: 320, label: '320 kbps (Mejor)', icon: 'bi-volume-up-fill', color: 'text-success', size: '~7.5MB/min' }
+]
 
 // Verificar si estamos en Electron
-const isElectron = () => {
-    return !!(window.electron && window.electron.ipcRenderer)
-}
+const isElectron = computed(() => {
+    return !!(window.electron && (window.electron.ipcRenderer || window.electron.downloadAudio))
+})
 
 // Mostrar toast
 const showToast = (text: string, isError: boolean = false) => {
@@ -103,56 +93,107 @@ const showToast = (text: string, isError: boolean = false) => {
 
 // Manejar cierre del progreso
 const handleProgressClose = () => {
+    console.log('Cerrando progreso de descarga')
     currentDownloadId.value = null
-    downloading.value = false
+    isDownloading.value = false
+    downloadInProgress.value = false
+}
+
+// NUEVO: Manejar cancelación de descarga
+const handleDownloadCancelled = () => {
+    console.log('Descarga cancelada por el usuario')
+    showToast('Descarga cancelada')
+    handleProgressClose()
+}
+
+// Seleccionar calidad y descargar
+const setQualityAndDownload = (quality: number) => {
+    // PREVENIR DOBLE CLICK
+    if (downloadInProgress.value) {
+        showToast('Ya hay una descarga en progreso', true)
+        return
+    }
+
+    selectedQuality.value = quality
+    downloadWithQuality(quality)
 }
 
 const downloadWithQuality = async (quality: number) => {
-    if (!isElectron()) {
+    // Verificar si estamos en Electron
+    if (!isElectron.value) {
         showToast('Esta función solo está disponible en la aplicación de escritorio', true)
         return
     }
 
-    downloading.value = true
+    // PREVENIR DOBLE INICIO
+    if (downloadInProgress.value) {
+        console.warn('Ya hay una descarga en progreso')
+        return
+    }
+
+    downloadInProgress.value = true
+    isDownloading.value = true
 
     // Generar ID único
     const downloadId = `${props.videoId}_${Date.now()}`
     currentDownloadId.value = downloadId
 
+    console.log('Iniciando descarga con ID:', downloadId)
+
     try {
         showToast(`Descargando en ${quality} kbps...`)
 
         // Llamar con el downloadId
-        const result = await window.electron!.ipcRenderer.invoke('download-audio', {
+        const downloadOptions = {
             videoId: props.videoId,
             title: props.title,
             quality: quality,
-            downloadId: downloadId  // ← PASAR EL ID
-        })
+            downloadId: downloadId  // PASAR EL ID
+        }
+
+        console.log('Enviando opciones de descarga:', downloadOptions)
+
+        let result;
+
+        // Intentar múltiples métodos de descarga
+        if (window.electron?.downloadAudio) {
+            console.log('   Usando window.electron.downloadAudio')
+            result = await window.electron.downloadAudio(downloadOptions)
+        } else if (window.electron?.ipcRenderer?.invoke) {
+            console.log('   Usando ipcRenderer.invoke')
+            result = await window.electron.ipcRenderer.invoke('download-audio', downloadOptions)
+        } else {
+            throw new Error('No se encontró método de descarga disponible')
+        }
+
+        console.log('Resultado de descarga:', result)
 
         if (result.success) {
-            showToast(`Descargado: ${result.info?.title || props.title} (${quality} kbps)`)
+            showToast(`Descargado: ${props.title} (${quality} kbps)`)
+            // Esperar un poco antes de limpiar
             setTimeout(() => {
                 if (currentDownloadId.value === downloadId) {
-                    currentDownloadId.value = null
+                    handleProgressClose()
                 }
-                downloading.value = false
-            }, 1500)
+            }, 2000)
+        } else if (result.cancelled) {
+            console.log('Descarga cancelada')
+            handleProgressClose()
         } else {
-            throw new Error(result.error)
+            throw new Error(result.error || 'Error desconocido en la descarga')
         }
     } catch (error: any) {
-        console.error('Error:', error)
-        showToast(`Error: ${error.message}`, true)
-        currentDownloadId.value = null
-        downloading.value = false
-    }
-}
+        console.error('Error en descarga:', error)
 
-// Seleccionar calidad y descargar
-const setQualityAndDownload = (quality: number) => {
-    selectedQuality.value = quality
-    downloadWithQuality(quality)
+        // No mostrar error si fue cancelado
+        if (error.message?.includes('cancel') || error.message?.includes('SIGKILL')) {
+            console.log('Descarga cancelada (detectado por error)')
+        } else {
+            showToast(`Error: ${error.message}`, true)
+        }
+
+        handleProgressClose()
+    }
 }
 
 // Descargar solo portada
@@ -198,6 +239,13 @@ const downloadMetadataOnly = async () => {
 
     showToast('Metadata descargada!')
 }
+
+// Limpiar al desmontar
+onUnmounted(() => {
+    // Si hay una descarga en progreso, no limpiar el ID
+    // para que DownloadProgress pueda seguir mostrando el progreso
+    console.log('🧹 Componente desmontado, descarga en progreso:', downloadInProgress.value)
+})
 </script>
 
 <style scoped>
@@ -272,5 +320,16 @@ const downloadMetadataOnly = async () => {
 
 .dropdown-divider {
     margin: 4px 0;
+}
+
+/* Animación de spinner */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 </style>

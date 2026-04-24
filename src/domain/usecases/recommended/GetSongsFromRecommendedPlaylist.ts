@@ -2,5 +2,6 @@ import { fetchSongsFromRecommendedPlaylistService } from '@/data/services/firest
 import type { RecommendedSongModel } from '@/domain/models/RecommendedSongModel'
 
 export async function getSongsFromRecommendedPlaylist(playlistId: string): Promise<RecommendedSongModel[]> {
-  return await fetchSongsFromRecommendedPlaylistService(playlistId)
+  const response = await fetchSongsFromRecommendedPlaylistService(playlistId)
+  return response.songs
 }
