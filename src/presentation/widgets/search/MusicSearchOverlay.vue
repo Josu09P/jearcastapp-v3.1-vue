@@ -13,6 +13,8 @@ import { addSongToPlaylistService } from '@/data/services/firestore/PlaylistsFir
 import { createOrGetPlaylist } from '@/domain/usecases/playlists/CreateOrGetPlaylist'
 import { useApiKeyManager } from '@/composables/useApiKeyManager'
 
+import { youtubeScraperService } from '@/data/services/youtube/YouTubeScraperService'
+
 const query = ref('')
 const results = ref<any[]>([])
 const searchPerformed = ref(false)
@@ -20,6 +22,7 @@ const props = defineProps<{ visible: boolean }>()
 const addingFavoritesMap = ref<Record<string, boolean>>({})
 const isProcessing = ref(false)
 const searching = ref(false)
+const isUsingScraper = ref(false)
 const emit = defineEmits<{
     (e: 'close'): void
     (e: 'openPlaylistModal', video: any): void
@@ -50,7 +53,6 @@ const apiKeyManager = useApiKeyManager()
 // Usar las variables reactivas del manager directamente en el template
 const apiKeys = computed(() => apiKeyManager.apiKeys.value)
 const currentApiKeyIndex = computed(() => apiKeyManager.currentApiKeyIndex.value)
-const quotaExceeded = computed(() => apiKeyManager.quotaExceeded.value)
 
 const onSearch = async () => {
     if (!query.value) return
@@ -58,31 +60,49 @@ const onSearch = async () => {
     searching.value = true
     searchPerformed.value = true
     results.value = []
+    isUsingScraper.value = false
 
     try {
-        results.value = await apiKeyManager.executeWithFailover(async (key) => {
-            const videos = await searchYoutube(query.value, key)
-            const stats = await getVideoStats(videos.map((v: any) => v.videoId).join(','), key)
-            return videos.map((v: any) => {
-                const stat = stats.find((s: any) => s.videoId === v.videoId)
-                return {
-                    ...v,
-                    viewCount: stat?.viewCount || 0
-                }
+        // Intento 1: Usar API Keys con el Manager (si existen)
+        if (apiKeys.value.length > 0 && currentApiKeyIndex.value !== -1) {
+            console.log('Buscador: Intentando búsqueda oficial con API Key')
+            results.value = await apiKeyManager.executeWithFailover(async (key) => {
+                const videos = await searchYoutube(query.value, key)
+                const stats = await getVideoStats(videos.map((v: any) => v.videoId).join(','), key)
+                return videos.map((v: any) => {
+                    const stat = stats.find((s: any) => s.videoId === v.videoId)
+                    return {
+                        ...v,
+                        viewCount: stat?.viewCount || 0
+                    }
+                })
             })
-        })
+        } 
+
+        // Intento 2: Si no hay resultados (o no hay Keys), usar Scraper automáticamente
+        if (results.value.length === 0) {
+            console.log('Buscador: Usando Scraper (Búsqueda Libre)')
+            isUsingScraper.value = true
+            const scraperResults = await youtubeScraperService.searchWithoutToken(query.value)
+            results.value = scraperResults.map((v: any) => ({
+                videoId: v.videoId,
+                title: v.title,
+                thumbnail: v.thumbnail,
+                author: v.author,
+                viewCount: 0 // El scraper no suele dar stats detallados
+            }))
+        }
 
         if (results.value.length === 0) {
             showToast('No se encontraron resultados')
         }
     } catch (error: any) {
-        console.error('Error:', error)
+        console.error('Error en búsqueda:', error)
         showToast(error.message || 'Error al buscar')
     } finally {
         searching.value = false
     }
 }
-
 // Inicializar el manager al montar el componente
 onMounted(async () => {
     if (!userStore.id) return
@@ -249,28 +269,41 @@ const createNewPlaylist = async () => {
                 </div>
             </form>
 
-            <!-- Estado de API Keys - usando variables del manager -->
-            <div v-if="apiKeys.length > 0" class="mt-3 text-center">
-                <span class="badge me-2" :class="currentApiKeyIndex !== -1 ? 'bg-success' : 'bg-danger'">
-                    <i class="bi bi-key me-1"></i>
-                    {{ currentApiKeyIndex !== -1 ? `Usando Key ${currentApiKeyIndex + 1} de ${apiKeys.length}` :
-                        'Sinkeys activas' }}
-                </span>
-                <span v-if="quotaExceeded" class="badge bg-warning text-dark ms-2">
-                    <i class="bi bi-exclamation-triangle me-1"></i>
-                    Cuota excedida, cambiando de key...
-                </span>
-            </div>
-            <div v-else class="mt-3 text-center">
-                <span class="badge bg-danger">
-                    <i class="bi bi-exclamation-circle me-1"></i>
-                    No hay API Keys configuradas. Ve a Configuración.
-                </span>
+            <!-- Estado de Búsqueda Dinámica -->
+            <div class="mt-3 text-center">
+                <!-- Modo API Key -->
+                <div v-if="apiKeys.length > 0 && currentApiKeyIndex !== -1" class="d-inline-block">
+                    <span class="badge bg-success bg-opacity-75 p-2" style="border-radius: 20px;">
+                        <i class="bi bi-shield-check me-1"></i>
+                        Modo Seguro (Key {{ currentApiKeyIndex + 1 }}/{{ apiKeys.length }})
+                    </span>
+                    <span v-if="quotaExceeded" class="badge bg-warning text-dark ms-2 p-2" style="border-radius: 20px;">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        Cambiando de Key...
+                    </span>
+                </div>
+
+                <!-- Modo Scraper (Búsqueda Libre) -->
+                <div v-else class="d-inline-block">
+                    <span class="badge bg-info text-dark p-2" style="border-radius: 20px;">
+                        <i class="bi bi-incognito me-1"></i>
+                        Búsqueda Libre Activa
+                    </span>
+                    <p class="text-light small mt-2 opacity-75" style="max-width: 400px; margin: 0 auto;">
+                        <i class="bi bi-lightbulb me-1"></i> 
+                        Para una experiencia más rápida y precisa, añade una <strong>API Key</strong> en Configuración.
+                    </p>
+                </div>
             </div>
 
             <div v-if="searchPerformed">
-                <h6 class="text-white mt-4"><span class="result-search-text">Resultados para: "{{ query }}"</span></h6>
-                <div class="row gx-3 gy-4 mt-3">
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <h6 class="text-white mb-0">
+                        <span class="result-search-text">Resultados para: "{{ query }}"</span>
+                    </h6>
+                    <span v-if="isUsingScraper" class="badge bg-secondary opacity-50 small">Via Scraper</span>
+                </div>
+                <div class="row gx-3 gy-4 mt-2">
                     <div v-for="(video, index) in results" :key="video.videoId" class="col-md-6 col-lg-4 col-xl-3">
                         <div class="card h-100 flex-row shadow-sm p-2 align-items-center video-card-custom">
                             <img :src="video.thumbnail" :alt="video.title" class="rounded-start me-3"

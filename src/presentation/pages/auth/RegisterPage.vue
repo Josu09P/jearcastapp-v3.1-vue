@@ -33,11 +33,11 @@
                     placeholder="Repite tu contraseña" required />
                 </div>
                 <div class="mb-3">
-                  <label for="apikeyYoutube" class="form-label">API Key de YouTube</label>
+                  <label for="apikeyYoutube" class="form-label">API Key de YouTube (Opcional)</label>
                   <input v-model="form.apikeyYoutube" type="text" class="form-control"
-                    placeholder="Tu API Key de YouTube" />
-                  <div class="form-text text-light">
-                    Esta clave será usada para realizar búsquedas de videos.
+                    placeholder="Pega tu clave aquí o déjalo vacío" />
+                  <div class="form-text text-light" style="font-size: 0.8rem; opacity: 0.8;">
+                    <i class="bi bi-info-circle"></i> Si no tienes una clave, usarás la <strong>Búsqueda Libre</strong>. Puedes añadirla después en ajustes.
                   </div>
                 </div>
 
@@ -99,24 +99,33 @@ const handleSubmit = async () => {
   errorMessage.value = ''
   loading.value = true
 
-  Toastify({
-    text: '🔍 Verificando datos... Probando API Key de YouTube',
-    duration: 3000,
-    style: { background: '#0d6efd' }
-  }).showToast()
-
-  await new Promise((resolve) => setTimeout(resolve, 500))
-
-  const validApiKey = await isYoutubeApiKeyValid(form.apikeyYoutube)
-
-  if (!validApiKey) {
+  // Solo validar si el usuario ha escrito algo
+  if (form.apikeyYoutube && form.apikeyYoutube.trim() !== '') {
     Toastify({
-      text: '❌ La API Key de YouTube no es válida.',
-      duration: 4000,
-      style: { background: '#dc3545' }
+      text: '🔍 Verificando datos... Probando API Key de YouTube',
+      duration: 3000,
+      style: { background: '#0d6efd' }
     }).showToast()
-    loading.value = false
-    return
+
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    const validApiKey = await isYoutubeApiKeyValid(form.apikeyYoutube)
+
+    if (!validApiKey) {
+      Toastify({
+        text: '❌ La API Key de YouTube no es válida. Por favor, revísala o déjala vacía.',
+        duration: 4000,
+        style: { background: '#dc3545' }
+      }).showToast()
+      loading.value = false
+      return
+    }
+  } else {
+    Toastify({
+      text: '✨ Registrando en modo Búsqueda Libre...',
+      duration: 3000,
+      style: { background: '#198754' }
+    }).showToast()
   }
 
   try {

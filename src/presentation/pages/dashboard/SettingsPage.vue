@@ -223,8 +223,11 @@ const toggleApiKey = async (apiKey: ApiKeyModel) => {
                         <div class="info-row">
                             <span class="info-label">Email</span>
                             <div class="info-value">
-                                <input v-if="editing" v-model="profileForm.email" type="email" class="edit-input"
-                                    placeholder="tu@email.com">
+                                <div v-if="editing" class="d-flex align-items-center">
+                                    <input :value="profileForm.email" type="email" class="edit-input opacity-50"
+                                        readonly style="cursor: not-allowed;">
+                                    <i class="bi bi-lock-fill ms-2 text-secondary" title="El correo no se puede cambiar"></i>
+                                </div>
                                 <span v-else>{{ profileForm.email }}</span>
                             </div>
                         </div>
