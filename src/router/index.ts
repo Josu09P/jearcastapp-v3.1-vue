@@ -60,6 +60,11 @@ const routes = [
         component: () => import('@/presentation/pages/dashboard/RecommendedPage.vue'),
       },
       {
+        path: 'artists',
+        name: 'Artistas',
+        component: () => import('@/presentation/pages/dashboard/ArtistsPage.vue'),
+      },
+      {
         path: 'local-music',
         name: 'Música Local',
         component: () => import('@/presentation/pages/dashboard/LocalMusicPage.vue'),

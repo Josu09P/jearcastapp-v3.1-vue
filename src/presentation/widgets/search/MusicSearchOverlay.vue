@@ -47,6 +47,10 @@ const focusInput = () => {
     }, 50)
 }
 
+defineExpose({
+    focusInput
+})
+
 // ==================== USAR EL API KEY MANAGER ====================
 const apiKeyManager = useApiKeyManager()
 
@@ -78,11 +82,11 @@ const onSearch = async () => {
                     }
                 })
             })
-        } 
+        }
 
-        // Intento 2: Si no hay resultados (o no hay Keys), usar Scraper automáticamente
+        // Intento 2: Si no hay resultados (o no hay Keys), usar Scraper (yt-dlp backend)
         if (results.value.length === 0) {
-            console.log('Buscador: Usando Scraper (Búsqueda Libre)')
+            console.log('Buscador: Usando Scraper (yt-dlp)')
             isUsingScraper.value = true
             const scraperResults = await youtubeScraperService.searchWithoutToken(query.value)
             results.value = scraperResults.map((v: any) => ({
@@ -90,7 +94,9 @@ const onSearch = async () => {
                 title: v.title,
                 thumbnail: v.thumbnail,
                 author: v.author,
-                viewCount: 0 // El scraper no suele dar stats detallados
+                duration: v.duration || '',
+                views: v.views || '',
+                url: v.url || `https://youtube.com/watch?v=${v.videoId}`
             }))
         }
 
@@ -104,6 +110,7 @@ const onSearch = async () => {
         searching.value = false
     }
 }
+
 // Inicializar el manager al montar el componente
 onMounted(async () => {
     if (!userStore.id) return
@@ -284,14 +291,14 @@ const createNewPlaylist = async () => {
                     </span>
                 </div>
 
-                <!-- Modo Scraper (Búsqueda Libre) -->
+                <!-- Modo Scraper (Búsqueda Libre con yt-dlp) -->
                 <div v-else class="d-inline-block">
                     <span class="badge bg-info text-dark p-2" style="border-radius: 20px;">
                         <i class="bi bi-incognito me-1"></i>
                         Búsqueda Libre Activa
                     </span>
                     <p class="text-light small mt-2 opacity-75" style="max-width: 400px; margin: 0 auto;">
-                        <i class="bi bi-lightbulb me-1"></i> 
+                        <i class="bi bi-lightbulb me-1"></i>
                         Para una experiencia más rápida y precisa, añade una <strong>API Key</strong> en Configuración.
                     </p>
                 </div>
@@ -302,7 +309,7 @@ const createNewPlaylist = async () => {
                     <h6 class="text-white mb-0">
                         <span class="result-search-text">Resultados para: "{{ query }}"</span>
                     </h6>
-                    <span v-if="isUsingScraper" class="badge bg-secondary opacity-50 small">Via Scraper</span>
+                    <span v-if="isUsingScraper" class="badge bg-secondary opacity-50 small">Via yt-dlp</span>
                 </div>
                 <div class="row gx-3 gy-4 mt-2">
                     <div v-for="(video, index) in results" :key="video.videoId" class="col-md-6 col-lg-4 col-xl-3">
@@ -315,9 +322,15 @@ const createNewPlaylist = async () => {
                                         style="font-size: 0.85rem">
                                         {{ video.title }}
                                     </h6>
-                                    <p class="text-light small mb-2">
+                                    <!-- CORREGIDO: Maneja tanto views string como número -->
+                                    <p class="text-light small mb-2" v-if="video.views">
                                         <i class="bi bi-eye"></i>
-                                        {{ video.viewCount.toLocaleString() }} vistas
+                                        {{ video.views }}
+                                    </p>
+                                    <p class="text-light small mb-2" v-else-if="video.viewCount">
+                                        <i class="bi bi-eye"></i>
+                                        {{ typeof video.viewCount === 'number' ? video.viewCount.toLocaleString() :
+                                        video.viewCount }} vistas
                                     </p>
                                 </div>
                                 <div class="d-flex justify-content-start gap-2">

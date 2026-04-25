@@ -16,12 +16,17 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, provide, ref } from 'vue';
+import { onMounted, provide, ref, watch } from 'vue';
 import HeaderTopWidget from '@/presentation/widgets/HeaderTopWidget.vue';
 import HeaderLeftWidget from '@/presentation/widgets/HeaderLeftWidget.vue';
 import { useUserDataStore } from '@/stores/userDataStore';
+import { useArtistStore } from '@/stores/artist-store';
+import { useUserStore } from '@/stores/user';
 
 const userDataStore = useUserDataStore();
+const artistStore = useArtistStore();
+const userStore = useUserStore();
+
 const isSidebarCollapsed = ref(false);
 
 const toggleSidebar = () => {
@@ -36,25 +41,53 @@ const changeSection = (section: string) => {
 provide('activeSection', activeSection)
 provide('changeSection', changeSection)
 
-// FETCH USER DATA ON MOUNT
+// ==================== INICIALIZACIÓN DE DATOS ====================
+
+// Cargar datos principales al montar
 onMounted(async () => {
   await Promise.all([
     userDataStore.fetchFavorites(),
     userDataStore.fetchPlaylists(),
     userDataStore.fetchRecommended(),
   ])
+
+  // Cargar artistas favoritos si hay usuario
+  if (userStore.id) {
+    console.log('🎤 Dashboard: Cargando artistas favoritos...')
+    await artistStore.fetchFavoriteArtists()
+  }
 })
+
+// Recargar artistas cuando el usuario inicia/cierra sesión
+watch(() => userStore.id, async (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    console.log('Usuario autenticado, recargando artistas favoritos...')
+    // Invalidar caché y recargar
+    await artistStore.invalidateAndRefresh()
+  } else if (!newId && oldId) {
+    // Usuario cerró sesión - limpiar store
+    console.log('Usuario cerró sesión, limpiando artistas...')
+    artistStore.favoriteArtists = []
+    artistStore.initialized = false
+  }
+})
+
+// También recargar cuando el usuario se carga desde localStorage
+watch(() => userStore.id, async (newId) => {
+  if (newId && !artistStore.initialized) {
+    console.log('Usuario cargado desde localStorage, recargando artistas...')
+    await artistStore.fetchFavoriteArtists()
+  }
+}, { immediate: true })
 </script>
 
 <style scoped>
 .app-layout {
   display: flex;
   height: 100vh;
-  /* Cambiado de min-height a height */
   background: var(--main-bg-color);
   background-attachment: fixed;
   overflow: hidden;
-  /* El layout no debe scrollear, solo sus hijos */
 }
 
 .sidebar {
@@ -97,8 +130,7 @@ onMounted(async () => {
   overflow-x: auto;
 }
 
-/* ==================== RESPONSIVE COMPLETO ==================== */
-
+/* ==================== RESPONSIVE ==================== */
 @media (max-width: 1024px) {
   .content-area {
     padding: 1.25rem;
