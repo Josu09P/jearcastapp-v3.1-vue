@@ -1,10 +1,30 @@
 <template>
     <DashboardLayout>
         <section class="container-fluid px-0">
+            <!-- SECCIÓN ARTISTAS FAVORITOS (FIREBASE) -->
+            <div v-if="favoriteArtists.length > 0" class="favorites-artists-top mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="section-title mb-0">
+                        <i class="bi bi-star-fill text-warning me-2"></i>Mis Artistas
+                    </h5>
+                    <router-link to="/dashboard/artists" class="text-accent small text-decoration-none">Ver todos</router-link>
+                </div>
+                <div class="artists-horizontal-scroll">
+                    <div v-for="artist in favoriteArtists" :key="artist.channel_id" class="top-artist-item" @click="goToArtistMix(artist)">
+                        <div class="top-artist-img-wrapper">
+                            <img :src="artist.thumbnail || 'https://ui-avatars.com/api/?name=' + artist.artist_name" class="top-artist-img">
+                            <div class="play-overlay">
+                                <i class="bi bi-play-fill"></i>
+                            </div>
+                        </div>
+                        <span class="top-artist-name">{{ artist.artist_name }}</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- SECCIÓN MIXWIDGET -->
             <MixWidget ref="mixWidget" />
             <br>
-
             <!-- Tarjetas de estadísticas -->
             <div class="stats-grid">
                 <!-- Favoritos -->
@@ -117,10 +137,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import DashboardLayout from '@/presentation/layouts/DashboardLayout.vue'
 import { usePlayerStore } from '@/stores/player-store'
 import { useUserStore } from '@/stores/user'
+import { useArtistStore } from '@/stores/artist-store'
 import { getFavoritesByUser } from '@/domain/usecases/favorites/GetFavoritesByUser'
 import { getPlaylistsByUser } from '@/domain/usecases/playlists/GetPlaylistsByUser'
 import { getRecommendedPlaylists } from '@/domain/usecases/recommended/GetRecommendedPlaylists'
@@ -133,9 +154,32 @@ import { createOrGetPlaylist } from '@/domain/usecases/playlists/CreateOrGetPlay
 import Swal from 'sweetalert2'
 import MixWidget from '@/presentation/widgets/recomendations/MixWidget.vue'
 import DownloadButton from '@/presentation/widgets/DownloadButton.vue'
+import { youtubeScraperService } from '@/data/services/youtube/YouTubeScraperService'
 
 const playerStore = usePlayerStore()
 const userStore = useUserStore()
+const artistStore = useArtistStore()
+
+const favoriteArtists = computed(() => artistStore.favoriteArtists)
+
+const goToArtistMix = async (artist: any) => {
+    loading.value = true
+    try {
+        const videos = await youtubeScraperService.searchWithoutToken(`${artist.artist_name} mejores canciones`)
+        if (videos.length > 0) {
+            playerStore.setPlaylist(videos.map((v: any) => ({
+                video_id: v.videoId,
+                video_title: v.title,
+                video_thumbnail: v.thumbnail
+            })), 0)
+            showToast(`Reproduciendo mix de ${artist.artist_name}`)
+        }
+    } catch (error) {
+        showToast('Error al cargar canciones', true)
+    } finally {
+        loading.value = false
+    }
+}
 const totalFavorites = ref(0)
 const totalPlaylists = ref(0)
 const totalRecommended = ref(0)
@@ -192,13 +236,13 @@ const clearRecentlyPlayed = async () => {
     }
 }
 
-const showToast = (text: string) => {
+const showToast = (text: string, isError: boolean = false) => {
     Toastify({
         text,
         duration: 2000,
         gravity: 'top',
         position: 'right',
-        className: 'toast-glass'
+        className: isError ? 'toast-glass bg-danger' : 'toast-glass'
     }).showToast()
 }
 
@@ -332,6 +376,87 @@ const createNewPlaylist = async () => {
 
 <style scoped>
 /* Stats minimalistas */
+.favorites-artists-top {
+    padding: 0 0.5rem;
+}
+
+.artists-horizontal-scroll {
+    display: flex;
+    gap: 1.2rem;
+    overflow-x: auto;
+    padding: 0.5rem 0;
+    scrollbar-width: none;
+}
+
+.artists-horizontal-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.top-artist-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    width: 80px;
+}
+
+.top-artist-img-wrapper {
+    position: relative;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+}
+
+.top-artist-item:hover .top-artist-img-wrapper {
+    border-color: var(--accent-color);
+    transform: scale(1.05);
+}
+
+.top-artist-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.play-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.top-artist-item:hover .play-overlay {
+    opacity: 1;
+}
+
+.play-overlay i {
+    color: white;
+    font-size: 1.5rem;
+}
+
+.top-artist-name {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+}
+
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -624,11 +749,13 @@ const createNewPlaylist = async () => {
 
     .stat-card {
         padding: 1rem 1.5rem;
-        justify-content: space-between; /* Separa el icono de la info para llenar el espacio */
+        justify-content: space-between;
+        /* Separa el icono de la info para llenar el espacio */
     }
 
     .stat-info {
-        text-align: right; /* Alinea el texto a la derecha para equilibrar con el icono a la izquierda */
+        text-align: right;
+        /* Alinea el texto a la derecha para equilibrar con el icono a la izquierda */
     }
 
     .stat-value {

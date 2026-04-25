@@ -64,4 +64,18 @@ La aplicación sigue los principios de **Clean Architecture**, dividiendo la ló
 - **Stream Bridge:** Sistema de recuperación para videos restringidos geográficamente, intentando reproducir via proxy o buscando espejos (mirrors) automáticamente.
 
 ---
+
+## 5. Módulo de Artistas Adventistas (Optimización de Recursos)
+
+### Enfoque de Contenido
+- **Curaduría:** La base de datos de artistas ha sido migrada para enfocarse exclusivamente en el ecosistema musical de la Iglesia Adventista del Séptimo Día (SDA).
+- **Base de Datos Local:** Integración de `artists-db.json` para proporcionar una lista de canales verificados sin necesidad de consultas iniciales al servidor.
+
+### Optimizaciones de Rendimiento
+- **Lazy Loading de Imágenes:** Se eliminó la precarga de miniaturas (thumbnails) de artistas sugeridos. Ahora el sistema solo busca metadatos enriquecidos (vía IPC Electron) cuando el usuario marca un artista como favorito o realiza una búsqueda explícita.
+- **Arquitectura de Mixes:** 
+    - **Productor (ArtistsPage):** Centraliza la búsqueda y generación de mezclas.
+    - **Consumidor (HomePage):** Muestra los resultados cacheados, evitando la regeneración constante de playlists que consume cuotas de red y procesamiento.
+
+---
 **Desarrollado con enfoque en rendimiento, privacidad y estética minimalista.**

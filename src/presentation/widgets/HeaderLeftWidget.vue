@@ -49,6 +49,7 @@ const changeSection = inject('changeSection') as (section: string) => void;
 const menuItems = [
   { route: '/dashboard', label: 'Inicio', icon: 'bi bi-house-door-fill' },
   { route: '/dashboard/favorites', label: 'Favoritos', icon: 'bi bi-heart-fill' },
+  { route: '/dashboard/artists', label: 'Artistas', icon: 'bi bi-people-fill' },
   { route: '/dashboard/play-list', label: 'Playlists', icon: 'bi bi-collection-play-fill' },
   { route: '/dashboard/recommended', label: 'TopPicks', icon: 'bi bi-compass-fill' },
   { route: '/dashboard/local-music', label: 'Música Local', icon: 'bi bi-music-note-beamed' },
