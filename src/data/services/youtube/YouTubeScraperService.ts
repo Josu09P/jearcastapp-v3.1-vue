@@ -15,7 +15,7 @@ export interface ScrapedVideo {
 
 class YouTubeScraperService {
   async searchWithoutToken(query: string): Promise<ScrapedVideo[]> {
-    console.log(`🔍 [Frontend] Solicitando búsqueda: "${query}"`)
+    console.log(`🔍 [Frontend] Buscando: "${query}"`)
 
     try {
       if ((window as any).electron?.youtubeSearch) {
@@ -23,8 +23,8 @@ class YouTubeScraperService {
         const results = await (window as any).electron.youtubeSearch(query)
         const elapsed = (performance.now() - startTime).toFixed(0)
 
-        console.log(`✅ [Frontend] ${results.length} resultados en ${elapsed}ms`)
-        return results
+        console.log(`✅ [Frontend] ${results.length} resultados encontrados en ${elapsed}ms`)
+        return results as ScrapedVideo[]
       }
 
       console.warn('⚠️ [Frontend] Backend no disponible')

@@ -31,7 +31,7 @@ const selectFolder = async () => {
 
 const rescan = async () => {
     await localMusicStore.rescan()
-    showToast(`✅ Escaneo completado: ${localMusicStore.totalTracks} canciones encontradas`)
+    showToast(`Escaneo completado: ${localMusicStore.totalTracks} canciones encontradas`)
 }
 
 const clearFolder = async () => {

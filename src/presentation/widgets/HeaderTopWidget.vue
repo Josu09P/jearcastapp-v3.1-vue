@@ -129,7 +129,7 @@ function toggleSidebar() {
   top: 0;
   z-index: 100;
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: transparent;
   padding: 2.70rem 1.5rem 0.75rem;
 }
 
@@ -306,15 +306,18 @@ function toggleSidebar() {
 .logout-btn {
   display: flex;
   align-items: center;
-  justify-content: center; /* Centrado perfecto */
+  justify-content: center;
+  /* Centrado perfecto */
   width: 40px;
   height: 40px;
   margin: 0 auto;
   gap: 0.5rem;
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 50%; /* Más circular */
-  padding: 0; /* Limpiamos paddings previos */
+  border-radius: 50%;
+  /* Más circular */
+  padding: 0;
+  /* Limpiamos paddings previos */
   color: rgba(255, 255, 255, 0.7);
   font-size: 0.85rem;
   cursor: pointer;

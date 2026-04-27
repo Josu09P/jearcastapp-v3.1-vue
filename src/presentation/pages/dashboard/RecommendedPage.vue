@@ -331,9 +331,11 @@ onUnmounted(() => {
     background-size: cover;
     background-position: center;
     position: relative;
-    border-radius: 0 0 1rem 1rem;
+    border-bottom-left-radius: 1rem;
+    border-bottom-right-radius: 1rem;
     overflow: hidden;
     margin-top: -1.5rem;
+    transform: translateZ(0);
 }
 
 .recommended-hero::before {
@@ -346,9 +348,12 @@ onUnmounted(() => {
     background-image: inherit;
     background-size: inherit;
     background-position: inherit;
-    filter: blur(8px);
+    filter: blur(12px);
     transform: scale(1.1);
     z-index: 0;
+    /* Radio mucho más grande para ocultar el borde mordido del contenedor */
+    border-bottom-left-radius: 4rem;
+    border-bottom-right-radius: 4rem;
 }
 
 .hero-overlay {

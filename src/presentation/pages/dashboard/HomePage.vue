@@ -4,15 +4,16 @@
             <!-- SECCIÓN ARTISTAS FAVORITOS (FIREBASE) -->
             <div v-if="favoriteArtists.length > 0" class="favorites-artists-top mb-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="section-title mb-0">
-                        <i class="bi bi-star-fill text-warning me-2"></i>Mis Artistas
-                    </h5>
-                    <router-link to="/dashboard/artists" class="text-accent small text-decoration-none">Ver todos</router-link>
+                    <h4 class="text-white mb-0 fw-bold text-truncate">Artistas Favoritos</h4>
+                    <router-link to="/dashboard/artists" class="text-accent small text-decoration-none">Ver
+                        todos</router-link>
                 </div>
                 <div class="artists-horizontal-scroll">
-                    <div v-for="artist in favoriteArtists" :key="artist.channel_id" class="top-artist-item" @click="goToArtistMix(artist)">
+                    <div v-for="artist in favoriteArtists" :key="artist.channel_id" class="top-artist-item"
+                        @click="goToArtistMix(artist)">
                         <div class="top-artist-img-wrapper">
-                            <img :src="artist.thumbnail || 'https://ui-avatars.com/api/?name=' + artist.artist_name" class="top-artist-img">
+                            <img :src="artist.thumbnail || 'https://ui-avatars.com/api/?name=' + artist.artist_name"
+                                class="top-artist-img">
                             <div class="play-overlay">
                                 <i class="bi bi-play-fill"></i>
                             </div>

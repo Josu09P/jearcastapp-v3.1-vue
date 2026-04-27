@@ -504,13 +504,27 @@ const loadLyrics = async () => {
 // ==================== FIN LETRAS ====================
 
 /* ==================== IFRAME RESIZE ==================== */
+const activeTimers = new Set<number>();
+const safeSetTimeout = (fn: Function, delay: number) => {
+    const timer = window.setTimeout(() => {
+        fn();
+        activeTimers.delete(timer);
+    }, delay);
+    activeTimers.add(timer);
+    return timer;
+};
+
+const clearAllActiveTimers = () => {
+    activeTimers.forEach(timer => window.clearTimeout(timer));
+    activeTimers.clear();
+};
+
 const forceIframeResize = (): void => {
     if (!playerContainer.value || !ytPlayer) return
 
     const applyResize = () => {
         if (!playerContainer.value || !ytPlayer) return
 
-        // Obtener el contenedor padre que tiene el tamaño real disponible
         const wrapper = playerContainer.value.parentElement
         if (!wrapper) return
 
@@ -518,35 +532,30 @@ const forceIframeResize = (): void => {
         const containerHeight = wrapper.clientHeight
 
         if (containerWidth > 0 && containerHeight > 0) {
-            ytPlayer.setSize(containerWidth, containerHeight)
-
-            const iframe = playerContainer.value.querySelector('iframe')
-            if (iframe) {
-                iframe.removeAttribute('width')
-                iframe.removeAttribute('height')
-                Object.assign(iframe.style, {
-                    width: '100%',
-                    height: '100%',
-                    position: 'absolute',
-                    top: '0',
-                    left: '0',
-                    border: '0',
-                    objectFit: 'contain'
-                })
+            try {
+                ytPlayer.setSize(containerWidth, containerHeight)
+                const iframe = playerContainer.value.querySelector('iframe')
+                if (iframe) {
+                    iframe.style.width = '100%'
+                    iframe.style.height = '100%'
+                    iframe.style.position = 'absolute'
+                    iframe.style.top = '0'
+                    iframe.style.left = '0'
+                }
+            } catch (e) {
+                console.warn('Error ajustando tamaño del player:', e)
             }
         }
     }
 
-    RESIZE_DELAYS.forEach(delay => {
-        setTimeout(applyResize, delay)
-    })
+    // Ejecutar inmediatamente y con ligeros delays para asegurar sincronía con el DOM de Vue
+    applyResize();
+    [50, 150, 400, 800].forEach(delay => safeSetTimeout(applyResize, delay));
 }
 
 // Manejador de resize de ventana
 const handleWindowResize = () => {
-    if (playerStore.isFullScreen) {
-        forceIframeResize()
-    }
+    forceIframeResize();
 }
 
 /* ==================== YOUTUBE API ==================== */
@@ -560,12 +569,11 @@ const loadYouTubeAPI = (): Promise<void> => new Promise((resolve) => {
 
 const setupResizeObserver = (): void => {
     if (!playerContainer.value) return
-    resizeObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-            if (ytPlayer && entry.contentRect.width > 0 && entry.contentRect.height > 0) {
-                ytPlayer.setSize(entry.contentRect.width, entry.contentRect.height)
-                forceIframeResize()
-            }
+    if (resizeObserver) resizeObserver.disconnect();
+
+    resizeObserver = new ResizeObserver(() => {
+        if (ytPlayer && !isChangingTrack.value) {
+            forceIframeResize();
         }
     })
     resizeObserver.observe(playerContainer.value)
@@ -838,21 +846,28 @@ const createPlayer = (videoId: string): void => {
 
 /**
  * Maneja errores del reproductor de YouTube.
- * Los códigos 101 y 150 indican que el video no se puede reproducir en el país o en reproductores externos.
  */
 const handleYouTubeError = async (errorCode: number) => {
     console.error(`❌ [YT-ERROR] Error detectado: ${errorCode}`);
     
+    // Si el video falla, forzamos pausa en el store para sincronizar UI temporalmente
+    playerStore.pause();
+    activateBlur();
+
     if ([101, 150].includes(errorCode) && currentTrack.value) {
         console.warn('⚠️ Video restringido geográficamente. Iniciando protocolo de recuperación...');
         
         // Intentar Capa 1: Stream Bridge
         const success = await playThroughStreamBridge(currentTrack.value.video_id);
         
-        // Si falla la capa 1 (como en el navegador por CORS), intentar Capa 2: Espejo
+        // Si falla la capa 1, intentar Capa 2: Espejo
         if (!success) {
             console.log('🔄 Capa 1 fallida. Intentando Capa 2: Búsqueda de Espejo...');
             await findAndPlayMirror();
+        } else {
+            // Si el bridge funcionó, forzamos play en el store
+            playerStore.play();
+            scheduleBlurRemoval();
         }
     } else {
         console.error('Error no recuperable. Saltando a la siguiente canción.');
@@ -869,36 +884,35 @@ const findAndPlayMirror = async () => {
     try {
         let mirrorId = null;
 
-        // 1. Intentar con Scraper (Costo 0 - Funcionará en Electron)
+        // 1. Intentar con Scraper
         try {
             const results = await youtubeScraperService.searchWithoutToken(query);
             const mirror = results.find((v: any) => v.videoId !== currentTrack.value?.video_id);
             if (mirror) mirrorId = mirror.videoId;
         } catch (e) {
-            console.warn('[MirrorSystem] Scraper bloqueado por CORS en navegador.');
+            console.warn('[MirrorSystem] Scraper bloqueado.');
         }
 
-        // 2. Fallback a API Oficial (Si el scraper falla, ej: en el navegador)
+        // 2. Fallback a API Oficial
         if (!mirrorId && userStore.apikeyYoutube) {
-            console.log('[MirrorSystem] Usando API oficial para encontrar espejo...');
+            console.log('[MirrorSystem] Usando API oficial...');
             const apiResults = await searchSongsByArtist(query, userStore.apikeyYoutube, 5);
             const mirror = apiResults.find((v: any) => v.videoId !== currentTrack.value?.video_id);
             if (mirror) mirrorId = mirror.videoId;
         }
         
         if (mirrorId) {
-            showToast('Video original no disponible. Cargando versión alternativa...', false);
-            console.log(`✅ [MirrorSystem] Espejo encontrado: ${mirrorId}`);
+            showToast('Cargando versión alternativa...', false);
             if (currentTrack.value) {
                 currentTrack.value.video_id = mirrorId;
                 createPlayer(mirrorId);
             }
         } else {
-            showToast('Música no disponible por restricciones de YouTube.', true);
+            showToast('Música no disponible por restricciones.', true);
             playerStore.next();
         }
     } catch (e) {
-        console.error('Error crítico en el sistema de espejos:', e);
+        console.error('Error crítico en espejos:', e);
         playerStore.next();
     }
 }
@@ -926,6 +940,8 @@ const playThroughStreamBridge = async (videoId: string): Promise<boolean> => {
             });
 
             await playStream(streamUrl);
+            playerStore.play();
+            scheduleBlurRemoval();
             return true;
         }
         return false;
@@ -1291,38 +1307,43 @@ const playLocalTrackFromStore = async (track: Track) => {
     }
 };
 
-// Detener toda reproducción activa
+// Detener toda reproducción activa y LIMPIAR DOM
 const stopAllPlayback = () => {
-    // Detener YouTube
+    console.log('🧹 Limpieza total de reproductores iniciada...');
+
+    // 1. Matar YouTube
     if (ytPlayer) {
         try {
-            ytPlayer.pauseVideo();
+            ytPlayer.destroy();
+            ytPlayer = null;
+            console.log('📺 YouTube Player destruido');
         } catch (e) {
-            console.error('Error pausando YouTube:', e);
+            console.error('Error al destruir YouTube:', e);
         }
     }
 
-    // Detener audio local
-    if (isLocalPlayback.value) {
-        try {
-            pauseLocalAudio();
-            // Destruir la instancia de audio para limpiar completamente
-            destroyLocalAudio();
-        } catch (e) {
-            console.error('Error deteniendo audio local:', e);
+    // 2. Limpiar el contenedor del DOM (Iframe)
+    if (playerContainer.value) {
+        while (playerContainer.value.firstChild) {
+            playerContainer.value.removeChild(playerContainer.value.firstChild);
         }
     }
 
-    // Resetear estado
+    // 3. Matar Audio Local (Señal a Electron)
+    if (window.electronAudio?.stop) {
+        window.electronAudio.stop();
+        console.log('🔊 Señal de STOP enviada a Electron');
+    }
+    
+    // Si usas el servicio local de fallback
+    destroyLocalAudio();
+
+    // Resetear estados
     isLocalPlayback.value = false;
     playerStore.pause();
+    clearBlurTimers();
 
-    // Limpiar el contenedor de YouTube si es necesario
-    if (playerContainer.value && ytPlayer) {
-        // No destruir el player, solo pausar
-    }
-
-    console.log('Toda reproducción detenida');
+    console.log('Toda reproducción detenida y DOM limpio');
 };
 
 /* ==================== WATCHERS ==================== */
@@ -1371,32 +1392,45 @@ watch(() => currentTrack.value, async (newTrack, oldTrack) => {
     try {
         isChangingTrack.value = true;
 
-        // ✅ Si hay una canción anterior reproduciéndose, detenerla
-        if (oldTrack && oldTrack !== newTrack) {
-            stopAllPlayback();
-        }
-
-        // Siempre activar blur al cambiar de canción
+        // ✅ REGLA DE ORO: Siempre destruir todo antes de empezar el nuevo (Online u Local)
+        stopAllPlayback();
         activateBlur();
 
         if (newTrack.isLocal && newTrack.localPath) {
-            await playLocalTrackFromStore(newTrack);
-        } else if (newTrack.video_id && !newTrack.isLocal) {
-            // Si había audio local reproduciéndose, asegurarse de detenerlo
-            if (isLocalPlayback.value) {
-                destroyLocalAudio();
-                isLocalPlayback.value = false;
+            isLocalPlayback.value = true;
+            console.log('🚀 Iniciando Motor Local para:', newTrack.video_title);
+            
+            // Intentar usar el motor de audio de Electron si existe
+            if (window.electronAudio?.play) {
+                await window.electronAudio.play({ 
+                    path: newTrack.localPath, 
+                    title: newTrack.video_title,
+                    artist: newTrack.video_author || 'Artista Local'
+                });
+            } else {
+                // Fallback al servicio interno si no está el bridge de Electron
+                await playLocalTrackFromStore(newTrack);
             }
-
+            
+            playerStore.play();
+            scheduleBlurRemoval();
+            
+            // Iniciar animación Lottie
+            if (isExpanded.value && !playerStore.isFullScreen) {
+                await nextTick();
+                setupLottie();
+            }
+        } else if (newTrack.video_id) {
             isLocalPlayback.value = false;
+            console.log('🌐 Iniciando Motor Online (YouTube) para:', newTrack.video_id);
+            
             prefetchAuthor(newTrack.video_id);
             await loadYouTubeAPI();
             await nextTick();
             createPlayer(newTrack.video_id);
         }
 
-        // ✅ Consolidación de efectos secundarios
-        // 1. Guardar en historial (antes esparcido en otro watch)
+        // ✅ Efectos secundarios (Historial y Letras)
         if (playerStore.isPlaying) {
             addToRecentlyPlayed({
                 video_id: newTrack.video_id,
@@ -1406,7 +1440,6 @@ watch(() => currentTrack.value, async (newTrack, oldTrack) => {
             });
         }
 
-        // 2. Resetear y cargar letras (antes esparcido en otro watch)
         currentLyrics.value = null;
         if (showLyrics.value) {
             loadLyrics();
@@ -1416,7 +1449,7 @@ watch(() => currentTrack.value, async (newTrack, oldTrack) => {
         // Pequeño delay para evitar rebotes ultra-rápidos
         setTimeout(() => {
             isChangingTrack.value = false;
-        }, 100);
+        }, 200);
     }
 }, { immediate: true });
 watch(() => animationStore.currentAnimationId, async (newId, oldId) => {
@@ -1476,7 +1509,8 @@ onBeforeUnmount(() => {
     window.removeEventListener('keydown', handleKeyPress);
     window.removeEventListener('resize', handleWindowResize);
 
-    // ✅ Limpieza crítica de AudioContext
+    // ✅ Limpieza crítica de AudioContext y Timers
+    clearAllActiveTimers();
     if (silentAudioContext) {
         silentAudioContext.close().then(() => {
             console.log('AudioContext cerrado correctamente');

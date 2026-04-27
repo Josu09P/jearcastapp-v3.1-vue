@@ -121,6 +121,13 @@ export const useArtistStore = defineStore('artistStore', {
       return await this.fetchFavoriteArtists()
     },
 
+    clearStore() {
+      this.initialized = false
+      this.favoriteArtists = []
+      this.loading = false
+      console.log('🎤 ArtistStore: Datos limpiados por cierre de sesión')
+    },
+
     async getMixesFromFavorites(): Promise<any[]> {
       if (this.favoriteArtists.length === 0) return []
 
