@@ -150,25 +150,10 @@ class ArtistDiscoveryService {
 
   getSimilarArtists(artistName: string): { name: string; channelId: string }[] {
     const genres: Record<string, string[]> = {
-      cuartetos: ['Arautos do Rei', 'Los Heraldos del Rey', 'Trio Legado'],
-      solistas: [
-        'Felipe Garibo',
-        'Junior Kelly Marchena',
-        'Edson Nuñez',
-        'Karen Cruzado',
-        'Daniel Castro',
-        'José Vásquez',
-        'Gladys Muñoz',
-        'Santiago Benavides'
-      ],
-      grupos: [
-        'Forgiven',
-        'Conpaz Compuesto',
-        'Duo Zimrah',
-        'Melissa y Melodie',
-        'Jonathan y Sarah Jeremias'
-      ],
-      ministerios: ['La Voz de la Esperanza']
+      pop: ['Taylor Swift', 'Ed Sheeran', 'Dua Lipa', 'Coldplay', 'The Weeknd'],
+      reggaeton: ['Bad Bunny', 'Karol G', 'J Balvin', 'Shakira', 'Rihanna'],
+      rock: ['Queen', 'Michael Jackson', 'Imagine Dragons', 'Coldplay'],
+      edm: ['Avicii', 'Daft Punk', 'Calvin Harris', 'David Guetta']
     }
 
     let artistGenre = ''

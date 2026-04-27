@@ -7,14 +7,14 @@
                 Descubrir Artistas
             </h5>
             <p class="section-subtitle mb-3 text-secondary">
-                Busca tus ministerios favoritos de la iglesia adventista
+                Busca tus artistas y canales favoritos
             </p>
 
             <!-- Buscador -->
             <div class="search-box mb-4">
                 <i class="bi bi-search search-icon"></i>
                 <input v-model="searchQuery" type="text" class="form-control search-input"
-                    placeholder="Escribe el nombre de un artista o ministerio..." @keyup.enter="searchOnYouTube" />
+                    placeholder="Escribe el nombre de un artista..." @keyup.enter="searchOnYouTube" />
                 <button v-if="searchQuery" @click="searchOnYouTube" class="search-btn" title="Buscar en YouTube">
                     <i class="bi bi-youtube"></i>
                 </button>
@@ -86,7 +86,6 @@
 import { ref, computed, reactive } from 'vue'
 import { useArtistStore } from '@/stores/artist-store'
 import { artistDiscoveryService } from '@/data/services/youtube/ArtistDiscoveryService'
-import { contentFilterService } from '@/data/services/audio/ContentFilterService'
 import Toastify from 'toastify-js'
 
 const artistStore = useArtistStore()
@@ -151,13 +150,7 @@ const searchOnYouTube = async () => {
         if ((window as any).electron?.ipcRenderer?.invoke) {
             const channels = await (window as any).electron.ipcRenderer.invoke('youtube-search-channels', searchQuery.value)
             
-            // Filtrar canales/artistas por seguridad pero con la nueva Whitelist inteligente
-            const filteredChannels = channels.filter((ch: any) => {
-                const name = ch.name || ch.title || '';
-                return !contentFilterService.isForbidden(name);
-            });
-
-            youtubeResults.value = filteredChannels.map((ch: any) => {
+            youtubeResults.value = channels.map((ch: any) => {
                 const chId = ch.channelId || ch.channel_id
                 if (chId) loadArtistImage(ch.name || searchQuery.value, chId, ch.thumbnail)
                 return {

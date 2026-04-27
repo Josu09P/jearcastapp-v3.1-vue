@@ -195,7 +195,6 @@ import {
     destroyLocalAudio
 } from '@/data/services/audio/LocalAudioService'
 import { LyricsService, type LyricsData } from '@/data/services/youtube/LyricsService';
-import { contentFilterService } from '@/data/services/audio/ContentFilterService';
 import LyricsDisplay from '../LyricsDisplay.vue';
 import AudioControl from './AudioControl.vue';
 import Toastify from 'toastify-js';
@@ -1389,14 +1388,6 @@ watch(() => playerStore.isFullScreen, async (isFull) => {
 
 watch(() => currentTrack.value, async (newTrack, oldTrack) => {
     if (!newTrack || isChangingTrack.value) return;
-
-    // 🔥 FILTRO DE SEGURIDAD: Evitar géneros no deseados
-    if (contentFilterService.isForbidden(newTrack.video_title)) {
-        console.warn(`🚫 Contenido bloqueado por filtro: ${newTrack.video_title}`);
-        showToast('Contenido no apto omitido', true);
-        playerStore.next();
-        return;
-    }
 
     try {
         isChangingTrack.value = true;

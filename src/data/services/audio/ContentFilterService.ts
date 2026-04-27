@@ -1,48 +1,29 @@
 
 /**
- * Servicio de filtrado equilibrado.
- * Bloquea géneros mundanos específicos (pop, rock, jazz, remix, urbano)
- * pero permite palabras naturales como "amor" o "popular".
+ * ContentFilterService - Versión Abierta
+ * Este servicio anteriormente filtraba contenido por términos específicos.
+ * Ahora ha sido pulido para permitir una experiencia abierta a todos los usuarios.
  */
 class ContentFilterService {
-  // Géneros prohibidos (se deben encontrar como palabra completa)
-  private readonly BLACKLIST_GENRES = [
-    'regueton', 'reggaeton', 'perreo', 'dembow', 
-    'pop', 'rock', 'jazz', 'remix', 'trap', 'funk', 'disco'
-  ];
-
   /**
-   * Verifica si un título contiene un género prohibido como palabra exacta.
+   * Permite todos los títulos sin restricciones.
    */
-  isForbidden(title: string): boolean {
-    if (!title) return false;
-    const cleanTitle = title.toLowerCase();
-
-    // Verificamos cada género prohibido usando límites de palabra (\b)
-    return this.BLACKLIST_GENRES.some(term => {
-      // El regex \b asegura que solo coincida si es la palabra completa
-      // Bloquea "Musica Pop" pero NO bloquea "Musica Popular"
-      const regex = new RegExp(`\\b${term}\\b`, 'i');
-      return regex.test(cleanTitle);
-    });
+  isForbidden(_title: string): boolean {
+    return false;
   }
 
   /**
-   * Retorna términos de exclusión para YouTube.
+   * No aplica exclusiones a las consultas de búsqueda.
    */
   getExclusionQuery(): string {
-    // Excluimos los más pesados en la búsqueda directa para no entorpecer
-    return ' -regueton -reggaeton -pop -rock -remix';
+    return '';
   }
 
   /**
-   * Filtra una lista de videos eliminando los prohibidos.
+   * Retorna la lista de videos sin alteraciones.
    */
   filterVideos<T extends { title?: string; video_title?: string }>(videos: T[]): T[] {
-    return videos.filter(v => {
-      const title = v.title || v.video_title || '';
-      return !this.isForbidden(title);
-    });
+    return videos;
   }
 }
 
