@@ -151,12 +151,24 @@ class ArtistDiscoveryService {
   getSimilarArtists(artistName: string): { name: string; channelId: string }[] {
     const genres: Record<string, string[]> = {
       cuartetos: ['Arautos do Rei', 'Los Heraldos del Rey', 'Trio Legado'],
-      grupos_vocales: ['Novo Tom', 'Vocal Livre', 'Forgiven', 'Take 6'],
-      solistas: ['Felipe Garibo', 'Junior Kelly Marchena', 'Edson Nuñez', 'Gadiel Espinoza'],
-      adoracion: ['Oasis Ministry', 'Ministerio Shalom'],
-      coral: ['Heritage Singers', 'Melodías de Esperanza'],
-      pop_contemporaneo: ['Daniela Araújo', 'Leonardo Gonçalves', 'Rafaela Pinho'],
-      cantautores: ['Santiago Benavides']
+      solistas: [
+        'Felipe Garibo',
+        'Junior Kelly Marchena',
+        'Edson Nuñez',
+        'Karen Cruzado',
+        'Daniel Castro',
+        'José Vásquez',
+        'Gladys Muñoz',
+        'Santiago Benavides'
+      ],
+      grupos: [
+        'Forgiven',
+        'Conpaz Compuesto',
+        'Duo Zimrah',
+        'Melissa y Melodie',
+        'Jonathan y Sarah Jeremias'
+      ],
+      ministerios: ['La Voz de la Esperanza']
     }
 
     let artistGenre = ''

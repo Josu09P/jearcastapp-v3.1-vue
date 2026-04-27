@@ -86,7 +86,7 @@ function toggleSidebar() {
 /* Header */
 .sidebar-header {
   padding: 0.97rem 1.25rem 0.1rem !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: transparent;
   margin-bottom: 1.5rem;
 }
 
@@ -206,7 +206,7 @@ function toggleSidebar() {
 /* Footer */
 .sidebar-footer {
   padding: 1rem 1.25rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: transparent;
   margin-top: auto;
 }
 

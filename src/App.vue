@@ -10,7 +10,11 @@
 import { onMounted, onUnmounted, ref } from 'vue';
 import NavbarCustom from './presentation/widgets/navbar/NavbarCustom.vue';
 import PlayerGlobalWidget from './presentation/widgets/player/PlayerGlobalWidget.vue';
+import { useUserStore } from '@/stores/user';
+import { useArtistStore } from '@/stores/artist-store';
 
+const userStore = useUserStore();
+const artistStore = useArtistStore();
 const isMaximized = ref(false);
 
 const handleMaximized = () => {
@@ -23,7 +27,15 @@ const handleUnmaximized = () => {
   document.body.classList.remove('is-maximized');
 };
 
-onMounted(() => {
+onMounted(async () => {
+  // Inicializar usuario desde localStorage
+  userStore.loadUserFromLocalStorage();
+  
+  // Si hay usuario, cargar sus artistas favoritos inmediatamente
+  if (userStore.id) {
+    await artistStore.fetchFavoriteArtists();
+  }
+
   // Escuchar eventos de Electron
   if (window.electron?.ipcRenderer) {
     window.electron.ipcRenderer.on('window-maximized', handleMaximized);

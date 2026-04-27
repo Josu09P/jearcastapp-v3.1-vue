@@ -59,7 +59,6 @@ export async function fetchFavoriteArtists(
   let q = query(
     collection(db, 'favorite_artists'),
     where('user_id', '==', userId),
-    orderBy('created_at', 'desc'),
     limit(pageSize),
   )
 

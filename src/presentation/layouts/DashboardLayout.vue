@@ -50,33 +50,18 @@ onMounted(async () => {
     userDataStore.fetchPlaylists(),
     userDataStore.fetchRecommended(),
   ])
-
-  // Cargar artistas favoritos si hay usuario
-  if (userStore.id) {
-    console.log('🎤 Dashboard: Cargando artistas favoritos...')
-    await artistStore.fetchFavoriteArtists()
-  }
 })
 
-// Recargar artistas cuando el usuario inicia/cierra sesión
+// Un solo watch robusto para manejar el cambio de usuario y la carga inicial
 watch(() => userStore.id, async (newId, oldId) => {
-  if (newId && newId !== oldId) {
-    console.log('Usuario autenticado, recargando artistas favoritos...')
-    // Invalidar caché y recargar
-    await artistStore.invalidateAndRefresh()
-  } else if (!newId && oldId) {
-    // Usuario cerró sesión - limpiar store
-    console.log('Usuario cerró sesión, limpiando artistas...')
-    artistStore.favoriteArtists = []
-    artistStore.initialized = false
-  }
-})
-
-// También recargar cuando el usuario se carga desde localStorage
-watch(() => userStore.id, async (newId) => {
-  if (newId && !artistStore.initialized) {
-    console.log('Usuario cargado desde localStorage, recargando artistas...')
-    await artistStore.fetchFavoriteArtists()
+  if (newId) {
+    if (newId !== oldId || !artistStore.initialized) {
+      console.log('🎤 Dashboard: Cargando/Refrescando artistas favoritos...')
+      await artistStore.fetchFavoriteArtists()
+    }
+  } else {
+    // Usuario cerró sesión
+    artistStore.clearStore()
   }
 }, { immediate: true })
 </script>

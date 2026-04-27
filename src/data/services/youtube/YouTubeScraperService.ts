@@ -13,18 +13,25 @@ export interface ScrapedVideo {
   url?: string
 }
 
+import { contentFilterService } from '../audio/ContentFilterService'
+
 class YouTubeScraperService {
   async searchWithoutToken(query: string): Promise<ScrapedVideo[]> {
-    console.log(`🔍 [Frontend] Solicitando búsqueda: "${query}"`)
+    // Añadir términos negativos para que YouTube no los incluya
+    const safeQuery = `${query}${contentFilterService.getExclusionQuery()}`
+    console.log(`🔍 [Frontend] Solicitando búsqueda segura: "${safeQuery}"`)
 
     try {
       if ((window as any).electron?.youtubeSearch) {
         const startTime = performance.now()
-        const results = await (window as any).electron.youtubeSearch(query)
+        const results = await (window as any).electron.youtubeSearch(safeQuery)
         const elapsed = (performance.now() - startTime).toFixed(0)
 
-        console.log(`✅ [Frontend] ${results.length} resultados en ${elapsed}ms`)
-        return results
+        // Filtro adicional en el frontend por seguridad
+        const filteredResults = contentFilterService.filterVideos<ScrapedVideo>(results)
+        
+        console.log(`✅ [Frontend] ${filteredResults.length} resultados seguros (de ${results.length}) en ${elapsed}ms`)
+        return filteredResults as ScrapedVideo[]
       }
 
       console.warn('⚠️ [Frontend] Backend no disponible')

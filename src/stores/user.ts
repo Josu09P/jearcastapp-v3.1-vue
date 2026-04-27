@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { useArtistStore } from './artist-store'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
@@ -43,12 +44,24 @@ export const useUserStore = defineStore('user', {
       this.apikeyYoutube = ''
       this.create_at = null
 
-      localStorage.removeItem('userJearCastInfo')
-      localStorage.removeItem('recentlyPlayed')
-      localStorage.removeItem('jearcast_selectedPlaylistId')
-      localStorage.removeItem('lastRecommendedPlaylistId')
-      localStorage.removeItem('cachedMixes')
-      localStorage.removeItem('cachedMixesHash')
+      // Limpiar Stores relacionados
+      const artistStore = useArtistStore()
+      artistStore.clearStore()
+
+      // Limpiar TODO el localStorage para no dejar rastros de la sesión
+      const keysToRemove = [
+        'userJearCastInfo',
+        'recentlyPlayed',
+        'jearcast_selectedPlaylistId',
+        'lastRecommendedPlaylistId',
+        'cachedMixes',
+        'cachedMixesHash',
+        'cachedArtistMixes'
+      ]
+      keysToRemove.forEach(key => localStorage.removeItem(key))
+      
+      // Forzar recarga para limpiar otros estados en memoria y caches de servicios
+      window.location.reload()
     },
   },
 })

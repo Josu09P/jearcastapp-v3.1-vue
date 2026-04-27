@@ -4,7 +4,7 @@
             <div class="d-flex justify-content-between align-items-center gap-2">
                 <div class="container-title-home min-width-0" style="margin-top: -15px;">
                     <h4 class="text-white mb-0 fw-bold text-truncate">Mix para ti</h4>
-                    <p class="mix-subtitle text-truncate">Basado en tus favoritos</p>
+                    <p class="mix-subtitle text-truncate">Basado en tus Musicas favoritos</p>
                 </div>
                 <div class="d-flex gap-2 align-items-center flex-shrink-0">
                     <span v-if="mixes.length > 0 && !loading" class="cached-badge" title="Guardado en caché">
@@ -145,34 +145,56 @@ const loadMixes = async (forceRefresh: boolean = false) => {
 
     try {
         favoritesHash.value = await generateFavoritesHash()
+        const cached = loadMixesFromCache()
 
-        if (!forceRefresh) {
-            const cached = loadMixesFromCache()
-            if (cached && cached.length > 0) {
-                console.log('Usando mixes cacheados')
-                mixes.value = cached
-                loading.value = false
-                return
+        if (!forceRefresh && cached && cached.length > 0) {
+            console.log('Usando mixes cacheados')
+            mixes.value = cached
+            loading.value = false
+            return
+        }
+
+        console.log('Generando mixes incrementales...')
+
+        // 1. Obtener Mix de Descubrimiento (Siempre se regenera para frescura)
+        const discoveryMix = await generateDiscoveryMix()
+
+        // 2. Obtener favoritos por artista
+        const response = await getFavoritesByUser(userStore.id)
+        const favorites = Array.isArray(response) ? response : (response as any).favorites || []
+        const artistAnalysis = (await import('@/domain/usecases/mix/AnalyzeFavoritesUseCase')).analyzeFavoritesByArtist(favorites)
+
+        const topArtists = artistAnalysis.slice(0, MAX_MIXES)
+        const existingMixes = cached || []
+        const newMixes: MixModel[] = []
+
+        if (discoveryMix) newMixes.push(discoveryMix)
+
+        for (const artist of topArtists) {
+            // Verificar si ya existe un mix para este artista en el caché
+            const cachedArtistMix = existingMixes.find(m => m.name.includes(artist.name))
+
+            if (cachedArtistMix && !forceRefresh) {
+                console.log(`Reutilizando mix existente para ${artist.name}`)
+                newMixes.push(cachedArtistMix)
+            } else {
+                try {
+                    console.log(`Generando nuevo mix para ${artist.name}`)
+                    const mix = await (await import('@/domain/usecases/mix/CreateArtistMixUseCase')).createArtistMix(artist)
+                    newMixes.push(mix)
+                } catch (error) {
+                    console.error(`Error creando mix para ${artist.name}:`, error)
+                }
             }
         }
 
-        console.log('Generando nuevos mixes...')
-        
-        // 1. Generar Mix de Descubrimiento (SCRAPING - Basado en historial reciente)
-        const discoveryMix = await generateDiscoveryMix()
-        
-        // 2. Generar Mixes por Artista (SCRAPING - Basado en favoritos)
-        const generatedMixes = await generateArtistMixes(userStore.id, MAX_MIXES)
-        
-        // Combinar (Discovery siempre primero si existe)
-        const finalMixes = discoveryMix ? [discoveryMix, ...generatedMixes] : generatedMixes
-        mixes.value = finalMixes
+        mixes.value = newMixes.slice(0, MAX_MIXES + 1) // +1 por el Discovery Mix
 
-        if (finalMixes.length > 0) {
-            saveMixesToCache(finalMixes)
+        if (newMixes.length > 0) {
+            saveMixesToCache(newMixes)
         }
 
-        if (finalMixes.length === 0) {
+        if (newMixes.length === 0) {
             showToast('Escucha algunas canciones para generar mixes personalizados')
         }
     } catch (error) {

@@ -5,7 +5,7 @@ import type { MixModel } from '@/domain/models/MixModel'
 
 export const generateArtistMixes = async (
   userId: string,
-  limit: number = 4,
+  limit: number = 7,
 ): Promise<MixModel[]> => {
   try {
     // 1. Obtener favoritos del usuario (devuelve FavoritesResponse)
