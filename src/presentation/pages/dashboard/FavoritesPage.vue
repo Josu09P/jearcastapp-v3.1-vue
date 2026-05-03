@@ -169,7 +169,7 @@ onUnmounted(() => {
             <div class="favorites-hero mb-4" :style="{ backgroundImage: `url(${currentBgImage})` }">
                 <div class="hero-overlay">
                     <div class="hero-content px-4">
-                        <span class="badge bg-accent mb-2">Tu Colección</span>
+                        <!--<span class="badge bg-accent mb-2">Tu Colección</span>-->
                         <h1 class="display-4 fw-bold text-white mb-2">Favoritos</h1>
                         <div class="d-flex align-items-center gap-3 text-white-50">
                             <span><i class="bi bi-heart-fill me-1 text-white"></i> {{ favorites.length }}
@@ -295,8 +295,6 @@ onUnmounted(() => {
     background-size: cover;
     background-position: center;
     position: relative;
-    border-bottom-left-radius: 1rem;
-    border-bottom-right-radius: 1rem;
     overflow: hidden;
     margin-top: -1.5rem;
     transition: background-image 1s ease-in-out;

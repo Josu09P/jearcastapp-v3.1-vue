@@ -93,7 +93,7 @@ function resetAnimation() {
             <section class="themes-section">
                 <header class="section-header">
                     <div class="header-content">
-                        <h4 class="title">Apariencia (Gradientes)</h4>
+                        <h4 class="title">Gradientes</h4>
                         <p class="subtitle">Personaliza el color de acento con degradados elegantes</p>
                     </div>
                 </header>
@@ -108,7 +108,7 @@ function resetAnimation() {
             <section class="themes-section">
                 <header class="section-header">
                     <div class="header-content">
-                        <h4 class="title">Colores Sólidos</h4>
+                        <h4 class="title">Sólidos</h4>
                         <p class="subtitle">Fondos minimalistas y consistentes</p>
                     </div>
                 </header>

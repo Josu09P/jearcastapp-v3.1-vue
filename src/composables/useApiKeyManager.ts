@@ -26,7 +26,7 @@ export const useApiKeyManager = () => {
         create_at: userStore.create_at,
       }
       userStore.setUser(userData)
-      console.log('✅ API Key guardada en localStorage')
+      console.log('[OK] API Key guardada en localStorage')
     }
   }
 
@@ -35,7 +35,7 @@ export const useApiKeyManager = () => {
       await searchYoutube('test', key)
       return true
     } catch (error: any) {
-      console.log(`❌ Key falló: ${error.message}`)
+      console.log(`[ERROR] Key falló: ${error.message}`)
       return false
     }
   }
@@ -45,7 +45,7 @@ export const useApiKeyManager = () => {
     try {
       const keys = await getApiKeys(userStore.id)
       apiKeys.value = keys
-      console.log(`📦 Cargadas ${keys.length} keys desde Firestore`)
+      console.log(`[INFO] Cargadas ${keys.length} keys desde Firestore`)
       return keys.length > 0
     } catch (error) {
       console.error('Error cargando keys:', error)
@@ -58,7 +58,7 @@ export const useApiKeyManager = () => {
     if (userStore.apikeyYoutube) {
       const works = await testApiKey(userStore.apikeyYoutube)
       if (works) {
-        console.log('✅ Usando API Key principal de localStorage')
+        console.log('[OK] Usando API Key principal de localStorage')
         usingFirestoreKeys.value = false
         currentApiKeyIndex.value = 0
         apiKeys.value = [
@@ -71,7 +71,7 @@ export const useApiKeyManager = () => {
         ]
         return true
       }
-      console.log('⚠️ Key principal falló, buscando en Firestore...')
+      console.log('[WARN] Key principal falló, buscando en Firestore...')
     }
 
     // 2. Cargar desde Firestore
@@ -84,7 +84,7 @@ export const useApiKeyManager = () => {
       if (works) {
         saveApiKeyToLocalStorage(firstKey.key)
         currentApiKeyIndex.value = 0
-        console.log('✅ Key de Firestore funciona, guardada en localStorage')
+        console.log('[OK] Key de Firestore funciona, guardada en localStorage')
         return true
       } else {
         await toggleApiKeyStatus(userStore.id!, firstKey)
@@ -109,24 +109,24 @@ export const useApiKeyManager = () => {
         currentApiKeyIndex.value = 0
         const newKey = activeApiKeys.value[0]
         saveApiKeyToLocalStorage(newKey.key)
-        console.log(`🔄 Cambiando a nueva API Key`)
+        console.log(`[RELOAD] Cambiando a nueva API Key`)
       } else {
         currentApiKeyIndex.value = -1
         usingFirestoreKeys.value = false
-        console.log('❌ No hay más keys disponibles')
+        console.log('[ERROR] No hay más keys disponibles')
       }
     } else {
-      console.log('🔄 Key principal falló, cambiando a Firestore...')
+      console.log('[RELOAD] Key principal falló, cambiando a Firestore...')
       const hasKeys = await loadApiKeysFromFirestore()
       if (hasKeys && activeApiKeys.value.length > 0) {
         usingFirestoreKeys.value = true
         currentApiKeyIndex.value = 0
         const newKey = activeApiKeys.value[0]
         saveApiKeyToLocalStorage(newKey.key)
-        console.log(`🔄 Cambiando a key de respaldo`)
+        console.log(`[RELOAD] Cambiando a key de respaldo`)
       } else {
         currentApiKeyIndex.value = -1
-        console.log('❌ No hay keys disponibles')
+        console.log('[ERROR] No hay keys disponibles')
       }
     }
 

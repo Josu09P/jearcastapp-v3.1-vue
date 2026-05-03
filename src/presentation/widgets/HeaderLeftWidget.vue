@@ -7,8 +7,7 @@
           <div class="brand-icon">
             <img src="@/assets/img/logo-v3-icon.png" alt="App Icon" class="app-icon" />
           </div>
-          <span class="brand-name"
-            style="font-weight: bold; background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;">
+          <span class="brand-name" style="font-weight: bold; -webkit-background-clip: text; background-clip: text;">
             JearCastMusic
           </span>
         </div>
@@ -48,8 +47,8 @@ const changeSection = inject('changeSection') as (section: string) => void;
 
 const menuItems = [
   { route: '/dashboard', label: 'Inicio', icon: 'bi bi-house-door-fill' },
-  { route: '/dashboard/favorites', label: 'Favoritos', icon: 'bi bi-heart-fill' },
   { route: '/dashboard/artists', label: 'Artistas', icon: 'bi bi-people-fill' },
+  { route: '/dashboard/favorites', label: 'Favoritos', icon: 'bi bi-heart-fill' },
   { route: '/dashboard/play-list', label: 'Playlists', icon: 'bi bi-collection-play-fill' },
   { route: '/dashboard/recommended', label: 'TopPicks', icon: 'bi bi-compass-fill' },
   { route: '/dashboard/local-music', label: 'Música Local', icon: 'bi bi-music-note-beamed' },
@@ -116,7 +115,7 @@ function toggleSidebar() {
 .brand-name {
   font-size: 1.1rem;
   font-weight: 600;
-  background: var(--brand-gradient);
+  background: rgba(255, 255, 255, 0.7);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

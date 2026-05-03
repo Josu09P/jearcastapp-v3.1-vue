@@ -24,7 +24,11 @@ class YouTubeScraperService {
         const elapsed = (performance.now() - startTime).toFixed(0)
 
         console.log(`✅ [Frontend] ${results.length} resultados encontrados en ${elapsed}ms`)
-        return results as ScrapedVideo[]
+        return results.map((v: any) => ({
+          ...v,
+          // Normalizar el nombre del autor para que no llegue vacío
+          author: v.author || v.uploader || v.channel || 'Autor desconocido'
+        })) as ScrapedVideo[]
       }
 
       console.warn('⚠️ [Frontend] Backend no disponible')

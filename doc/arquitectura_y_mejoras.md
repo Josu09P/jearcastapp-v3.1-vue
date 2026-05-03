@@ -42,19 +42,17 @@ La aplicación sigue los principios de **Clean Architecture**, dividiendo la ló
 
 ---
 
-## 3. Mejoras Recientes (Sprint Actual)
+### 3. Mejoras Recientes (Mayo 2026)
 
-### Diseño y Estética
-- **Paleta Muted (Mate):** Se han desaturado los colores de acento en todos los temas para reducir la fatiga visual y enfocar la atención en el contenido (Minimalismo).
-- **Border Radius:** Incremento de la curvatura en el video y componentes (18px) para un look más moderno y orgánico.
+#### Optimización de Código y Arquitectura
+- **Refactorización de PlayerGlobalWidget:** El componente central (reproductor) ha sido descompuesto en composables especializados (`useYouTubePlayer`, `useLocalAudioPlayer`, `usePlayerUI`, `useDiscovery`). Esto redujo el tamaño del archivo `.vue` y mejoró la separación de responsabilidades.
+- **Limpieza de Estilos (CSS):** Centralización de estilos en `player-styles.css`, eliminando el bloque `<style scoped>` masivo del componente. Se optimizó el redimensionamiento del Iframe mediante ráfagas de reflujo controladas.
+- **Mitigación de Errores de Concurrencia:** Implementación de un lock de estado de error (`lastErrorId`) para evitar alertas persistentes y bucles de recuperación infinitos ante fallos de red o copyright.
 
-### Seguridad y Estabilidad
-- **Integridad de Perfil:** Bloqueo del campo de correo electrónico en los ajustes para evitar inconsistencias en la autenticación de Firebase.
-- **Registro Flexible:** Eliminación de la obligatoriedad de la API Key en el registro. Ahora el acceso es universal ("Fricción Cero"), permitiendo que usuarios novatos disfruten de la app mediante el modo de "Búsqueda Libre".
+#### Seguridad y Estabilidad
+- **Prevención de Duplicados:** Implementación de un estado de carga (`isProcessing`) en la selección de artistas favoritos para evitar entradas duplicadas por clics accidentales.
+- **Tipado Estricto:** Introducción de definiciones de tipos globales para la API de YouTube (`src/youtube.d.ts`).
 
-### Correcciones de Errores (Hotfixes)
-- **Duplicidad de Declaraciones:** Corrección de errores de compilación en el componente de búsqueda.
-- **Persistencia de Velo:** El blur ya no desaparece prematuramente al cambiar de canción desde el Miniplayer hacia el Fullscreen.
 
 ---
 

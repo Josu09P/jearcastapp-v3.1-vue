@@ -18,7 +18,11 @@ export const playStream = (url: string): Promise<void> => {
     audio.load()
 
     const onCanPlay = () => {
-      audio.play().then(resolve).catch(reject)
+      audio.play().then(resolve).catch((err) => {
+        console.warn('Auto-play bloqueado, intentando de nuevo tras interacción:', err);
+        // Intentar reproducir de nuevo si falla por políticas de navegador
+        audio.play().then(resolve).catch(reject);
+      })
     }
 
     const onError = (e: any) => {

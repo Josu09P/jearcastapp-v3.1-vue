@@ -14,14 +14,18 @@ html, body {
   background: transparent !important;
 }
 
+h1, h2, h3, h4, h5, h6, span, p, a {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
 #app {
   height: 100vh;
   width: 100vw;
   margin: 0;
-  
+
   position: relative;
-  transform: translate(0); 
-  overflow: hidden; 
+  transform: translate(0);
+  overflow: hidden;
   border-radius: var(--app-radius);
   background: var(--main-bg-color);
 

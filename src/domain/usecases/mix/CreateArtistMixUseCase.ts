@@ -10,11 +10,34 @@ export const createArtistMix = async (
     // ✅ Uso de Scraping Ético: No requiere tokens ni API Key
     // Solo buscar más canciones si tenemos menos de 8
     if (artistAnalysis.songs.length < 8) {
-      const moreSongs = await youtubeScraperService.searchWithoutToken(`${artistAnalysis.name} mix`)
+      // ✅ Búsqueda optimizada: Evitamos la palabra "mix" para que no traiga listas de 1 hora
+      // Usamos términos que sugieren canciones individuales oficiales.
+      const query = `${artistAnalysis.name} official audio top songs`
+      const searchResults = await youtubeScraperService.searchWithoutToken(query)
       
       const existingIds = new Set(artistAnalysis.songs.map((s) => s.videoId))
-      const newSongs = moreSongs
-        .filter((song: any) => !existingIds.has(song.videoId))
+      
+      const newSongs = searchResults
+        .filter((song: any) => {
+          const title = song.title.toLowerCase()
+          const author = song.author.toLowerCase()
+          const artistName = artistAnalysis.name.toLowerCase()
+
+          // ❌ FILTRO DE RECOPILATORIOS: Evitar videos que sean compilaciones largas
+          const isCompilation = title.includes('mix') || 
+                                title.includes('completo') || 
+                                title.includes('álbum') || 
+                                title.includes('album') || 
+                                title.includes('best of') ||
+                                title.includes('grandes éxitos') ||
+                                title.includes('sus mejores') ||
+                                title.includes('compilation')
+
+          // 🔍 VALIDACIÓN DE AUTOR: Intentar que el autor del video coincida o contenga el nombre del artista
+          const isOfficialSource = author.includes(artistName) || artistName.includes(author)
+
+          return !existingIds.has(song.videoId) && !isCompilation && (isOfficialSource || artistAnalysis.songs.length < 3)
+        })
         .map((song: any) => ({
           videoId: song.videoId,
           title: song.title,

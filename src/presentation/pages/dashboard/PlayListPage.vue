@@ -397,7 +397,7 @@ onUnmounted(() => {
                 :style="{ backgroundImage: `url(${currentPlaylistImage})` }">
                 <div class="hero-overlay">
                     <div class="hero-content px-4">
-                        <span class="badge bg-accent mb-2">Tu Playlist</span>
+                        <!--<span class="badge bg-accent mb-2">Tu Playlist</span>-->
                         <h1 class="display-4 fw-bold text-white mb-2">{{ currentPlaylistName }}</h1>
                         <div class="d-flex align-items-center gap-3 text-white-50">
                             <span><i class="bi bi-music-note-beamed me-1"></i> {{ songs.length }} Canciones</span>
@@ -417,7 +417,7 @@ onUnmounted(() => {
             <!-- HEADER SECTION (Solo visible cuando se ven todas) -->
             <div v-if="showAllPlaylists" class="d-flex justify-content-between align-items-center mb-4 px-3">
                 <div class="d-flex align-items-center gap-3">
-                    <h4 class="text-white mb-0 fw-bold">Playlists</h4>
+                    <h4 class="mb-0 fw-bold">Playlists</h4>
                 </div>
 
                 <div class="d-flex gap-2">
@@ -601,8 +601,6 @@ onUnmounted(() => {
     background-size: cover;
     background-position: center;
     position: relative;
-    border-bottom-left-radius: 1rem;
-    border-bottom-right-radius: 1rem;
     overflow: hidden;
     margin-top: -1.5rem;
     transform: translateZ(0);

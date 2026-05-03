@@ -26,21 +26,21 @@
 
 ---
 
-### ✅ Cambios Realizados (Abril 2026)
+### Cambios Realizados (Abril 2026)
 
 Se han aplicado las siguientes correcciones arquitectónicas siguiendo las teorías confirmadas:
 
-1. **Gestión de Memoria en `CacheService`:**
-   * **Cambio:** Se añadió un límite `MAX_SIZE = 200` al `Map` interno.
-   * **Lógica:** Implementación de un desalojo tipo LRU (Least Recently Used) simple. Al insertar un elemento nuevo que excede el límite, se elimina automáticamente el más antiguo.
-   * **Resultado:** Consumo de RAM predecible incluso en sesiones de uso prolongado.
+1. Gestión de Memoria en CacheService:
+   * Cambio: Se añadió un límite MAX_SIZE = 200 al Map interno.
+   * Lógica: Implementación de un desalojo tipo LRU (Least Recently Used) simple. Al insertar un elemento nuevo que excede el límite, se elimina automáticamente el más antiguo.
+   * Resultado: Consumo de RAM predecible incluso en sesiones de uso prolongado.
 
-2. **Idempotencia y Control de Carrera en `PlayerGlobalWidget`:**
-   * **Cambio:** Introducción de un estado reactivo `isChangingTrack` (lock) y **consolidación de observadores (watches)**.
-   * **Lógica:** El `watch` de la canción actual ahora es atómico; gestiona la carga del reproductor, el historial de canciones y el reseteo de letras en una sola ejecución controlada. Se eliminaron 2 observadores redundantes.
-   * **Resultado:** Navegación fluida, código unificado y garantía de que todos los efectos secundarios ocurren en el orden correcto.
+2. Idempotencia y Control de Carrera en PlayerGlobalWidget:
+   * Cambio: Introducción de un estado reactivo isChangingTrack (lock) y consolidación de observadores (watches).
+   * Lógica: El watch de la canción actual ahora es atómico; gestiona la carga del reproductor, el historial de canciones y el reseteo de letras en una sola ejecución controlada. Se eliminaron 2 observadores redundantes.
+   * Resultado: Navegación fluida, código unificado y garantía de que todos los efectos secundarios ocurren en el orden correcto.
 
-3. **Optimización del Reproductor (Singleton Pattern):**
-   * **Cambio:** Refactorización de `createPlayer`.
-   * **Lógica:** En lugar de `destroy()` y `new YT.Player()`, ahora se utiliza `ytPlayer.loadVideoById()` si el objeto ya existe.
-   * **Resultado:** Reducción drástica del uso de CPU durante transiciones, eliminación del parpadeo del iframe y carga de música notablemente más rápida.
+3. Optimización del Reproductor (Singleton Pattern):
+   * Cambio: Refactorización de createPlayer.
+   * Lógica: En lugar de destroy() y new YT.Player(), ahora se utiliza ytPlayer.loadVideoById() si el objeto ya existe.
+   * Resultado: Reducción drástica del uso de CPU durante transiciones, eliminación del parpadeo del iframe y carga de música notablemente más rápida.

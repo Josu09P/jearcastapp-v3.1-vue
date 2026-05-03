@@ -70,6 +70,12 @@ export const useArtistStore = defineStore('artistStore', {
         return 'exists'
       }
 
+      // Verificación local previa para evitar doble guardado o llamadas innecesarias
+      if (this.isArtistFavorite(artist.channel_id)) {
+        console.log(`ℹ️ El artista ${artist.artist_name} ya está en favoritos localmente`)
+        return 'exists'
+      }
+
       try {
         const result = await addFavoriteArtistUseCase({
           user_id: userId,

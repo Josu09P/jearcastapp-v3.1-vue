@@ -1,6 +1,6 @@
 # JEARCAST - APP
 
-## 📌 Descripción general
+## [INFO] Descripción general
 
 **JearCastApp** es una aplicación de escritorio desarrollada con el objetivo de brindar a los usuarios una experiencia moderna y limpia para escuchar música desde YouTube, similar a plataformas como Spotify. Utiliza la **API de YouTube** mediante una clave personal (**API Key**) proporcionada por el usuario, siguiendo el enfoque del conocido reproductor **Headset**.
 
@@ -8,7 +8,7 @@ Este proyecto está pensado especialmente para **usuarios de Linux**, ofreciendo
 
 ---
 
-## 🛠️ Tecnologías Utilizadas
+## [SETUP] Tecnologías Utilizadas
 
 | Categoría        | Tecnologías                 | Descripción                                                                 |
 |------------------|-----------------------------|-----------------------------------------------------------------------------|
@@ -19,13 +19,13 @@ Este proyecto está pensado especialmente para **usuarios de Linux**, ofreciendo
 
 ---
 
-## 🎨 Diseño y Experiencia de Usuario
+## [DESIGN] Diseño y Experiencia de Usuario
 
 Para agilizar el desarrollo y mantener una estructura visual coherente, se utiliza el framework **VUE** en combinación con **Bootstrap**. Esto permite construir una interfaz **moderna, ligera y responsive**.
 
 ---
 
-## 🔐 Autenticación y Seguridad
+## [AUTH] Autenticación y Seguridad
 
 - Al iniciar la aplicación, el usuario podrá registrarse o iniciar sesión utilizando su **correo electrónico y contraseña** (Firebase Auth).
 - Al autenticarse, se le solicitará su **propia API Key de YouTube**, la cual se almacenará de forma segura en **Firestore**, asociada a su cuenta.
@@ -33,7 +33,7 @@ Para agilizar el desarrollo y mantener una estructura visual coherente, se utili
 
 ---
 
-## ▶️ Flujo de Uso
+## [FLOW] Flujo de Uso
 
 ### 1. Pantalla de Bienvenida
 
@@ -54,17 +54,17 @@ Para agilizar el desarrollo y mantener una estructura visual coherente, se utili
 
 ---
 
-## 📂 Secciones
+## [FILES] Secciones
 
-- 🎵 Música (buscador)
-- ⭐ Favoritos
-- 🎶 Playlists
-- 🐞 Reporte de errores (bugs)
-- ⚙️ Configuración
+- [MUSIC] Música (buscador)
+- [FAVORITES] Favoritos
+- [PLAYLISTS] Playlists
+- [BUG] Reporte de errores (bugs)
+- [SETTINGS] Configuración
 
 ---
 
-## ⚙️ Consideraciones Técnicas
+## [SETTINGS] Consideraciones Técnicas
 
 - La reproducción de música se realizará a través de un **`<iframe>` de YouTube embebido**, cumpliendo con las políticas de uso de la plataforma.
 - **No se descargará contenido**, ni se reproducirá directamente el audio sin la interfaz oficial de YouTube.
@@ -72,7 +72,7 @@ Para agilizar el desarrollo y mantener una estructura visual coherente, se utili
 
 ---
 
-## 🧑‍💻 Código Abierto
+## [CODE] Código Abierto
 
 - Este proyecto será totalmente **open source** y estará disponible gratuitamente para la comunidad.
 - Se invita a **desarrolladores, músicos y entusiastas de Linux** a colaborar o mejorar el sistema.

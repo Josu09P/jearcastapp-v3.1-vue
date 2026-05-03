@@ -122,7 +122,7 @@ export class LyricsService {
   private static async searchExact(title: string, artist: string): Promise<LyricsData | null> {
     const cleanTitle = this.cleanTitle(title)
     const url = `${this.API_BASE}/get?track_name=${encodeURIComponent(cleanTitle)}&artist_name=${encodeURIComponent(artist)}`
-    console.log(`📡 Estrategia 1 (exacta): ${url}`)
+    console.log(`[NETWORK] Estrategia 1 (exacta): ${url}`)
 
     const response = await fetch(url)
     if (response.ok) {
@@ -140,7 +140,7 @@ export class LyricsService {
   private static async searchGeneral(title: string): Promise<LyricsData | null> {
     const cleanTitle = this.cleanTitle(title)
     const searchUrl = `${this.API_BASE}/search?q=${encodeURIComponent(cleanTitle)}`
-    console.log(`📡 Estrategia 2 (general): ${searchUrl}`)
+    console.log(`[NETWORK] Estrategia 2 (general): ${searchUrl}`)
 
     const response = await fetch(searchUrl)
     if (!response.ok) return null
@@ -148,7 +148,7 @@ export class LyricsService {
     const results = await response.json()
     if (!results || results.length === 0) return null
 
-    console.log(`📊 Encontrados ${results.length} resultados`)
+    console.log(`[INFO] Encontrados ${results.length} resultados`)
 
     // Ordenar por similitud
     const scored = results.map((result: any) => ({
@@ -159,7 +159,7 @@ export class LyricsService {
     scored.sort((a: any, b: any) => b.score - a.score)
 
     console.log(
-      `✨ Mejor coincidencia: "${scored[0].result.trackName}" - ${scored[0].result.artistName} (score: ${scored[0].score})`,
+      `[SUCCESS] Mejor coincidencia: "${scored[0].result.trackName}" - ${scored[0].result.artistName} (score: ${scored[0].score})`,
     )
 
     if (scored[0].score > 0.3) {
@@ -182,7 +182,7 @@ export class LyricsService {
     if (keywords.length === 0) return null
 
     const query = keywords.join(' ')
-    console.log(`📡 Estrategia 3 (keywords): "${query}"`)
+    console.log(`[NETWORK] Estrategia 3 (keywords): "${query}"`)
 
     const url = `${this.API_BASE}/search?q=${encodeURIComponent(query)}`
     const response = await fetch(url)
@@ -194,7 +194,7 @@ export class LyricsService {
 
     // Tomar el primer resultado
     const bestMatch = results[0]
-    console.log(`✨ Coincidencia por keywords: "${bestMatch.trackName}" - ${bestMatch.artistName}`)
+    console.log(`[SUCCESS] Coincidencia por keywords: "${bestMatch.trackName}" - ${bestMatch.artistName}`)
 
     const detailUrl = `${this.API_BASE}/get?track_name=${encodeURIComponent(bestMatch.trackName)}&artist_name=${encodeURIComponent(bestMatch.artistName)}`
     const detailResponse = await fetch(detailUrl)

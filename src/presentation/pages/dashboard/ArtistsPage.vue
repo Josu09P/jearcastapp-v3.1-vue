@@ -45,7 +45,7 @@
 
         <!-- BLOQUE 2: DESCUBRIR Y BUSCAR -->
         <section class="discover-section mb-5">
-          <div class="artist-picker-container glass-card overflow-hidden">
+          <div class="artist-picker-container overflow-hidden">
             <ArtistPickerWidget />
           </div>
         </section>
@@ -152,13 +152,35 @@ const confirmRemove = async (artist: any) => {
 const generateMixForArtist = async (artist: any) => {
   loadingMix.value = artist.channel_id
   try {
-    const videos = await youtubeScraperService.searchWithoutToken(`${artist.artist_name} mejores canciones`)
+    // ✅ Búsqueda refinada: Evitamos la palabra "mix" o "mejores canciones" genérica
+    // Usamos "official music videos" para atraer contenido de canales oficiales y pistas únicas
+    const query = `${artist.artist_name} official audio top songs`
+    const videos = await youtubeScraperService.searchWithoutToken(query)
+    
     if (videos.length > 0) {
+      const artistNameLower = artist.artist_name.toLowerCase()
+      
+      // Filtrar para evitar recopilatorios (long mixes) y priorizar canciones del autor
+      const filteredSongs = videos.filter((v: any) => {
+        const title = v.title.toLowerCase()
+        const isMix = title.includes('mix') || title.includes('completo') || 
+                      title.includes('album') || title.includes('best of') ||
+                      title.includes('recopilacion')
+        
+        // Priorizar si el autor del canal coincide con el artista
+        const isOfficial = v.author.toLowerCase().includes(artistNameLower)
+        
+        return !isMix && isOfficial
+      })
+
+      // Si el filtro es muy estricto y no queda nada, usamos los resultados originales pero sin la palabra "mix" en el título
+      const finalSongs = filteredSongs.length > 0 ? filteredSongs : videos.slice(0, 15)
+
       const newMix = {
         name: `${artist.artist_name} Mix`,
         description: `Lo mejor de ${artist.artist_name}`,
-        cover: artist.thumbnail || videos[0]?.thumbnail || '',
-        songs: videos.slice(0, 15),
+        cover: artist.thumbnail || finalSongs[0]?.thumbnail || '',
+        songs: finalSongs.slice(0, 15),
         artistId: artist.channel_id
       }
       saveMixToCache(newMix)

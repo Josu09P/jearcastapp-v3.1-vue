@@ -123,9 +123,9 @@ const playSong = (index: number) => {
         video_thumbnail: song.video_thumbnail
     }))
     playerStore.setPlaylist(
-        playlist, 
-        index, 
-        { type: 'recommended', id: currentPlaylistId.value! }, 
+        playlist,
+        index,
+        { type: 'recommended', id: currentPlaylistId.value! },
         userDataStore.hasMoreRecommendedSongs
     )
 }
@@ -181,7 +181,7 @@ onUnmounted(() => {
             <!-- HEADER con título y controles (Solo se muestra cuando se ven todas las playlists) -->
             <div v-if="showAllPlaylists" class="d-flex justify-content-between align-items-center mb-4 px-3">
                 <div class="d-flex align-items-center gap-3">
-                    <h4 class="text-white mb-0 fw-bold">Recomendados</h4>
+                    <h4 class="mb-0 fw-bold" style="color: rgba(255, 255, 255, 0.7);">Recomendados</h4>
                 </div>
 
                 <div class="d-flex gap-2">
@@ -331,8 +331,6 @@ onUnmounted(() => {
     background-size: cover;
     background-position: center;
     position: relative;
-    border-bottom-left-radius: 1rem;
-    border-bottom-right-radius: 1rem;
     overflow: hidden;
     margin-top: -1.5rem;
     transform: translateZ(0);

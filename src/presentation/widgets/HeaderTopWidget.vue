@@ -10,7 +10,7 @@
         </button>
         <div class="logo">
           <span class="logo-text"
-            style="background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;">
+            style="background: rgba(255, 255, 255, 0.7); -webkit-background-clip: text; background-clip: text; color: transparent;">
             "Listen to Music"
           </span>
         </div>
@@ -273,7 +273,7 @@ function toggleSidebar() {
 .user-avatar {
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, #d2c8c8, var(--accent-color));
+  background: linear-gradient(135deg, #767676, var(--accent-color));
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -282,7 +282,7 @@ function toggleSidebar() {
 }
 
 .user-avatar span {
-  color: white;
+  color: var(--color-initials) !important;
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -295,7 +295,7 @@ function toggleSidebar() {
 .user-name {
   font-size: 0.85rem;
   font-weight: 500;
-  color: white;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .user-role {

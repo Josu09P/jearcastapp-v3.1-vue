@@ -50,12 +50,20 @@
                     </button>
                 </div>
                 <div class="artist-grid">
-                    <div v-for="artist in youtubeResults" :key="artist.channelId" class="artist-card"
-                        :class="{ selected: isArtistFavorite(artist.channelId) }" @click="toggleArtist(artist)">
+                    <div v-for="artist in youtubeResults" :key="artist.channelId" class="artist-card" :class="{
+                        selected: isArtistFavorite(artist.channelId),
+                        processing: isProcessing[artist.channelId]
+                    }" @click="toggleArtist(artist)">
                         <div class="artist-card-img">
                             <img :src="getArtistImage(artist.name, artist.channelId, artist.thumbnail)"
                                 :alt="artist.name" @error="onImageError($event, artist.name)" />
-                            <div v-if="isArtistFavorite(artist.channelId)" class="artist-card-check">
+
+                            <!-- Spinner de carga -->
+                            <div v-if="isProcessing[artist.channelId]" class="artist-card-spinner">
+                                <div class="spinner-border spinner-border-sm text-white" role="status"></div>
+                            </div>
+
+                            <div v-else-if="isArtistFavorite(artist.channelId)" class="artist-card-check">
                                 <i class="bi bi-check-circle-fill"></i>
                             </div>
                             <div v-else class="artist-card-add-icon">
@@ -149,7 +157,7 @@ const searchOnYouTube = async () => {
     try {
         if ((window as any).electron?.ipcRenderer?.invoke) {
             const channels = await (window as any).electron.ipcRenderer.invoke('youtube-search-channels', searchQuery.value)
-            
+
             youtubeResults.value = channels.map((ch: any) => {
                 const chId = ch.channelId || ch.channel_id
                 if (chId) loadArtistImage(ch.name || searchQuery.value, chId, ch.thumbnail)
@@ -170,22 +178,31 @@ const searchOnYouTube = async () => {
 
 const isArtistFavorite = (channelId: string) => artistStore.isArtistFavorite(channelId)
 
+const isProcessing = ref<Record<string, boolean>>({})
+
 const toggleArtist = async (artist: any) => {
-    if (isArtistFavorite(artist.channelId)) {
-        await artistStore.removeArtist(artist.channelId)
-        Toastify({ text: 'Artista eliminado', duration: 2000, className: 'toast-glass' }).showToast()
-    } else {
-        const result = await artistStore.addArtist({
-            artist_name: artist.name,
-            channel_id: artist.channelId,
-            thumbnail: imageCache[artist.channelId] || artist.thumbnail,
-            genres: []
-        })
-        if (result === 'added') {
-            Toastify({ text: `${artist.name} agregado`, duration: 2000, className: 'toast-glass' }).showToast()
-        } else if (result === 'exists') {
-            Toastify({ text: 'Ya está en tus favoritos', duration: 2000, className: 'toast-glass bg-warning' }).showToast()
+    if (isProcessing.value[artist.channelId]) return
+    isProcessing.value[artist.channelId] = true
+
+    try {
+        if (isArtistFavorite(artist.channelId)) {
+            await artistStore.removeArtist(artist.channelId)
+            Toastify({ text: 'Artista eliminado', duration: 2000, className: 'toast-glass' }).showToast()
+        } else {
+            const result = await artistStore.addArtist({
+                artist_name: artist.name,
+                channel_id: artist.channelId,
+                thumbnail: imageCache[artist.channelId] || artist.thumbnail,
+                genres: []
+            })
+            if (result === 'added') {
+                Toastify({ text: `${artist.name} agregado`, duration: 2000, className: 'toast-glass' }).showToast()
+            } else if (result === 'exists') {
+                Toastify({ text: 'Ya está en tus favoritos', duration: 2000, className: 'toast-glass bg-warning' }).showToast()
+            }
         }
+    } finally {
+        isProcessing.value[artist.channelId] = false
     }
 }
 </script>
@@ -287,6 +304,12 @@ const toggleArtist = async (artist: any) => {
     border-color: var(--accent-color);
 }
 
+.artist-card.processing {
+    opacity: 0.7;
+    pointer-events: none;
+    cursor: wait;
+}
+
 .artist-card-img {
     position: relative;
     width: 80px;
@@ -294,6 +317,19 @@ const toggleArtist = async (artist: any) => {
     margin: 0 auto 0.75rem;
     border-radius: 50%;
     overflow: hidden;
+}
+
+.artist-card-spinner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
 }
 
 .artist-card-img img {
@@ -352,7 +388,7 @@ const toggleArtist = async (artist: any) => {
 }
 
 .glass-card {
-    background: rgba(255, 255, 255, 0.03);
+    background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 16px;
     padding: 1.5rem;

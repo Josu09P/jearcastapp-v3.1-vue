@@ -135,7 +135,7 @@ export const addToRecentlyPlayed = (
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
 
-    console.log(`✅ Agregado al historial: ${track.video_title}, total: ${updated.length}`)
+    console.log(`[OK] Agregado al historial: ${track.video_title}, total: ${updated.length}`)
 
     return updated
   } catch (error) {
