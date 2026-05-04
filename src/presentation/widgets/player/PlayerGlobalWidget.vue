@@ -384,14 +384,11 @@ const createPlayer = (videoId: string): void => {
 
                     if (success) {
                         console.log('✅ Stream Bridge activo y reproduciendo automáticamente');
-                        // Forzamos el estado de reproducción en el store
                         playerStore.play();
                         activateBlur(); 
-                    } else {
-                        // SOLO si el audio local TAMBIÉN falla, pasamos a la siguiente
-                        console.error('❌ Error crítico: Ni YouTube ni Stream Bridge funcionaron.');
-                        playerStore.next();
                     }
+                    // IMPORTANTE: Ya no llamamos a next() aquí. 
+                    // Si success es false, el handleYouTubeError se encargará de saltar una sola vez.
                     return success
                 })
         }
@@ -519,6 +516,35 @@ const stopAllPlayback = () => {
     resetErrorState() 
 }
 
+/* ==================== EVENTOS DE TECLADO & MEDIA ==================== */
+const handleGlobalKeyDown = (e: KeyboardEvent) => {
+    // No actuar si el usuario está escribiendo en un input, textarea o contenido editable
+    const activeElement = document.activeElement;
+    const isInput = activeElement?.tagName === 'INPUT' || 
+                   activeElement?.tagName === 'TEXTAREA' || 
+                   (activeElement as HTMLElement)?.isContentEditable;
+    
+    if (isInput) return;
+
+    if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlayPause();
+    }
+}
+
+const setupMediaKeys = () => {
+    if (window.electron?.onMediaKey) {
+        window.electron.onMediaKey((key: string) => {
+            console.log(`🎵 [MediaKey] ${key}`);
+            switch (key) {
+                case 'playpause': togglePlayPause(); break;
+                case 'next': next(); break;
+                case 'prev': prev(); break;
+            }
+        });
+    }
+}
+
 /* ==================== LIFECYCLE & LOOP ==================== */
 let animationFrameId: number | null = null
 let lottieInstance: any = null
@@ -572,15 +598,31 @@ watch(() => currentTrack.value, async (newTrack) => {
             createPlayer(newTrack.video_id)
         }
         if (showLyrics.value) loadLyrics(newTrack)
+
+        // EXPANSIÓN PROACTIVA: Si quedan pocas canciones, cargar más
+        // Aumentamos el margen a 10 canciones para que sea imperceptible
+        const remaining = playerStore.playlist.length - (playerStore.currentIndex + 1)
+        if (remaining < 10 && (playerStore.hasMoreInContext || !playerStore.playbackContext)) {
+            expandPlaylistWithMoreSongs()
+        }
     } finally {
         setTimeout(() => { isChangingTrack.value = false }, 200)
     }
 }, { immediate: true })
 
+// Watcher para el modo aleatorio: Si se activa y hay más canciones en el origen, cargar más
+watch(() => playerStore.isShuffling, (shuffling) => {
+    if (shuffling && playerStore.hasMoreInContext) {
+        console.log('🎲 [Shuffle] Cargando más canciones para aumentar la variedad...')
+        expandPlaylistWithMoreSongs()
+    }
+})
+
 watch(() => playerStore.isFullScreen, async (isFull) => {
     if (isFull) {
         lastMiniPosition.value = { ...position.value }
-        activateBlur()
+        // Se elimina activateBlur() de aquí para evitar que se tape el video 
+        // cuando el usuario solo está cambiando el tamaño de la ventana
         await nextTick()
         forceIframeResize()
     } else {
@@ -590,11 +632,19 @@ watch(() => playerStore.isFullScreen, async (isFull) => {
 
 onMounted(() => {
     window.addEventListener('resize', forceIframeResize)
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    setupMediaKeys()
     if (!playerStore.isFullScreen && isExpanded.value) setupLottie()
 })
 
 onBeforeUnmount(() => {
     window.removeEventListener('resize', forceIframeResize)
+    window.removeEventListener('keydown', handleGlobalKeyDown)
+    
+    if (window.electron?.removeMediaKeyListener) {
+        window.electron.removeMediaKeyListener()
+    }
+    
     stopAllPlayback()
     if (animationFrameId) cancelAnimationFrame(animationFrameId)
 })

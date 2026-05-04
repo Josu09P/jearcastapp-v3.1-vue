@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { getFavoritesByUser } from '@/domain/usecases/favorites/GetFavoritesByUser'
+import { getFavoritesCount } from '@/data/services/firestore/FavoritesFirestore'
 import { getPlaylistsByUser } from '@/domain/usecases/playlists/GetPlaylistsByUser'
 import { getSongsFromPlaylist } from '@/domain/usecases/playlists/GetSongsFromPlaylist'
 import { getRecommendedPlaylists } from '@/domain/usecases/recommended/GetRecommendedPlaylists'
@@ -7,6 +8,7 @@ import { fetchSongsFromRecommendedPlaylistService } from '@/data/services/firest
 
 interface UserDataState {
   favorites: any[]
+  favoritesTotalCount: number
   lastVisibleFavorite: any | null
   hasMoreFavorites: boolean
 
@@ -36,6 +38,7 @@ interface UserDataState {
 export const useUserDataStore = defineStore('userData', {
   state: (): UserDataState => ({
     favorites: [],
+    favoritesTotalCount: 0,
     lastVisibleFavorite: null,
     hasMoreFavorites: true,
 
@@ -85,10 +88,15 @@ export const useUserDataStore = defineStore('userData', {
 
       this.loading.favorites = true
       try {
-        const response = await getFavoritesByUser(userId, 50)
+        const [response, totalCount] = await Promise.all([
+            getFavoritesByUser(userId, 50),
+            getFavoritesCount(userId)
+        ])
+
         this.favorites = response.favorites
+        this.favoritesTotalCount = totalCount
         this.lastVisibleFavorite = response.lastVisible
-        this.hasMoreFavorites = response.favorites.length === 50
+        this.hasMoreFavorites = this.favorites.length < totalCount
         this.initialized.favorites = true
         return this.favorites
       } catch (error) {
@@ -110,7 +118,7 @@ export const useUserDataStore = defineStore('userData', {
         const response = await getFavoritesByUser(userId, 50, this.lastVisibleFavorite)
         this.favorites = [...this.favorites, ...response.favorites]
         this.lastVisibleFavorite = response.lastVisible
-        this.hasMoreFavorites = response.favorites.length === 50
+        this.hasMoreFavorites = this.favorites.length < this.favoritesTotalCount
         return response.favorites
       } catch (error) {
         console.error('Error cargando más favoritos:', error)
@@ -123,6 +131,7 @@ export const useUserDataStore = defineStore('userData', {
     async invalidateAndRefreshFavorites() {
       this.initialized.favorites = false
       this.favorites = []
+      this.favoritesTotalCount = 0
       this.lastVisibleFavorite = null
       this.hasMoreFavorites = true
       return await this.fetchFavorites(true)

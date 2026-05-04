@@ -114,13 +114,23 @@ export const useYouTubePlayer = (playerContainer: Ref<HTMLDivElement | null>) =>
             console.warn(`[WARN] Error de restricción (${errorCode}). Intentando Audio Directo...`)
             // Intentamos recuperar silenciosamente
             const success = await retryCallback(currentStoreId)
+            
+            // VERIFICACIÓN CRÍTICA: ¿Seguimos en la misma canción tras el await?
+            if (playerStore.currentTrack?.video_id !== currentStoreId) {
+                console.warn('⚠️ [YT-ERROR] La canción cambió durante la recuperación. Cancelando salto automático.')
+                return
+            }
+
             if (!success) {
                 // Solo si el retry (audio local) también falla, saltamos
                 playerStore.next()
             }
         } else {
             // Errores no relacionados con copyright (red, etc.)
-            playerStore.next()
+            // También verificamos aquí por seguridad
+            if (playerStore.currentTrack?.video_id === currentStoreId) {
+                playerStore.next()
+            }
         }
     }
 

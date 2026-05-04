@@ -135,7 +135,7 @@ defineExpose({
     backdrop-filter: blur(10px);
     background: transparent;
     -webkit-backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    /* border-bottom: 1px solid rgba(255, 255, 255, 0.08); */
     -webkit-app-region: drag;
     user-select: none;
 }

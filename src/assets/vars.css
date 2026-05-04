@@ -33,7 +33,7 @@ THEMES - DEFINICIONES (GRADIENTES SUAVES Y ELEGANTES)
 
 .theme-default {
     --main-bg-color: linear-gradient(145deg, #262626 0%, #1a1a1a 45%, #0f0f0f 100%);
-    --accent-color: rgba(255, 255, 255, 0.7);
+    --accent-color: rgba(165, 165, 165, 0.7);
     --accent-color-rgb: 62, 150, 93;
     --brand-gradient: linear-gradient(135deg, #fff, #333734);
     --color-initials: rgba(255, 255, 255, 0.7);

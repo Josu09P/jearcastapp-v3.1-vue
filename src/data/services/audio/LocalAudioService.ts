@@ -14,13 +14,24 @@ export const initLocalAudio = (): HTMLAudioElement => {
 export const playStream = (url: string): Promise<void> => {
   return new Promise((resolve, reject) => {
     const audio = getAudioInstance()
+    
+    // Forzar limpieza previa para evitar conflictos de buffer
+    audio.pause()
+    audio.src = ''
+    audio.load()
+    
     audio.src = url
     audio.load()
 
     const onCanPlay = () => {
-      audio.play().then(resolve).catch((err) => {
-        console.warn('Auto-play bloqueado, intentando de nuevo tras interacción:', err);
-        // Intentar reproducir de nuevo si falla por políticas de navegador
+      audio.removeEventListener('canplay', onCanPlay)
+      audio.play().then(() => {
+          console.log('🔊 [AudioService] Autoplay exitoso');
+          resolve();
+      }).catch((err) => {
+        console.warn('Auto-play bloqueado, intentando forzar:', err);
+        // Algunos navegadores requieren una acción de usuario, 
+        // pero en Electron podemos intentar forzarlo de nuevo
         audio.play().then(resolve).catch(reject);
       })
     }
@@ -30,7 +41,7 @@ export const playStream = (url: string): Promise<void> => {
       reject(new Error('No se pudo reproducir el stream'))
     }
 
-    audio.addEventListener('canplayonce', onCanPlay, { once: true })
+    audio.addEventListener('canplay', onCanPlay, { once: true })
     audio.addEventListener('error', onError, { once: true })
   })
 }

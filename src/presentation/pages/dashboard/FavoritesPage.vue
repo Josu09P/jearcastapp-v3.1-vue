@@ -45,9 +45,19 @@ const visibleFavorites = computed(() => {
     return sortedFavorites.value.slice(0, displayLimit.value)
 })
 
-const loadMore = (entries: IntersectionObserverEntry[]) => {
-    if (entries[0].isIntersecting && displayLimit.value < favorites.value.length) {
-        displayLimit.value += 20
+const loadMore = async (entries: IntersectionObserverEntry[]) => {
+    if (entries[0].isIntersecting) {
+        // 1. Primero agotamos lo que ya tenemos cargado en memoria (displayLimit)
+        if (displayLimit.value < favorites.value.length) {
+            displayLimit.value += 20
+        } 
+        // 2. Si ya mostramos todo lo de memoria, pero hay más en Firebase, cargamos más
+        else if (userDataStore.hasMoreFavorites && !loading.value) {
+            console.log('Cargando más favoritos automáticamente por scroll...')
+            await userDataStore.loadMoreFavorites()
+            // Al cargarse más en favorites.value, el primer punto volverá a ser cierto
+            displayLimit.value += 20 
+        }
     }
 }
 
@@ -172,7 +182,7 @@ onUnmounted(() => {
                         <!--<span class="badge bg-accent mb-2">Tu Colección</span>-->
                         <h1 class="display-4 fw-bold text-white mb-2">Favoritos</h1>
                         <div class="d-flex align-items-center gap-3 text-white-50">
-                            <span><i class="bi bi-heart-fill me-1 text-white"></i> {{ favorites.length }}
+                            <span><i class="bi bi-heart-fill me-1 text-white"></i> {{ userDataStore.favoritesTotalCount }}
                                 Canciones</span>
                         </div>
                         <div class="mt-4 d-flex gap-2">
@@ -301,33 +311,16 @@ onUnmounted(() => {
     transform: translateZ(0);
 }
 
-.favorites-hero::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: inherit;
-    background-size: inherit;
-    background-position: inherit;
-    filter: blur(15px);
-    transform: scale(1.1);
-    z-index: 0;
-    /* Radio mucho más grande para que el blur cubra el borde del contenedor */
-    border-bottom-left-radius: 4rem;
-    border-bottom-right-radius: 4rem;
-}
-
 .hero-overlay {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(to bottom,
-            rgba(0, 0, 0, 0.2) 0%,
-            rgba(0, 0, 0, 0.8) 100%);
+    /* Aplicando el mismo efecto blur que el HeaderLeft (modo celular) */
+    background: rgba(0, 0, 0, 0.4); 
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     display: flex;
     align-items: flex-end;
     padding-bottom: 2rem;

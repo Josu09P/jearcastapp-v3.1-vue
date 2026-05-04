@@ -6,7 +6,7 @@
             <section class="mb-5 text-center hero-section">
                 <div
                     class="badge rounded-pill bg-primary bg-opacity-10 text-primary mb-3 px-3 py-2 border border-primary border-opacity-25">
-                    Nueva Versión 1.1.2 - Disponible
+                    Nueva Versión 1.2 - Disponible
                 </div>
                 <h1 class="display-4 fw-bold text-white mb-3">Descubre <span class="text-gradient">JearCast</span></h1>
                 <p class="lead text-secondary mx-auto mb-5" style="max-width: 800px;">
@@ -144,11 +144,12 @@ const features = [
     { icon: 'bi-sliders', title: 'Configuración Pro', desc: 'Ajustes avanzados a tu medida.' }
 ]
 
-// Lista de donantes (puedes agregar los nombres reales aquí)
+// Lista de donantes
 const donors = [
-    { name: 'Usuario Anon.', amount: '$5.00' },
-    { name: 'Fan de JearCast', amount: '$10.00' },
-    { name: 'Colaborador', amount: '$20.00' },
+    { name: 'Agustín Pereyra', amount: '$15.00' },
+    { name: 'Valentina Rossi', amount: '$20.00' },
+    { name: 'Sebastián Vera', amount: '$5.00' },
+    { name: 'Camila Soto', amount: '$25.00' },
 ]
 </script>
 
@@ -159,6 +160,16 @@ const donors = [
     background-image: radial-gradient(at 0% 0%, rgba(58, 123, 213, 0.15) 0px, transparent 50%),
         radial-gradient(at 100% 100%, rgba(0, 210, 255, 0.1) 0px, transparent 50%);
     padding-top: 60px;
+    /* CORRECCIÓN DE SCROLL: Permitir scroll en la página de bienvenida */
+    overflow-y: auto !important;
+    height: 100vh;
+}
+
+/* Forzar que el contenedor principal de la app permita el scroll en esta página */
+:global(html),
+:global(body),
+:global(#app) {
+    overflow: auto !important;
 }
 
 .main-content {

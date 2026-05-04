@@ -11,7 +11,7 @@
         <div class="logo">
           <span class="logo-text"
             style="background: rgba(255, 255, 255, 0.7); -webkit-background-clip: text; background-clip: text; color: transparent;">
-            "Listen to Music"
+            Listen to Music
           </span>
         </div>
       </div>

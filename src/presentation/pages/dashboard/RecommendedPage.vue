@@ -22,9 +22,16 @@ const visibleSongs = computed(() => {
     return sortedSongs.value.slice(0, displayLimit.value)
 })
 
-const loadMore = (entries: IntersectionObserverEntry[]) => {
-    if (entries[0].isIntersecting && displayLimit.value < songs.value.length) {
-        displayLimit.value += 20
+const loadMore = async (entries: IntersectionObserverEntry[]) => {
+    if (entries[0].isIntersecting) {
+        if (displayLimit.value < songs.value.length) {
+            displayLimit.value += 20
+        } else if (userDataStore.hasMoreRecommendedSongs && !loadingSongs.value && currentPlaylistId.value) {
+            console.log('Cargando más recomendados automáticamente por scroll...')
+            const newSongs = await userDataStore.loadMoreSongsFromRecommended(currentPlaylistId.value)
+            songs.value = [...songs.value, ...newSongs]
+            displayLimit.value += 20
+        }
     }
 }
 
@@ -336,33 +343,16 @@ onUnmounted(() => {
     transform: translateZ(0);
 }
 
-.recommended-hero::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: inherit;
-    background-size: inherit;
-    background-position: inherit;
-    filter: blur(12px);
-    transform: scale(1.1);
-    z-index: 0;
-    /* Radio mucho más grande para ocultar el borde mordido del contenedor */
-    border-bottom-left-radius: 4rem;
-    border-bottom-right-radius: 4rem;
-}
-
 .hero-overlay {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(to bottom,
-            rgba(0, 0, 0, 0.2) 0%,
-            rgba(0, 0, 0, 0.8) 100%);
+    /* Aplicando el mismo efecto blur que el HeaderLeft (modo celular) */
+    background: rgba(0, 0, 0, 0.4); 
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     display: flex;
     align-items: flex-end;
     padding-bottom: 2rem;

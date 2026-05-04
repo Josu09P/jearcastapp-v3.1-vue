@@ -34,8 +34,9 @@ h1, h2, h3, h4, h5, h6, span, p, a {
   transition: border-radius 0.2s ease;
 }
 
-/* Eliminar bordes redondeados cuando la app está maximizada */
-body.is-maximized #app {
+/* Eliminar bordes redondeados cuando la app está maximizada o en fullscreen */
+body.is-maximized #app,
+body.is-maximized .container-all {
   border-radius: 0 !important;
   border: none !important;
 }

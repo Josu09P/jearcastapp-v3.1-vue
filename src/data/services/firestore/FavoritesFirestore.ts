@@ -1,10 +1,23 @@
-import { collection, query, where, orderBy, getDocs, deleteDoc, doc, limit, startAfter, type QueryDocumentSnapshot, type DocumentData } from 'firebase/firestore'
+import { collection, query, where, orderBy, getDocs, deleteDoc, doc, limit, startAfter, getCountFromServer, type QueryDocumentSnapshot, type DocumentData } from 'firebase/firestore'
 import { db } from '../../firebase/firebase.config'
 import type { FavoriteMusicModel } from '@/domain/models/FavoriteMusicModel'
 
 export interface FavoritesResponse {
   favorites: FavoriteMusicModel[]
   lastVisible: QueryDocumentSnapshot<DocumentData> | null
+}
+
+/**
+ * Obtiene el conteo total de favoritos de un usuario sin descargar los documentos.
+ * Muy eficiente para mostrar en la UI.
+ */
+export const getFavoritesCount = async (userId: string): Promise<number> => {
+  const q = query(
+    collection(db, 'favorites'),
+    where('user_id', '==', userId)
+  )
+  const snapshot = await getCountFromServer(q)
+  return snapshot.data().count
 }
 
 export const fetchFavoritesByUserId = async (

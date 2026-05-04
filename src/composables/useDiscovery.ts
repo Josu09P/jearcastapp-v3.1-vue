@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { usePlayerStore, type Track } from '@/stores/player-store'
 import { useUserStore } from '@/stores/user'
+import { useUserDataStore } from '@/stores/userDataStore'
 import { youtubeScraperService } from '@/data/services/youtube/YouTubeScraperService'
 import { detectMainArtist, calculateSimilarity } from '@/domain/usecases/mix/GetVibeFromTitle'
 import { getRecentlyPlayed } from '@/data/services/local/RecentlyPlayedService'
@@ -10,23 +11,73 @@ import { searchSongsByArtist } from '@/data/services/youtube/SearchByArtistServi
 export const useDiscovery = () => {
     const playerStore = usePlayerStore()
     const userStore = useUserStore()
+    const userDataStore = useUserDataStore()
     const isExpanding = ref(false)
+
+    /**
+     * Intenta cargar más canciones de la fuente original (Context Pagination)
+     */
+    const expandFromContext = async (): Promise<Track[]> => {
+        const context = playerStore.playbackContext
+        if (!context) return []
+
+        console.log(`[PAGINATION] Intentando cargar más canciones para contexto: ${context.type}`)
+        let newSongs: any[] = []
+
+        try {
+            if (context.type === 'favorites' && userDataStore.hasMoreFavorites) {
+                newSongs = await userDataStore.loadMoreFavorites()
+            } else if (context.type === 'playlist' && context.id && userDataStore.hasMorePlaylistSongs) {
+                newSongs = await userDataStore.loadMoreSongsFromPlaylist(context.id)
+            } else if (context.type === 'recommended' && context.id && userDataStore.hasMoreRecommendedSongs) {
+                newSongs = await userDataStore.loadMoreSongsFromRecommended(context.id)
+            }
+
+            // Mapear al formato Track si es necesario
+            return newSongs.map(s => ({
+                video_id: s.video_id,
+                video_title: s.video_title,
+                video_thumbnail: s.video_thumbnail,
+                video_author: s.video_author || 'JearCast Music'
+            }))
+        } catch (e) {
+            console.error('[PAGINATION] Error cargando más canciones de la fuente:', e)
+            return []
+        }
+    }
 
     const expandPlaylistWithMoreSongs = async () => {
         if (isExpanding.value) return
-        const currentTrack = playerStore.currentTrack
-        if (!currentTrack?.video_id) return
-
         isExpanding.value = true
-        const currentVideoId = currentTrack.video_id
-        const currentTitle = currentTrack.video_title
-        const currentArtist = detectMainArtist(currentTrack.video_author || '', currentTitle)
-        const currentPlaylist = playerStore.playlist
 
         try {
+            // 1. PRIORIDAD: Cargar de la fuente original (Favoritos, Playlist, etc.)
+            const contextSongs = await expandFromContext()
+            if (contextSongs.length > 0) {
+                console.log(`[PAGINATION] Añadidas ${contextSongs.length} canciones de la fuente original`)
+                playerStore.addToPlaylist(contextSongs)
+                
+                // Actualizar el estado 'hasMore' en el player store
+                const context = playerStore.playbackContext
+                if (context?.type === 'favorites') playerStore.setHasMore(userDataStore.hasMoreFavorites)
+                else if (context?.type === 'playlist') playerStore.setHasMore(userDataStore.hasMorePlaylistSongs)
+                else if (context?.type === 'recommended') playerStore.setHasMore(userDataStore.hasMoreRecommendedSongs)
+                
+                return // Éxito con la fuente original
+            }
+
+            // 2. FALLBACK: Descubrimiento de YouTube (Radio Mode)
+            const currentTrack = playerStore.currentTrack
+            if (!currentTrack?.video_id) return
+
+            const currentVideoId = currentTrack.video_id
+            const currentTitle = currentTrack.video_title
+            const currentArtist = detectMainArtist(currentTrack.video_author || '', currentTitle)
+            const currentPlaylist = playerStore.playlist
+
             console.log(`[SEARCH] [Discovery] Analizando vibra para: "${currentTitle}"`)
             let rawResults = await youtubeScraperService.getRelatedVideos(currentVideoId)
-
+            
             const existingIds = new Set(currentPlaylist.map(song => song.video_id))
             let candidates: any[] = []
 
