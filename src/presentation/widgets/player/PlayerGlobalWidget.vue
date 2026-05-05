@@ -639,6 +639,13 @@ watch(() => isExpanded.value, async (expanded) => {
     }
 })
 
+// REPARACIÓN: Actualizar animación cuando se cambia en ajustes
+watch(() => animationStore.currentAnimationId, () => {
+    if (!playerStore.isFullScreen && isExpanded.value) {
+        setupLottie()
+    }
+})
+
 onMounted(() => {
     window.addEventListener('resize', forceIframeResize)
     window.addEventListener('keydown', handleGlobalKeyDown)
