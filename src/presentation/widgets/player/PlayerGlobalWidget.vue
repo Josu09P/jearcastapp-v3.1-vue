@@ -631,6 +631,14 @@ watch(() => playerStore.isFullScreen, async (isFull) => {
     }
 })
 
+// REPARACIÓN: Re-inicializar Lottie cuando se expande el mini-player
+watch(() => isExpanded.value, async (expanded) => {
+    if (expanded && !playerStore.isFullScreen) {
+        await nextTick()
+        setupLottie()
+    }
+})
+
 onMounted(() => {
     window.addEventListener('resize', forceIframeResize)
     window.addEventListener('keydown', handleGlobalKeyDown)
