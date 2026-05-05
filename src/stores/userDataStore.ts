@@ -2,9 +2,10 @@ import { defineStore } from 'pinia'
 import { getFavoritesByUser } from '@/domain/usecases/favorites/GetFavoritesByUser'
 import { getFavoritesCount } from '@/data/services/firestore/FavoritesFirestore'
 import { getPlaylistsByUser } from '@/domain/usecases/playlists/GetPlaylistsByUser'
+import { fetchPlaylistsCountService } from '@/data/services/firestore/PlaylistsFirestore'
 import { getSongsFromPlaylist } from '@/domain/usecases/playlists/GetSongsFromPlaylist'
 import { getRecommendedPlaylists } from '@/domain/usecases/recommended/GetRecommendedPlaylists'
-import { fetchSongsFromRecommendedPlaylistService } from '@/data/services/firestore/RecommendedPlaylistFirestore'
+import { fetchRecommendedPlaylistsCountService, fetchSongsFromRecommendedPlaylistService } from '@/data/services/firestore/RecommendedPlaylistFirestore'
 
 interface UserDataState {
   favorites: any[]
@@ -13,11 +14,13 @@ interface UserDataState {
   hasMoreFavorites: boolean
 
   playlists: any[]
+  playlistsTotalCount: number
   playlistSongCounts: Record<string, number>
   lastVisiblePlaylistSong: any | null
   hasMorePlaylistSongs: boolean
 
   recommended: any[]
+  recommendedTotalCount: number
   lastVisibleRecommendedSong: any | null
   hasMoreRecommendedSongs: boolean
 
@@ -43,11 +46,13 @@ export const useUserDataStore = defineStore('userData', {
     hasMoreFavorites: true,
 
     playlists: [],
+    playlistsTotalCount: 0,
     playlistSongCounts: {},
     lastVisiblePlaylistSong: null,
     hasMorePlaylistSongs: true,
 
     recommended: [],
+    recommendedTotalCount: 0,
     lastVisibleRecommendedSong: null,
     hasMoreRecommendedSongs: true,
 
@@ -222,8 +227,12 @@ export const useUserDataStore = defineStore('userData', {
       this.loading.playlists = true
       try {
         console.log('Cargando playlists desde Firestore...')
-        const playlists = await getPlaylistsByUser(userId)
+        const [playlists, totalCount] = await Promise.all([
+            getPlaylistsByUser(userId),
+            fetchPlaylistsCountService(userId)
+        ])
         this.playlists = playlists
+        this.playlistsTotalCount = totalCount
 
         // Cargar conteos de canciones para cada playlist
         for (const playlist of this.playlists) {
@@ -272,15 +281,19 @@ export const useUserDataStore = defineStore('userData', {
     // RECOMENDADOS
     async fetchRecommended(force = false) {
       if (!force && this.initialized.recommended) {
-        console.log('Usando recomendados del store (ya cargados)')
+        console.log('Usando recomendados del store (ya cargadas)')
         return this.recommended
       }
 
       this.loading.recommended = true
       try {
         console.log('Cargando recomendados desde Firestore...')
-        const recommended = await getRecommendedPlaylists()
+        const [recommended, totalCount] = await Promise.all([
+            getRecommendedPlaylists(),
+            fetchRecommendedPlaylistsCountService()
+        ])
         this.recommended = recommended
+        this.recommendedTotalCount = totalCount
         this.initialized.recommended = true
         return recommended
       } catch (error) {

@@ -13,8 +13,15 @@ import {
   type DocumentData, 
   limit, 
   startAfter, 
-  orderBy 
+  orderBy,
+  getCountFromServer
 } from 'firebase/firestore'
+
+export async function fetchRecommendedPlaylistsCountService(): Promise<number> {
+  const ref = collection(db, 'recommended_playlists')
+  const snapshot = await getCountFromServer(ref)
+  return snapshot.data().count
+}
 
 export async function fetchRecommendedPlaylistsService(): Promise<RecommendedPlaylistModel[]> {
   const ref = collection(db, 'recommended_playlists')

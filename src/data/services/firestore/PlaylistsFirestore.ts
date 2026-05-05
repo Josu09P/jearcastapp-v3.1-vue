@@ -9,12 +9,21 @@ import {
   orderBy,
   limit,
   startAfter,
+  getCountFromServer,
   type QueryDocumentSnapshot,
   type DocumentData
 } from 'firebase/firestore'
 
 import type { PlaylistSongModel } from '@/domain/models/PlaylistSongModel'
 import type { PlaylistModel } from '@/domain/models/PlayListModel'
+
+// Obtener cantidad de playlists del usuario (Optimizado)
+export async function fetchPlaylistsCountService(user_id: string): Promise<number> {
+  const ref = collection(db, 'playlists')
+  const q = query(ref, where('user_id', '==', user_id))
+  const snapshot = await getCountFromServer(q)
+  return snapshot.data().count
+}
 
 // Crear o recuperar una playlist
 export async function createOrGetPlaylistService(data: PlaylistModel): Promise<string> {

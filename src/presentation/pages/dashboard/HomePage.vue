@@ -143,9 +143,7 @@ import DashboardLayout from '@/presentation/layouts/DashboardLayout.vue'
 import { usePlayerStore } from '@/stores/player-store'
 import { useUserStore } from '@/stores/user'
 import { useArtistStore } from '@/stores/artist-store'
-import { getFavoritesByUser } from '@/domain/usecases/favorites/GetFavoritesByUser'
-import { getPlaylistsByUser } from '@/domain/usecases/playlists/GetPlaylistsByUser'
-import { getRecommendedPlaylists } from '@/domain/usecases/recommended/GetRecommendedPlaylists'
+import { useUserDataStore } from '@/stores/userDataStore'
 import Toastify from 'toastify-js'
 import type { PlaylistModel } from '@/domain/models/PlayListModel'
 import { addFavoriteMusic } from '@/domain/usecases/favorites/AddFavoriteMusic'
@@ -160,6 +158,7 @@ import { youtubeScraperService } from '@/data/services/youtube/YouTubeScraperSer
 const playerStore = usePlayerStore()
 const userStore = useUserStore()
 const artistStore = useArtistStore()
+const userDataStore = useUserDataStore()
 
 const favoriteArtists = computed(() => artistStore.favoriteArtists)
 
@@ -181,9 +180,9 @@ const goToArtistMix = async (artist: any) => {
         loading.value = false
     }
 }
-const totalFavorites = ref(0)
-const totalPlaylists = ref(0)
-const totalRecommended = ref(0)
+const totalFavorites = computed(() => userDataStore.favoritesTotalCount)
+const totalPlaylists = computed(() => userDataStore.playlistsTotalCount)
+const totalRecommended = computed(() => userDataStore.recommendedTotalCount)
 const recentlyPlayed = ref<any[]>([])
 const isProcessing = ref(false)
 const playlists = ref<PlaylistModel[]>([])
@@ -260,7 +259,8 @@ const refreshRecentlyPlayed = () => {
 const refreshPlaylists = async () => {
     if (!userStore.id) return
     loadingPlaylists.value = true
-    playlists.value = await getPlaylistsByUser(userStore.id)
+    await userDataStore.invalidateAndRefreshPlaylists()
+    playlists.value = userDataStore.playlists
     showToast('Playlists actualizadas')
     setTimeout(() => {
         loadingPlaylists.value = false
@@ -282,6 +282,11 @@ const addToFavorites = async (video: any) => {
         video_thumbnail: videoThumbnail
     })
 
+    if (result === 'added') {
+        // Actualizar el conteo en el store de forma optimizada
+        await userDataStore.fetchFavorites(true)
+    }
+
     Toastify({
         text: result === 'exists' ? 'Ya está en favoritos' : 'Agregado a favoritos',
         duration: 2000,
@@ -302,16 +307,15 @@ onMounted(async () => {
     const userId = userStore.id
     if (!userId) return
 
-    const [favorites, playlistsData, recommended] = await Promise.all([
-        getFavoritesByUser(userId),
-        getPlaylistsByUser(userId),
-        getRecommendedPlaylists()
+    // Cargar datos desde el store de forma centralizada
+    // Esto actualizará automáticamente totalFavorites, totalPlaylists y totalRecommended
+    await Promise.all([
+        userDataStore.fetchFavorites(),
+        userDataStore.fetchPlaylists(),
+        userDataStore.fetchRecommended()
     ])
 
-    totalFavorites.value = favorites.favorites.length
-    totalPlaylists.value = playlistsData.length
-    totalRecommended.value = recommended.length
-    playlists.value = playlistsData
+    playlists.value = userDataStore.playlists
 
     const stored = localStorage.getItem('recentlyPlayed')
     if (stored) {

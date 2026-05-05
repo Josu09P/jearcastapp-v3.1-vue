@@ -385,7 +385,8 @@ const createPlayer = (videoId: string): void => {
                     if (success) {
                         console.log('✅ Stream Bridge activo y reproduciendo automáticamente');
                         playerStore.play();
-                        activateBlur(); 
+                        scheduleBlurRemoval();
+                        showToast('Reproduciendo audio alternativo - Sin video por políticas de YouTube');
                     }
                     // IMPORTANTE: Ya no llamamos a next() aquí. 
                     // Si success es false, el handleYouTubeError se encargará de saltar una sola vez.

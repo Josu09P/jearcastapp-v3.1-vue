@@ -90,19 +90,30 @@
 }
 
 .search-form input {
-    max-width: 200px;
+    width: 100%;
+    max-width: 450px;
     background-color: rgba(255, 255, 255, 0.1);
     color: white;
     border-radius: 1.3rem;
-    height: 40px;
-    padding: 10px 14px;
+    height: 45px;
+    padding: 10px 18px;
     border: 1px solid rgba(255, 247, 247, 0.23) !important;
     backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+}
+
+.search-form input:focus {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: var(--accent-color) !important;
+    box-shadow: 0 0 0 0.25rem rgba(var(--accent-rgb), 0.25);
+    max-width: 500px;
 }
 
 .btn-search {
     border-radius: 1.0rem;
     font-size: 15px;
+    width: 45px;
+    height: 45px;
 }
 
 .video-card-custom {
@@ -110,6 +121,24 @@
     border-radius: 12px;
     backdrop-filter: blur(6px);
     color: white;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.video-card-custom:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.search-result-thumb {
+    width: 110px;
+    height: 70px;
+    border-radius: 8px;
+}
+
+.text-container-custom {
+    padding-right: 5px;
 }
 
 .search-input::placeholder {
@@ -184,7 +213,12 @@ input::placeholder {
     }
 
     .search-form input {
-        max-width: 180px;
+        max-width: 100%;
+    }
+
+    .search-result-thumb {
+        width: 100px;
+        height: 65px;
     }
 }
 
@@ -192,15 +226,46 @@ input::placeholder {
     .search-box {
         padding: 12px;
         width: 98%;
+        padding-top: 20px;
     }
 
     .search-form input {
-        max-width: 150px;
-        font-size: 12px;
+        max-width: 100%;
+        font-size: 13px;
+        height: 40px;
+    }
+
+    .btn-search {
+        width: 40px;
+        height: 40px;
     }
 
     .result-search-text {
         font-size: 11px;
         padding: 4px 8px;
+    }
+
+    .search-result-thumb {
+        width: 80px;
+        height: 55px;
+    }
+
+    .video-card-custom h6 {
+        font-size: 0.75rem !important;
+    }
+
+    .video-card-custom p {
+        font-size: 10px !important;
+    }
+
+    .video-card-custom .btn-sm {
+        padding: 2px 4px;
+    }
+}
+
+@media (max-width: 400px) {
+    .search-result-thumb {
+        width: 70px;
+        height: 50px;
     }
 }

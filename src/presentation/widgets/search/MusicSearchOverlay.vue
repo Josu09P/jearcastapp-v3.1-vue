@@ -312,11 +312,11 @@ const createNewPlaylist = async () => {
                     <span v-if="isUsingScraper" class="badge bg-secondary opacity-50 small">Via yt-dlp</span>
                 </div>
                 <div class="row gx-3 gy-4 mt-2">
-                    <div v-for="(video, index) in results" :key="video.videoId" class="col-md-6 col-lg-4 col-xl-3">
+                    <div v-for="(video, index) in results" :key="video.videoId" class="col-12 col-sm-6 col-lg-4 col-xl-3">
                         <div class="card h-100 flex-row shadow-sm p-2 align-items-center video-card-custom">
-                            <img :src="video.thumbnail" :alt="video.title" class="rounded-start me-3"
-                                style="width: 120px; height: 80px; object-fit: cover" />
-                            <div class="flex-grow-1 d-flex flex-column justify-content-between" style="min-width: 0;">
+                            <img :src="video.thumbnail" :alt="video.title" class="rounded-start me-3 search-result-thumb"
+                                style="object-fit: cover" />
+                            <div class="flex-grow-1 d-flex flex-column justify-content-between text-container-custom" style="min-width: 0;">
                                 <div>
                                     <h6 class="card-title text-truncate mb-1" :title="video.title"
                                         style="font-size: 0.85rem">

@@ -1,7 +1,7 @@
 <template>
     <div class="custom-navbar" v-if="isElectron">
         <div class="left-section">
-            <span class="app-title">V.1.2</span>
+            <span class="app-title">V.1.2.0</span>
         </div>
 
         <div class="right-section">
@@ -132,9 +132,9 @@ defineExpose({
     justify-content: space-between;
     padding: 0 10px;
     z-index: 9999;
-    backdrop-filter: blur(10px);
+    /*backdrop-filter: blur(1px);*/
     background: transparent;
-    -webkit-backdrop-filter: blur(10px);
+    /*-webkit-backdrop-filter: blur(1px);*/
     /* border-bottom: 1px solid rgba(255, 255, 255, 0.08); */
     -webkit-app-region: drag;
     user-select: none;

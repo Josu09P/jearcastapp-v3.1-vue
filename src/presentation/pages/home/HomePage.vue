@@ -6,7 +6,7 @@
             <section class="mb-5 text-center hero-section">
                 <div
                     class="badge rounded-pill bg-primary bg-opacity-10 text-primary mb-3 px-3 py-2 border border-primary border-opacity-25">
-                    Nueva Versión 1.2 - Disponible
+                    Nueva Versión 1.2.0 - Disponible
                 </div>
                 <h1 class="display-4 fw-bold text-white mb-3">Descubre <span class="text-gradient">JearCast</span></h1>
                 <p class="lead text-secondary mx-auto mb-5" style="max-width: 800px;">

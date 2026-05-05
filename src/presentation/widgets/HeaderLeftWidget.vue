@@ -32,7 +32,7 @@
       <!-- Footer de la sidebar -->
       <div class="sidebar-footer">
         <div class="version-info">
-          <span style="font-size: 13px;"> © EasyPantry</span>
+          <span style="font-size: 12px;"> © 2026 EasyPantry</span>
         </div>
       </div>
     </div>
@@ -52,7 +52,7 @@ const menuItems = [
   { route: '/dashboard/recommended', label: 'TopPicks', icon: 'bi bi-compass-fill' },
   { route: '/dashboard/artists', label: 'Artistas', icon: 'bi bi-people-fill' },
   { route: '/dashboard/local-music', label: 'Música Local', icon: 'bi bi-music-note-beamed' },
-  { route: '/dashboard/settings', label: 'Ajustes', icon: 'bi bi-gear-fill' }
+  { route: '/dashboard/settings', label: 'Configuración', icon: 'bi bi-gear-fill' }
 ]
 
 const emit = defineEmits(['toggle-sidebar']);
