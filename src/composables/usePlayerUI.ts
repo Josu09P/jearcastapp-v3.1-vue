@@ -53,6 +53,7 @@ export const usePlayerUI = () => {
 
     const loadLyrics = async (currentTrack: any) => {
         if (!currentTrack) return
+        currentLyrics.value = null
         loadingLyrics.value = true
         try {
             let lyrics = await LyricsService.getSyncedLyrics(

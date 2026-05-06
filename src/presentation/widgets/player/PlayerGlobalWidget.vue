@@ -584,11 +584,19 @@ const setupLottie = (): void => {
 
 /* ==================== WATCHERS ==================== */
 watch(() => currentTrack.value, async (newTrack) => {
-    if (!newTrack || isChangingTrack.value) return
+    if (!newTrack) {
+        currentLyrics.value = null
+        return
+    }
+    if (isChangingTrack.value) return
     isChangingTrack.value = true
     try {
         stopAllPlayback()
         activateBlur()
+
+        // RESET DE LETRAS: Siempre limpiar letras al cambiar de canción
+        currentLyrics.value = null
+
         if (newTrack.isLocal && newTrack.localPath) {
             await playLocalTrackFromStore(newTrack, (t, d) => {
                 currentTime.value = t; duration.value = d; progressValue.value = (t / d) * 100
