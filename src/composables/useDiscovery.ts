@@ -6,7 +6,6 @@ import { youtubeScraperService } from '@/data/services/youtube/YouTubeScraperSer
 import { detectMainArtist, calculateSimilarity } from '@/domain/usecases/mix/GetVibeFromTitle'
 import { getRecentlyPlayed } from '@/data/services/local/RecentlyPlayedService'
 import { getFavoritesByUser } from '@/domain/usecases/favorites/GetFavoritesByUser'
-import { searchSongsByArtist } from '@/data/services/youtube/SearchByArtistService'
 
 export const useDiscovery = () => {
     const playerStore = usePlayerStore()
@@ -25,21 +24,50 @@ export const useDiscovery = () => {
         let newSongs: any[] = []
 
         try {
-            if (context.type === 'favorites' && userDataStore.hasMoreFavorites) {
+            if (context.type === 'artist') {
+                const targetArtist = context.name || (playerStore.currentTrack ? detectMainArtist(playerStore.currentTrack.video_author || '', playerStore.currentTrack.video_title) : '')
+                if (targetArtist) {
+                    console.log(`[PAGINATION] Buscando más canciones del artista: ${targetArtist}`)
+                    const scraperResults = await youtubeScraperService.searchWithoutToken(`${targetArtist} canciones mejores exitos`)
+                    if (scraperResults && Array.isArray(scraperResults)) {
+                        newSongs = scraperResults.map((s: any) => ({
+                            video_id: s.videoId,
+                            video_title: s.title,
+                            video_thumbnail: s.thumbnail,
+                            video_author: targetArtist
+                        }))
+                    }
+                }
+            } else if (context.type === 'recommended') {
+                const topicQuery = context.name ? `${context.name} music canciones mix` : 'musica recomendada exitos'
+                console.log(`[PAGINATION] Buscando más canciones del tema recomendado: ${topicQuery}`)
+                const scraperResults = await youtubeScraperService.searchWithoutToken(topicQuery)
+                if (scraperResults && Array.isArray(scraperResults)) {
+                    newSongs = scraperResults.map((s: any) => ({
+                        video_id: s.videoId,
+                        video_title: s.title,
+                        video_thumbnail: s.thumbnail,
+                        video_author: 'JearCast Music'
+                    }))
+                }
+            } else if (context.type === 'favorites' && userDataStore.hasMoreFavorites) {
                 newSongs = await userDataStore.loadMoreFavorites()
             } else if (context.type === 'playlist' && context.id && userDataStore.hasMorePlaylistSongs) {
                 newSongs = await userDataStore.loadMoreSongsFromPlaylist(context.id)
-            } else if (context.type === 'recommended' && context.id && userDataStore.hasMoreRecommendedSongs) {
-                newSongs = await userDataStore.loadMoreSongsFromRecommended(context.id)
             }
 
-            // Mapear al formato Track si es necesario
-            return newSongs.map(s => ({
-                video_id: s.video_id,
-                video_title: s.video_title,
-                video_thumbnail: s.video_thumbnail,
-                video_author: s.video_author || 'JearCast Music'
-            }))
+            const existingIds = new Set(playerStore.playlist.map(s => s.video_id))
+            const uniqueSongs = newSongs
+                .filter((s: any) => !existingIds.has(s.video_id))
+                .slice(0, 10)
+                .map((s: any) => ({
+                    video_id: s.video_id,
+                    video_title: s.video_title,
+                    video_thumbnail: s.video_thumbnail,
+                    video_author: s.video_author || (context.type === 'artist' ? context.name : 'JearCast Music')
+                }))
+
+            return uniqueSongs
         } catch (e) {
             console.error('[PAGINATION] Error cargando más canciones de la fuente:', e)
             return []
@@ -51,22 +79,71 @@ export const useDiscovery = () => {
         isExpanding.value = true
 
         try {
-            // 1. PRIORIDAD: Cargar de la fuente original (Favoritos, Playlist, etc.)
+            const context = playerStore.playbackContext
+
+            // 1. PRIORIDAD: Cargar de la fuente original (Artista, Tema, Playlist, Favoritos)
             const contextSongs = await expandFromContext()
             if (contextSongs.length > 0) {
                 console.log(`[PAGINATION] Añadidas ${contextSongs.length} canciones de la fuente original`)
                 playerStore.addToPlaylist(contextSongs)
                 
                 // Actualizar el estado 'hasMore' en el player store
-                const context = playerStore.playbackContext
                 if (context?.type === 'favorites') playerStore.setHasMore(userDataStore.hasMoreFavorites)
                 else if (context?.type === 'playlist') playerStore.setHasMore(userDataStore.hasMorePlaylistSongs)
-                else if (context?.type === 'recommended') playerStore.setHasMore(userDataStore.hasMoreRecommendedSongs)
+                else if (context?.type === 'artist' || context?.type === 'recommended') playerStore.setHasMore(true)
                 
                 return // Éxito con la fuente original
             }
 
-            // 2. FALLBACK: Descubrimiento de YouTube (Radio Mode)
+            // Si es contexto de Artista y se acabaron las canciones inmediatas, buscar variaciones del artista
+            if (context?.type === 'artist') {
+                const targetArtist = context.name || (playerStore.currentTrack ? detectMainArtist(playerStore.currentTrack.video_author || '', playerStore.currentTrack.video_title) : '')
+                if (targetArtist) {
+                    console.log(`[PAGINATION] Buscando catálogo adicional para artista: ${targetArtist}`)
+                    const scraperResults = await youtubeScraperService.searchWithoutToken(`${targetArtist} top tracks official audio`)
+                    const existingIds = new Set(playerStore.playlist.map(song => song.video_id))
+                    const extraTracks = scraperResults
+                        .filter((v: any) => !existingIds.has(v.videoId))
+                        .slice(0, 8)
+                        .map((v: any) => ({
+                            video_id: v.videoId,
+                            video_title: v.title,
+                            video_thumbnail: v.thumbnail,
+                            video_author: targetArtist
+                        }))
+                    if (extraTracks.length > 0) {
+                        playerStore.addToPlaylist(extraTracks)
+                        return
+                    }
+                }
+                // Si es artista, NO caer en favoritos
+                return
+            }
+
+            // Si es contexto de Tema Recomendado, buscar variaciones del tema
+            if (context?.type === 'recommended') {
+                const topicQuery = context.name ? `${context.name} playlist tracks` : 'temas recomendados musica'
+                console.log(`[PAGINATION] Buscando catálogo adicional para tema: ${topicQuery}`)
+                const scraperResults = await youtubeScraperService.searchWithoutToken(topicQuery)
+                const existingIds = new Set(playerStore.playlist.map(song => song.video_id))
+                const extraTracks = scraperResults
+                    .filter((v: any) => !existingIds.has(v.videoId))
+                    .slice(0, 8)
+                    .map((v: any) => ({
+                        video_id: v.videoId,
+                        video_title: v.title,
+                        video_thumbnail: v.thumbnail,
+                        video_author: 'JearCast Music'
+                    }))
+                if (extraTracks.length > 0) {
+                    playerStore.addToPlaylist(extraTracks)
+                    return
+                }
+                // Si es topic, NO caer en favoritos
+                return
+            }
+
+            // 2. FALLBACK GENÉRICO: Descubrimiento de YouTube (Radio Mode)
             const currentTrack = playerStore.currentTrack
             if (!currentTrack?.video_id) return
 
@@ -95,7 +172,29 @@ export const useDiscovery = () => {
                     .sort((a, b) => b.score - a.score)
             }
 
-            if (candidates.length === 0) {
+            if (candidates.length < 2 && currentArtist) {
+                try {
+                    const scraperResults = await youtubeScraperService.searchWithoutToken(`${currentArtist} canciones`)
+                    if (scraperResults && Array.isArray(scraperResults)) {
+                        const scraperTracks = scraperResults
+                            .filter((v: any) => !existingIds.has(v.videoId))
+                            .slice(0, 10)
+                            .map((v: any) => ({
+                                video_id: v.videoId,
+                                video_title: v.title,
+                                video_thumbnail: v.thumbnail,
+                                video_author: v.author || currentArtist,
+                                score: 100
+                            }))
+                        candidates = [...candidates, ...scraperTracks]
+                    }
+                } catch (e) {
+                    console.warn('[Discovery] Error obteniendo canciones vía scraper:', e)
+                }
+            }
+
+            // Solo usar favoritos si el contexto era explícitamente 'favorites'
+            if (candidates.length === 0 && context?.type === 'favorites') {
                 const history = getRecentlyPlayed()
                 const favsResponse = await getFavoritesByUser(userStore.id || '')
                 const favorites = Array.isArray(favsResponse) ? favsResponse : (favsResponse as any).favorites || []
@@ -115,38 +214,7 @@ export const useDiscovery = () => {
                     .sort((a, b) => b.score - a.score)
             }
 
-            if (candidates.length < 2 && userStore.apikeyYoutube && currentArtist) {
-                const apiResults = await searchSongsByArtist(currentArtist, userStore.apikeyYoutube, 10)
-                const apiTracks = apiResults
-                    .filter((v: any) => !existingIds.has(v.videoId))
-                    .map((v: any) => ({
-                        video_id: v.videoId,
-                        video_title: v.title,
-                        video_thumbnail: v.thumbnail,
-                        video_author: v.video_author || currentArtist,
-                        score: 100
-                    }))
-                candidates = [...candidates, ...apiTracks]
-            }
-
             let toAdd = candidates.slice(0, 5)
-
-            if (toAdd.length === 0) {
-                const favsResponse = await getFavoritesByUser(userStore.id || '')
-                const favorites = Array.isArray(favsResponse) ? favsResponse : (favsResponse as any).favorites || []
-                if (favorites.length > 0) {
-                    toAdd = favorites
-                        .filter((f: any) => !existingIds.has(f.video_id))
-                        .sort(() => Math.random() - 0.5)
-                        .slice(0, 3)
-                        .map((f: any) => ({
-                            video_id: f.video_id,
-                            video_title: f.video_title,
-                            video_thumbnail: f.video_thumbnail,
-                            video_author: f.video_author
-                        }))
-                }
-            }
 
             if (toAdd.length > 0) {
                 playerStore.addToPlaylist(toAdd)

@@ -1,11 +1,44 @@
 <template>
     <div class="lyrics-container" :class="{ 'active': visible, 'two-columns': twoColumnLayout }">
         <div class="lyrics-header">
-            <button class="close-lyrics" @click="$emit('close')">
-                <i class="bi bi-x-lg" style="font-size: 10px;"></i>
-            </button>
-            <h5>{{ lyrics?.title || 'Letras' }}</h5>
-            <span class="artist">{{ lyrics?.artist }}</span>
+            <div class="lyrics-header-main">
+                <div class="lyrics-header-text">
+                    <h5>{{ lyrics?.title || 'Letras' }}</h5>
+                    <span class="artist">{{ lyrics?.artist }}</span>
+                </div>
+
+                <!-- Controles de Sincronización y Desfase -->
+                <div v-if="lyrics && lyrics.syncedLyrics.length > 0" class="lyrics-sync-controls">
+                    <button
+                        class="btn-sync-toggle"
+                        :class="{ 'is-synced': isSyncEnabled }"
+                        @click="toggleSync"
+                        :title="isSyncEnabled ? 'Sincronización activa (Clic para activar Modo Libre y desplazarte libremente)' : 'Modo Libre activo (Clic para activar seguimiento sincronizado)'"
+                    >
+                        <i :class="isSyncEnabled ? 'bi bi-lightning-charge-fill' : 'bi bi-pause-circle'"></i>
+                        <span class="sync-label">{{ isSyncEnabled ? 'Sincronizada' : 'Modo Libre' }}</span>
+                    </button>
+
+                    <!-- Micro-ajuste de Desfase / Timing Offset -->
+                    <div v-if="isSyncEnabled" class="offset-adjust-group" title="Ajuste fino de sincronización (adelantar o atrasar)">
+                        <button class="btn-offset" @click="adjustOffset(-0.5)" title="Atrasar letra 0.5s">
+                            -0.5s
+                        </button>
+                        <span v-if="timeOffset !== 0" class="offset-val" :class="{ 'offset-plus': timeOffset > 0, 'offset-minus': timeOffset < 0 }" @click="resetOffset" title="Clic para restablecer desfase a 0s">
+                            {{ timeOffset > 0 ? `+${timeOffset.toFixed(1)}s` : `${timeOffset.toFixed(1)}s` }}
+                        </span>
+                        <button class="btn-offset" @click="adjustOffset(0.5)" title="Adelantar letra 0.5s">
+                            +0.5s
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lyrics-header-actions">
+                <button class="close-lyrics" @click="$emit('close')" title="Cerrar letras">
+                    <i class="bi bi-x-lg" style="font-size: 10px;"></i>
+                </button>
+            </div>
         </div>
 
         <div class="lyrics-content" ref="lyricsContainer">
@@ -19,9 +52,11 @@
                 <p>No se encontraron letras para esta canción</p>
             </div>
 
-            <div v-else-if="lyrics.syncedLyrics.length > 0" class="synced-lyrics">
+            <div v-else-if="lyrics.syncedLyrics.length > 0" class="synced-lyrics" :class="{ 'free-mode': !isSyncEnabled }">
                 <div v-for="(line, index) in lyrics.syncedLyrics" :key="index" :ref="el => setLineRef(el, index)"
-                    class="lyrics-line" :class="{ active: currentLineIndex === index }">
+                    class="lyrics-line clickable" :class="{ active: isSyncEnabled && currentLineIndex === index }"
+                    @click="onLineClick(line.time)"
+                    :title="`Saltar a ${Math.floor(line.time / 60)}:${String(Math.floor(line.time % 60)).padStart(2, '0')}`">
                     {{ line.text }}
                 </div>
             </div>
@@ -49,8 +84,11 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     (e: 'close'): void
+    (e: 'seek', time: number): void
 }>()
 
+const isSyncEnabled = ref(true)
+const timeOffset = ref(0)
 const currentLineIndex = ref(-1)
 const lyricsContainer = ref<HTMLElement | null>(null)
 const lineRefs = ref<(HTMLElement | null)[]>([])
@@ -61,44 +99,72 @@ const setLineRef = (el: any, index: number) => {
     }
 }
 
-// Actualizar línea actual basada en el tiempo
-watch(() => props.currentTime, (time) => {
+const scrollToLine = (index: number) => {
+    if (index >= 0 && lineRefs.value[index] && lyricsContainer.value) {
+        const activeLine = lineRefs.value[index]
+        const container = lyricsContainer.value
+        const lineHeight = activeLine!.clientHeight
+        const containerHeight = container.clientHeight
+
+        const offsetTop = activeLine!.offsetTop
+        const targetScroll = offsetTop - (containerHeight / 2) + (lineHeight / 2)
+
+        container.scrollTo({
+            top: Math.max(0, targetScroll),
+            behavior: 'smooth'
+        })
+    }
+}
+
+const updateLineForTime = (rawTime: number) => {
     if (!props.lyrics?.syncedLyrics.length) return
 
-    // Buscar la línea que corresponde al tiempo actual
+    const effectiveTime = Math.max(0, rawTime + timeOffset.value)
+
     let newIndex = -1
     for (let i = props.lyrics.syncedLyrics.length - 1; i >= 0; i--) {
-        if (time >= props.lyrics.syncedLyrics[i].time) {
+        if (effectiveTime >= props.lyrics.syncedLyrics[i].time) {
             newIndex = i
             break
         }
     }
 
-    if (newIndex !== currentLineIndex.value) {
-        currentLineIndex.value = newIndex
-
-        // Scroll a la línea activa con centrado perfecto
-        if (newIndex >= 0 && lineRefs.value[newIndex] && lyricsContainer.value) {
-            const activeLine = lineRefs.value[newIndex]
-            const container = lyricsContainer.value
-            const lineHeight = activeLine!.clientHeight
-            const containerHeight = container.clientHeight
-
-            // Calcular posición para centrar la línea activa
-            const offsetTop = activeLine!.offsetTop
-            const targetScroll = offsetTop - (containerHeight / 2) + (lineHeight / 2)
-
-            container.scrollTo({
-                top: Math.max(0, targetScroll),
-                behavior: 'smooth'
-            })
-        }
+    currentLineIndex.value = newIndex
+    if (isSyncEnabled.value && newIndex >= 0) {
+        scrollToLine(newIndex)
     }
+}
+
+const toggleSync = () => {
+    isSyncEnabled.value = !isSyncEnabled.value
+    if (isSyncEnabled.value) {
+        updateLineForTime(props.currentTime)
+    }
+}
+
+const adjustOffset = (delta: number) => {
+    timeOffset.value = Math.round((timeOffset.value + delta) * 10) / 10
+    updateLineForTime(props.currentTime)
+}
+
+const resetOffset = () => {
+    timeOffset.value = 0
+    updateLineForTime(props.currentTime)
+}
+
+const onLineClick = (time: number) => {
+    emit('seek', time)
+}
+
+// Actualizar línea actual basada en el tiempo + offset
+watch(() => props.currentTime, (rawTime) => {
+    updateLineForTime(rawTime)
 })
 
 // Resetear cuando cambia la canción
 watch(() => props.lyrics, () => {
     currentLineIndex.value = -1
+    timeOffset.value = 0
     if (lyricsContainer.value) {
         lyricsContainer.value.scrollTop = 0
     }
@@ -151,46 +217,39 @@ watch(() => props.lyrics, () => {
 
 /* Header */
 .lyrics-header {
-    padding: 0.8rem 1.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     position: relative;
     flex-shrink: 0;
-    background: rgba(0, 0, 0, 0);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    background: rgba(0, 0, 0, 0.25);
 }
 
 .lyrics-container.two-columns .lyrics-header {
-    padding: 1rem 1.5rem;
+    padding: 0.9rem 1.5rem;
     background: rgba(0, 0, 0, 0.5);
 }
 
-.close-lyrics {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    background: rgba(255, 255, 255, 0.1);
-    border: none;
-    color: white;
-    font-size: 1.2rem;
-    cursor: pointer;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
+.lyrics-header-main {
     display: flex;
     align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
+    gap: 1.25rem;
+    flex: 1;
+    min-width: 0;
+    flex-wrap: wrap;
 }
 
-.close-lyrics:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: scale(1.1);
+.lyrics-header-text {
+    min-width: 0;
 }
 
 .lyrics-header h5 {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     font-weight: 600;
-    margin: 0 0 0.25rem 0;
-    padding-right: 2rem;
+    margin: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -201,6 +260,112 @@ watch(() => props.lyrics, () => {
     font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.6);
     display: block;
+}
+
+.lyrics-sync-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.btn-sync-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    border: none !important;
+    outline: none !important;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.btn-sync-toggle:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+}
+
+.btn-sync-toggle.is-synced {
+    background: rgba(62, 150, 93, 0.25);
+    color: #4ade80;
+}
+
+.offset-adjust-group {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 2px 5px;
+    border: none !important;
+    outline: none !important;
+    user-select: none;
+}
+
+.btn-offset {
+    background: none;
+    border: none !important;
+    outline: none !important;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.68rem;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.btn-offset:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+}
+
+.offset-val {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 1px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.offset-plus {
+    color: #38bdf8;
+}
+
+.offset-minus {
+    color: #f87171;
+}
+
+.lyrics-header-actions {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.close-lyrics {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: white;
+    font-size: 1.1rem;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.close-lyrics:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.08);
 }
 
 /* Contenido de letras - CENTRADO VERTICALMENTE */
@@ -249,12 +414,23 @@ watch(() => props.lyrics, () => {
 .lyrics-line {
     font-size: 1rem;
     line-height: 1.6;
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(255, 255, 255, 0.55);
     transition: all 0.2s ease;
-    padding: 0.4rem 0;
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
     cursor: default;
     text-align: center;
     letter-spacing: 0.3px;
+}
+
+.lyrics-line.clickable {
+    cursor: pointer;
+}
+
+.lyrics-line.clickable:hover {
+    color: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.05);
+    transform: scale(1.015);
 }
 
 .lyrics-line.active {
@@ -263,6 +439,7 @@ watch(() => props.lyrics, () => {
     font-weight: 600;
     text-shadow: 0 0 20px rgba(62, 150, 93, 0.4);
     transform: scale(1.02);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 /* Scrollbar personalizada */

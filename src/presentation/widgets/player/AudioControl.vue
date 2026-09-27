@@ -92,6 +92,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import { usePlayerStore } from '@/stores/player-store'
+
+const playerStore = usePlayerStore()
 
 const emit = defineEmits<{
     (e: 'volume-change', value: number): void
@@ -104,11 +107,15 @@ const showEqPanel = ref(false)
 const showNoiseReduction = ref(false)
 
 // Valores de audio
-const volume = ref(80)
+const volume = ref(playerStore.volume)
 const bass = ref(0)
 const mid = ref(0)
 const treble = ref(0)
 const noiseReduction = ref(false)
+
+watch(() => playerStore.volume, (val) => {
+    volume.value = val
+})
 
 // Computed para el ícono de volumen
 const volumeIcon = computed(() => {
@@ -124,9 +131,8 @@ const isEqActive = computed(() => {
 
 // Actualizar volumen
 const updateVolume = () => {
+    playerStore.setVolume(volume.value)
     emit('volume-change', volume.value)
-    // Guardar preferencia
-    localStorage.setItem('audio-volume', volume.value.toString())
 }
 
 // Actualizar ecualizador

@@ -58,10 +58,11 @@ export const usePlayerUI = () => {
         try {
             let lyrics = await LyricsService.getSyncedLyrics(
                 currentTrack.video_title,
-                currentTrack.video_author || ''
+                currentTrack.video_author || '',
+                currentTrack.video_id
             )
             if (!lyrics) {
-                lyrics = await LyricsService.getLyricsByTitle(currentTrack.video_title)
+                lyrics = await LyricsService.getLyricsByTitle(currentTrack.video_title, currentTrack.video_id)
             }
             currentLyrics.value = lyrics
         } catch (error) {

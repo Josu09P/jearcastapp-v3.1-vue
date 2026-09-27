@@ -18,8 +18,8 @@ VAR -> COLORS GLOBALS (MODIFICADO PARA MÁS ELEGANCIA)
     --bootstrap-green: #198754;
     --button-bg: rgba(255, 255, 255, 0.06);
     --button-hover-bg: rgba(255, 255, 255, 0.1);
-    --text-color: #ffffff;
-    --text-secondary: #b3b3b3;
+    --text-color: white;
+    --text-secondary: white;
     --blur-efect-global: blur(40px);
     --app-radius: 13px;
     --component-radius: 12px;

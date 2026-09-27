@@ -105,8 +105,8 @@ const generateFavoritesHash = async (): Promise<string> => {
 // Cargar mixes desde localStorage
 const loadMixesFromCache = (): MixModel[] | null => {
     try {
-        const cached = localStorage.getItem('cachedMixes')
-        const cachedHash = localStorage.getItem('cachedMixesHash')
+        const cached = localStorage.getItem('cachedMixes_v3')
+        const cachedHash = localStorage.getItem('cachedMixesHash_v3')
 
         if (cached && cachedHash && cachedHash === favoritesHash.value) {
             return JSON.parse(cached)
@@ -121,8 +121,8 @@ const loadMixesFromCache = (): MixModel[] | null => {
 // Guardar mixes en localStorage
 const saveMixesToCache = (mixesData: MixModel[]) => {
     try {
-        localStorage.setItem('cachedMixes', JSON.stringify(mixesData))
-        localStorage.setItem('cachedMixesHash', favoritesHash.value)
+        localStorage.setItem('cachedMixes_v3', JSON.stringify(mixesData))
+        localStorage.setItem('cachedMixesHash_v3', favoritesHash.value)
     } catch (error) {
         console.error('Error guardando caché:', error)
     }
@@ -132,6 +132,8 @@ const saveMixesToCache = (mixesData: MixModel[]) => {
 const clearCache = () => {
     localStorage.removeItem('cachedMixes')
     localStorage.removeItem('cachedMixesHash')
+    localStorage.removeItem('cachedMixes_v3')
+    localStorage.removeItem('cachedMixesHash_v3')
 }
 
 // Cargar mixes
@@ -218,13 +220,24 @@ const playMix = (mix: MixModel) => {
         return
     }
 
+    const artistName = mix.artist_name || mix.name.replace('Mix de ', '')
     const playlist = mix.songs.map(song => ({
         video_id: song.videoId,
         video_title: song.title,
-        video_thumbnail: song.thumbnail
+        video_thumbnail: song.thumbnail,
+        video_author: artistName
     }))
 
-    playerStore.setPlaylist(playlist, 0)
+    playerStore.setPlaylist(
+        playlist,
+        0,
+        {
+            type: 'artist',
+            id: mix.id,
+            name: artistName
+        },
+        true
+    )
     showToast(`Reproduciendo: ${mix.name}`)
 }
 

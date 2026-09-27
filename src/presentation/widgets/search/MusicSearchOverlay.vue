@@ -37,6 +37,28 @@ const newPlaylistName = ref('')
 const showPlaylistModal = ref(false)
 const selectedVideo = ref<any | null>(null)
 const inputRef = ref<HTMLInputElement | null>(null)
+const isDropdownOpen = ref(false)
+
+const selectedPlaylistName = computed(() => {
+    const pl = playlists.value.find(p => p.id === selectedPlaylistId.value)
+    return pl ? pl.name : ''
+})
+
+const selectPlaylist = (playlist: PlaylistModel) => {
+    selectedPlaylistId.value = playlist.id
+    isDropdownOpen.value = false
+}
+
+const toggleDropdown = () => {
+    isDropdownOpen.value = !isDropdownOpen.value
+}
+
+const handleModalClick = (e: MouseEvent) => {
+    const target = e.target as HTMLElement
+    if (!target.closest('.custom-glass-dropdown')) {
+        isDropdownOpen.value = false
+    }
+}
 
 // Método para enfocar el input
 const focusInput = () => {
@@ -71,36 +93,48 @@ const onSearch = async () => {
         // Intento 1: Usar API Keys con el Manager (si existen)
         if (apiKeys.value.length > 0 && currentApiKeyIndex.value !== -1) {
             console.log('Buscador: Intentando búsqueda oficial con API Key')
-            results.value = await apiKeyManager.executeWithFailover(async (key) => {
-                const videos = await searchYoutube(query.value, key)
-                const stats = await getVideoStats(videos.map((v: any) => v.videoId).join(','), key)
-                return videos.map((v: any) => {
-                    const stat = stats.find((s: any) => s.videoId === v.videoId)
-                    return {
-                        ...v,
-                        viewCount: stat?.viewCount || 0
-                    }
+            try {
+                const apiResults = await apiKeyManager.executeWithFailover(async (key) => {
+                    const videos = await searchYoutube(query.value, key)
+                    if (!videos || !Array.isArray(videos)) return []
+                    const stats = await getVideoStats(videos.map((v: any) => v.videoId).join(','), key)
+                    return videos.map((v: any) => {
+                        const stat = Array.isArray(stats) ? stats.find((s: any) => s.videoId === v.videoId) : null
+                        return {
+                            ...v,
+                            viewCount: stat?.viewCount || 0
+                        }
+                    })
                 })
-            })
+                if (apiResults && Array.isArray(apiResults) && apiResults.length > 0) {
+                    results.value = apiResults
+                }
+            } catch (apiErr) {
+                console.warn('Fallo en búsqueda oficial con API key, pasando a scraper:', apiErr)
+            }
         }
 
-        // Intento 2: Si no hay resultados (o no hay Keys), usar Scraper (yt-dlp backend)
-        if (results.value.length === 0) {
+        // Intento 2: Si no hay resultados (o no hay Keys / quota agotada), usar Scraper (yt-dlp backend)
+        if (!results.value || results.value.length === 0) {
             console.log('Buscador: Usando Scraper (yt-dlp)')
             isUsingScraper.value = true
             const scraperResults = await youtubeScraperService.searchWithoutToken(query.value)
-            results.value = scraperResults.map((v: any) => ({
-                videoId: v.videoId,
-                title: v.title,
-                thumbnail: v.thumbnail,
-                author: v.author,
-                duration: v.duration || '',
-                views: v.views || '',
-                url: v.url || `https://youtube.com/watch?v=${v.videoId}`
-            }))
+            if (scraperResults && Array.isArray(scraperResults)) {
+                results.value = scraperResults.map((v: any) => ({
+                    videoId: v.videoId,
+                    title: v.title,
+                    thumbnail: v.thumbnail,
+                    author: v.author,
+                    duration: v.duration || '',
+                    views: v.views || '',
+                    url: v.url || `https://youtube.com/watch?v=${v.videoId}`
+                }))
+            } else {
+                results.value = []
+            }
         }
 
-        if (results.value.length === 0) {
+        if (!results.value || results.value.length === 0) {
             showToast('No se encontraron resultados')
         }
     } catch (error: any) {
@@ -193,6 +227,7 @@ const addToFavorites = async (video: any) => {
 
 const openPlaylistModal = (video: any) => {
     selectedVideo.value = video
+    isDropdownOpen.value = false
     showPlaylistModal.value = true
 }
 
@@ -350,32 +385,60 @@ const createNewPlaylist = async () => {
                 </div>
             </div>
         </div>
-        <div v-if="showPlaylistModal" class="modal-backdrop" @click.self="showPlaylistModal = false">
-            <div class="search-modal-content">
+        <div v-if="showPlaylistModal" class="modal-backdrop" @click.self="showPlaylistModal = false; isDropdownOpen = false">
+            <div class="search-modal-content" @click="handleModalClick">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="text-white mb-0">Agregar / Crear Playlist</h5>
-                    <button class="btn btn-outline-light d-flex align-items-center justify-content-center"
+                    <h5 class="text-white mb-0 fw-semibold">Agregar / Crear Playlist</h5>
+                    <button class="btn-glass-refresh"
                         @click="refreshPlaylists" :disabled="loadingPlaylists"
-                        style="border-radius: 1rem; height: 36px; padding: 0 10px;">
-                        <i :class="['bi', 'me-0', loadingPlaylists ? 'bi-arrow-repeat spin-animation' : 'bi-arrow-clockwise']"
-                            style="font-size: 16px; vertical-align: middle; line-height: 1;"></i>
+                        title="Actualizar playlists">
+                        <i :class="['bi', loadingPlaylists ? 'bi-arrow-repeat spin-animation' : 'bi-arrow-clockwise']"></i>
                     </button>
                 </div>
 
                 <div v-if="playlists.length > 0" class="mb-3">
-                    <select v-model="selectedPlaylistId" class="form-select mb-2">
-                        <option disabled value="">Selecciona una playlist</option>
-                        <option v-for="p in playlists" :key="p.id" :value="p.id">{{ p.name }}</option>
-                    </select>
-                    <button class="btn btn-outline-light btn-search w-100 mb-3" @click="addToPlaylist">Agregar a la
-                        playlist</button>
+                    <!-- Custom Glassmorphic Dropdown -->
+                    <div class="custom-glass-dropdown mb-3">
+                        <button type="button" class="glass-select-trigger" @click.stop="toggleDropdown">
+                            <span class="d-flex align-items-center gap-2 text-truncate">
+                                <i class="bi bi-music-note-list text-accent"></i>
+                                <span :class="{ 'placeholder-label': !selectedPlaylistId }">
+                                    {{ selectedPlaylistName || 'Selecciona una playlist' }}
+                                </span>
+                            </span>
+                            <i class="bi bi-chevron-down dropdown-arrow" :class="{ 'rotate': isDropdownOpen }"></i>
+                        </button>
+
+                        <Transition name="dropdown-fade">
+                            <div v-if="isDropdownOpen" class="glass-dropdown-menu" @click.stop>
+                                <div 
+                                    v-for="p in playlists" 
+                                    :key="p.id" 
+                                    class="glass-dropdown-item" 
+                                    :class="{ 'active': selectedPlaylistId === p.id }"
+                                    @click="selectPlaylist(p)"
+                                >
+                                    <div class="d-flex align-items-center gap-2 text-truncate">
+                                        <i class="bi bi-folder2-open item-icon"></i>
+                                        <span class="text-truncate">{{ p.name }}</span>
+                                    </div>
+                                    <i v-if="selectedPlaylistId === p.id" class="bi bi-check2 text-accent fs-6"></i>
+                                </div>
+                            </div>
+                        </Transition>
+                    </div>
+
+                    <button class="btn btn-modal-action w-100 mb-3 d-flex align-items-center justify-content-center gap-2" @click="addToPlaylist">
+                        <i class="bi bi-music-note-list"></i> Agregar a la playlist
+                    </button>
                 </div>
 
                 <div>
-                    <input v-model="newPlaylistName" type="text" class="form-control mb-2"
-                        placeholder="Nueva playlist..." />
-                    <button class="btn btn-outline-light btn-search w-100" @click="createNewPlaylist">Crear y
-                        agregar</button>
+                    <input v-model="newPlaylistName" type="text" class="form-control mb-3"
+                        placeholder="Nombre de nueva playlist..." />
+                    <button class="btn btn-modal-action w-100 d-flex align-items-center justify-content-center gap-2" @click="createNewPlaylist">
+                        <i class="bi bi-folder-plus"></i> Crear y agregar
+                    </button>
                 </div>
             </div>
         </div>

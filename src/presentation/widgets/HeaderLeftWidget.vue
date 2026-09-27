@@ -28,13 +28,6 @@
           </ul>
         </div>
       </nav>
-
-      <!-- Footer de la sidebar -->
-      <div class="sidebar-footer">
-        <div class="version-info">
-          <span style="font-size: 12px;"> © 2026 EasyPantry</span>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -47,10 +40,10 @@ const changeSection = inject('changeSection') as (section: string) => void;
 
 const menuItems = [
   { route: '/dashboard', label: 'Inicio', icon: 'bi bi-house-door-fill' },
+  { route: '/dashboard/artists', label: 'Artistas', icon: 'bi bi-people-fill' },
   { route: '/dashboard/favorites', label: 'Favoritos', icon: 'bi bi-heart-fill' },
   { route: '/dashboard/play-list', label: 'Playlists', icon: 'bi bi-collection-play-fill' },
-  { route: '/dashboard/recommended', label: 'TopPicks', icon: 'bi bi-compass-fill' },
-  { route: '/dashboard/artists', label: 'Artistas', icon: 'bi bi-people-fill' },
+  { route: '/dashboard/recommended', label: 'Topics', icon: 'bi bi-compass-fill' },
   { route: '/dashboard/local-music', label: 'Música Local', icon: 'bi bi-music-note-beamed' },
   { route: '/dashboard/settings', label: 'Configuración', icon: 'bi bi-gear-fill' }
 ]
@@ -73,13 +66,16 @@ function toggleSidebar() {
   border-right: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .sidebar-nav {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 1.5rem 0;
+  padding: 1.5rem 0 0.5rem 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* Header */
@@ -125,6 +121,7 @@ function toggleSidebar() {
 .nav-menu {
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
   padding: 0 0.75rem;
 }
 
@@ -202,25 +199,6 @@ function toggleSidebar() {
   color: var(--accent-color);
 }
 
-/* Footer */
-.sidebar-footer {
-  padding: 1rem 1.25rem;
-  border-top: transparent;
-  margin-top: auto;
-}
-
-.version-info {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.3);
-}
-
-.version-info i {
-  font-size: 0.8rem;
-}
 
 /* Scrollbar personalizada */
 .nav-menu::-webkit-scrollbar {

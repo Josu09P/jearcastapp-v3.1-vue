@@ -33,38 +33,50 @@ export class LyricsService {
     return lines.sort((a, b) => a.time - b.time)
   }
 
+  private static isArtistMatch(artist1: string, artist2: string): boolean {
+    const a1 = this.cleanArtist(artist1).toLowerCase()
+    const a2 = this.cleanArtist(artist2).toLowerCase()
+    return a1.includes(a2) || a2.includes(a1)
+  }
+
   /**
-   * Limpieza inteligente del título
+   * Limpieza inteligente del título considerando el artista si está disponible
    */
-  private static cleanTitle(title: string): string {
-    // Extraer el título principal (después del guión si existe)
+  private static cleanTitle(title: string, artist?: string): string {
     let mainTitle = title
     if (title.includes('-')) {
       const parts = title.split('-')
-      mainTitle = parts.length > 1 ? parts[1].trim() : title
+      if (parts.length > 1) {
+        const left = parts[0].trim()
+        const right = parts.slice(1).join('-').trim()
+        // Si el artista coincide con la parte derecha, el título está en la parte izquierda
+        if (artist && this.isArtistMatch(artist, right)) {
+          mainTitle = left
+        } else {
+          // Por convención estándar "Artista - Título", tomar derecha
+          mainTitle = right
+        }
+      }
     }
 
     let cleaned = mainTitle
-      // Eliminar paréntesis con información de video/lyric
-      .replace(/\s*\([^)]*(?:Video|Lyric|Official|Audio|Video Lírico)[^)]*\)/gi, '')
-      .replace(/\s*\[[^\]]*(?:Video|Lyric|Official|Audio)[^\]]*\]/gi, '')
-      // Eliminar palabras genéricas
-      .replace(/\b(Official|Video|Lyric|Audio|Music|Video Lírico)\b/gi, '')
-      // Mantener "Remix" pero limpiar
+      // Eliminar paréntesis y corchetes con información de video/lyric/calidad
+      .replace(/\s*[\(\[](?:Official\s*)?(?:Music\s*)?(?:Video|Lyric|Audio|Video Lírico|Visualizer|En Vivo|Live|Clip Oficial|Remastered|HD|4K)[^\)\]]*[\)\]]/gi, '')
+      .replace(/\s*[\(\[](?:Letra|Lyrics)[^\)\]]*[\)\]]/gi, '')
+      .replace(/\|.*$/g, '')
+      // Eliminar palabras genéricas residuales
+      .replace(/\b(Official Music Video|Official Video|Video Oficial|Video Lírico|Visualizer)\b/gi, '')
+      // Mantener "Remix" pero simplificar
       .replace(/\s*\(Remix\)/gi, ' Remix')
       // Mantener "ft." pero simplificar
-      .replace(/\s*ft\.\s*/gi, ' ft ')
-      .replace(/\s*feat\.\s*/gi, ' ft ')
-      // Limpiar caracteres especiales excesivos
+      .replace(/\s*(?:ft\.|feat\.)\s*/gi, ' ft ')
       .replace(/["""'']/g, '')
-      // Normalizar espacios
       .replace(/\s+/g, ' ')
       .trim()
 
     // Si el título resultante es muy largo (>50 chars), tomar las primeras palabras clave
     if (cleaned.length > 50) {
       const words = cleaned.split(' ')
-      // Mantener solo las primeras 5-6 palabras clave
       const keywords = []
       for (const word of words) {
         if (word.length > 2 && !['ft', 'feat', 'remix'].includes(word.toLowerCase())) {
@@ -72,7 +84,6 @@ export class LyricsService {
         }
         if (keywords.length >= 5) break
       }
-      // Si encontramos "Remix", lo añadimos al final
       if (cleaned.toLowerCase().includes('remix') && !keywords.includes('Remix')) {
         keywords.push('Remix')
       }
@@ -80,6 +91,15 @@ export class LyricsService {
     }
 
     return cleaned
+  }
+
+  private static cleanArtist(artist: string): string {
+    return artist
+      .replace(/\s*-\s*Topic$/i, '')
+      .replace(/VEVO$/i, '')
+      .replace(/\s*Official\s*$/i, '')
+      .replace(/\s*Channel\s*$/i, '')
+      .trim()
   }
 
   /**
@@ -90,13 +110,14 @@ export class LyricsService {
 
     // 1. Si hay artista proporcionado, usarlo como principal
     if (providedArtist && providedArtist.trim() !== '') {
-      artists.push(providedArtist.trim())
+      const cleaned = this.cleanArtist(providedArtist)
+      if (cleaned) artists.push(cleaned)
     }
 
     // 2. Intentar extraer del título (formato "Artista - Canción")
     if (title.includes('-')) {
       const parts = title.split('-')
-      const artistPart = parts[0].trim()
+      const artistPart = this.cleanArtist(parts[0].trim())
       if (artistPart && !artists.includes(artistPart)) {
         artists.push(artistPart)
       }
@@ -106,7 +127,7 @@ export class LyricsService {
     const ftMatches = title.match(/(?:ft\.|feat\.)\s*([^,(]+)/gi)
     if (ftMatches) {
       for (const match of ftMatches) {
-        const ftArtist = match.replace(/(?:ft\.|feat\.)/i, '').trim()
+        const ftArtist = this.cleanArtist(match.replace(/(?:ft\.|feat\.)/i, '').trim())
         if (ftArtist && !artists.includes(ftArtist)) {
           artists.push(ftArtist)
         }
@@ -120,55 +141,77 @@ export class LyricsService {
    * Estrategia 1: Búsqueda exacta con artista principal
    */
   private static async searchExact(title: string, artist: string): Promise<LyricsData | null> {
-    const cleanTitle = this.cleanTitle(title)
+    const cleanTitle = this.cleanTitle(title, artist)
     const url = `${this.API_BASE}/get?track_name=${encodeURIComponent(cleanTitle)}&artist_name=${encodeURIComponent(artist)}`
     console.log(`[NETWORK] Estrategia 1 (exacta): ${url}`)
 
-    const response = await fetch(url)
-    if (response.ok) {
-      const data = await response.json()
-      if (data && (data.syncedLyrics || data.plainLyrics)) {
-        return this.processLyricsData(data)
+    try {
+      const response = await fetch(url)
+      if (response.ok) {
+        const data = await response.json()
+        if (data && (data.syncedLyrics || data.plainLyrics)) {
+          return this.processLyricsData(data)
+        }
       }
-    }
+    } catch (_) {}
     return null
   }
 
   /**
-   * Estrategia 2: Búsqueda general y mejor coincidencia
+   * Estrategia 2: Búsqueda general y mejor coincidencia (artista + título combinado)
    */
-  private static async searchGeneral(title: string): Promise<LyricsData | null> {
-    const cleanTitle = this.cleanTitle(title)
-    const searchUrl = `${this.API_BASE}/search?q=${encodeURIComponent(cleanTitle)}`
-    console.log(`[NETWORK] Estrategia 2 (general): ${searchUrl}`)
+  private static async searchGeneral(title: string, artist?: string): Promise<LyricsData | null> {
+    const cleanTitle = this.cleanTitle(title, artist)
+    const cleanArt = artist ? this.cleanArtist(artist) : ''
 
-    const response = await fetch(searchUrl)
-    if (!response.ok) return null
+    const queries: string[] = []
+    if (cleanArt && cleanTitle) {
+      queries.push(`${cleanArt} ${cleanTitle}`)
+    }
+    queries.push(cleanTitle)
 
-    const results = await response.json()
-    if (!results || results.length === 0) return null
+    for (const query of queries) {
+      const searchUrl = `${this.API_BASE}/search?q=${encodeURIComponent(query)}`
+      console.log(`[NETWORK] Estrategia 2 (general): ${searchUrl}`)
 
-    console.log(`[INFO] Encontrados ${results.length} resultados`)
+      try {
+        const response = await fetch(searchUrl)
+        if (!response.ok) continue
 
-    // Ordenar por similitud
-    const scored = results.map((result: any) => ({
-      result,
-      score: this.calculateSimilarity(cleanTitle, result.trackName),
-    }))
+        const results = await response.json()
+        if (!results || results.length === 0) continue
 
-    scored.sort((a: any, b: any) => b.score - a.score)
+        console.log(`[INFO] Encontrados ${results.length} resultados para "${query}"`)
 
-    console.log(
-      `[SUCCESS] Mejor coincidencia: "${scored[0].result.trackName}" - ${scored[0].result.artistName} (score: ${scored[0].score})`,
-    )
+        // Preferir resultados con letras
+        const withLyrics = results.filter((r: any) => r.syncedLyrics || r.plainLyrics)
+        const list = withLyrics.length > 0 ? withLyrics : results
 
-    if (scored[0].score > 0.3) {
-      const detailUrl = `${this.API_BASE}/get?track_name=${encodeURIComponent(scored[0].result.trackName)}&artist_name=${encodeURIComponent(scored[0].result.artistName)}`
-      const detailResponse = await fetch(detailUrl)
-      if (detailResponse.ok) {
-        const data = await detailResponse.json()
-        return this.processLyricsData(data)
-      }
+        const scored = list.map((result: any) => {
+          let score = this.calculateSimilarity(cleanTitle, result.trackName)
+          if (cleanArt && result.artistName && this.isArtistMatch(cleanArt, result.artistName)) {
+            score += 0.4
+          }
+          if (result.syncedLyrics) score += 0.3
+          return { result, score }
+        })
+
+        scored.sort((a: any, b: any) => b.score - a.score)
+
+        if (scored.length > 0 && scored[0].score > 0.25) {
+          const best = scored[0].result
+          if (best.syncedLyrics || best.plainLyrics) {
+            return this.processLyricsData(best)
+          }
+
+          const detailUrl = `${this.API_BASE}/get?track_name=${encodeURIComponent(best.trackName)}&artist_name=${encodeURIComponent(best.artistName)}`
+          const detailResponse = await fetch(detailUrl)
+          if (detailResponse.ok) {
+            const data = await detailResponse.json()
+            return this.processLyricsData(data)
+          }
+        }
+      } catch (_) {}
     }
 
     return null
@@ -185,24 +228,18 @@ export class LyricsService {
     console.log(`[NETWORK] Estrategia 3 (keywords): "${query}"`)
 
     const url = `${this.API_BASE}/search?q=${encodeURIComponent(query)}`
-    const response = await fetch(url)
+    try {
+      const response = await fetch(url)
+      if (!response.ok) return null
 
-    if (!response.ok) return null
+      const results = await response.json()
+      if (!results || results.length === 0) return null
 
-    const results = await response.json()
-    if (!results || results.length === 0) return null
-
-    // Tomar el primer resultado
-    const bestMatch = results[0]
-    console.log(`[SUCCESS] Coincidencia por keywords: "${bestMatch.trackName}" - ${bestMatch.artistName}`)
-
-    const detailUrl = `${this.API_BASE}/get?track_name=${encodeURIComponent(bestMatch.trackName)}&artist_name=${encodeURIComponent(bestMatch.artistName)}`
-    const detailResponse = await fetch(detailUrl)
-
-    if (detailResponse.ok) {
-      const data = await detailResponse.json()
-      return this.processLyricsData(data)
-    }
+      const withLyrics = results.find((r: any) => r.syncedLyrics || r.plainLyrics) || results[0]
+      if (withLyrics.syncedLyrics || withLyrics.plainLyrics) {
+        return this.processLyricsData(withLyrics)
+      }
+    } catch (_) {}
 
     return null
   }
@@ -214,7 +251,6 @@ export class LyricsService {
     const t1 = title1.toLowerCase()
     const t2 = title2.toLowerCase()
 
-    // Coincidencia exacta
     if (t1 === t2) return 1.0
 
     const words1 = t1.split(' ')
@@ -227,7 +263,6 @@ export class LyricsService {
       }
     }
 
-    // Bonus para "remix"
     let bonus = 0
     if (t1.includes('remix') && t2.includes('remix')) bonus += 0.2
     if (t1.includes('ft') && t2.includes('ft')) bonus += 0.1
@@ -280,26 +315,41 @@ export class LyricsService {
   /**
    * Método principal: buscar letras con múltiples estrategias
    */
-  static async getSyncedLyrics(title: string, artist: string): Promise<LyricsData | null> {
+  static async getSyncedLyrics(title: string, artist: string, videoId?: string): Promise<LyricsData | null> {
     try {
-      console.log(`🎤 Buscando letras para: "${title}"`)
+      console.log(`🎤 Buscando letras para: "${title}" (videoId: ${videoId})`)
 
       const artists = this.extractArtists(title, artist)
       console.log(`👥 Artistas detectados: ${artists.join(', ')}`)
 
-      // Estrategia 1: Buscar con cada artista
+      // Estrategia 1: Buscar con cada artista en LRCLIB
       for (const currentArtist of artists) {
         const result = await this.searchExact(title, currentArtist)
-        if (result) return result
+        if (result && (result.syncedLyrics.length > 0 || result.plainLyrics)) return result
       }
 
-      // Estrategia 2: Búsqueda general
-      const generalResult = await this.searchGeneral(title)
-      if (generalResult) return generalResult
+      // Estrategia 2: Búsqueda general en LRCLIB (artista + canción)
+      const generalResult = await this.searchGeneral(title, artist)
+      if (generalResult && (generalResult.syncedLyrics.length > 0 || generalResult.plainLyrics)) return generalResult
 
-      // Estrategia 3: Búsqueda por palabras clave
+      // Estrategia 3: Búsqueda por palabras clave en LRCLIB
       const keywordResult = await this.searchByKeywords(title)
-      if (keywordResult) return keywordResult
+      if (keywordResult && (keywordResult.syncedLyrics.length > 0 || keywordResult.plainLyrics)) return keywordResult
+
+      // Estrategia 4 (Respaldo Sincronizado): Subtítulos de YouTube vía Electron IPC
+      if (videoId && window.electron?.getVideoSubtitles) {
+        console.log(`📺 Intentando obtener letras/subtítulos de YouTube para ${videoId}...`)
+        const ytSubs = await window.electron.getVideoSubtitles(videoId)
+        if (ytSubs && ytSubs.syncedLyrics?.length > 0) {
+          console.log(`✅ Letras sincronizadas obtenidas de YouTube: ${ytSubs.syncedLyrics.length} líneas`)
+          return {
+            title,
+            artist: artist || 'YouTube',
+            syncedLyrics: ytSubs.syncedLyrics,
+            plainLyrics: ytSubs.plainLyrics || ''
+          }
+        }
+      }
 
       console.log('❌ No se encontraron letras después de todas las estrategias')
       return null
@@ -309,7 +359,7 @@ export class LyricsService {
     }
   }
 
-  static async getLyricsByTitle(title: string): Promise<LyricsData | null> {
-    return this.getSyncedLyrics(title, '')
+  static async getLyricsByTitle(title: string, videoId?: string): Promise<LyricsData | null> {
+    return this.getSyncedLyrics(title, '', videoId)
   }
 }

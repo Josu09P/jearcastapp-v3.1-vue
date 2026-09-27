@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { getFavoritesByUser } from '@/domain/usecases/favorites/GetFavoritesByUser'
-import { getFavoritesCount } from '@/data/services/firestore/FavoritesFirestore'
+import { getFavoritesCount, searchFavoritesInFirestore } from '@/data/services/firestore/FavoritesFirestore'
 import { getPlaylistsByUser } from '@/domain/usecases/playlists/GetPlaylistsByUser'
 import { fetchPlaylistsCountService } from '@/data/services/firestore/PlaylistsFirestore'
 import { getSongsFromPlaylist } from '@/domain/usecases/playlists/GetSongsFromPlaylist'
@@ -16,6 +16,7 @@ interface UserDataState {
   playlists: any[]
   playlistsTotalCount: number
   playlistSongCounts: Record<string, number>
+  playlistThumbnails: Record<string, string[]>
   lastVisiblePlaylistSong: any | null
   hasMorePlaylistSongs: boolean
 
@@ -48,6 +49,7 @@ export const useUserDataStore = defineStore('userData', {
     playlists: [],
     playlistsTotalCount: 0,
     playlistSongCounts: {},
+    playlistThumbnails: {},
     lastVisiblePlaylistSong: null,
     hasMorePlaylistSongs: true,
 
@@ -131,6 +133,12 @@ export const useUserDataStore = defineStore('userData', {
       } finally {
         this.loading.favorites = false
       }
+    },
+
+    async searchFavoritesInDb(searchQuery: string) {
+      const userId = this.getUserId()
+      if (!userId || !searchQuery.trim()) return []
+      return await searchFavoritesInFirestore(userId, searchQuery)
     },
 
     async invalidateAndRefreshFavorites() {
@@ -234,17 +242,19 @@ export const useUserDataStore = defineStore('userData', {
         this.playlists = playlists
         this.playlistsTotalCount = totalCount
 
-        // Cargar conteos de canciones para cada playlist
+        // Cargar conteos de canciones y miniaturas para cada playlist
         for (const playlist of this.playlists) {
           if (playlist.id) {
             try {
-              // Ajustado para obtener solo el conteo inicial (puede no ser exacto si hay > 50, 
-              // pero para el badge suele bastar o podemos optimizar luego)
               const response = await getSongsFromPlaylist(playlist.id, 50)
               this.playlistSongCounts[playlist.id] = response.songs.length
+              this.playlistThumbnails[playlist.id] = response.songs
+                .map((s: any) => s.video_thumbnail || s.thumbnail)
+                .filter(Boolean)
             } catch (e) {
               console.error(`Error cargando canciones para playlist ${playlist.id}:`, e)
               this.playlistSongCounts[playlist.id] = 0
+              this.playlistThumbnails[playlist.id] = []
             }
           }
         }
@@ -263,6 +273,7 @@ export const useUserDataStore = defineStore('userData', {
       this.initialized.playlists = false
       this.playlists = []
       this.playlistSongCounts = {}
+      this.playlistThumbnails = {}
       return await this.fetchPlaylists(true)
     },
 
@@ -271,6 +282,9 @@ export const useUserDataStore = defineStore('userData', {
       try {
         const response = await getSongsFromPlaylist(playlistId, 50)
         this.playlistSongCounts[playlistId] = response.songs.length
+        this.playlistThumbnails[playlistId] = response.songs
+          .map((s: any) => s.video_thumbnail || s.thumbnail)
+          .filter(Boolean)
         return response.songs.length
       } catch (e) {
         console.error(`Error actualizando conteo para playlist ${playlistId}:`, e)

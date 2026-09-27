@@ -1,21 +1,38 @@
 <template>
-  <NavbarCustom />
-  <span style="margin-bottom: 20px;"></span>
-  <router-view />
-  <teleport to='body'>
-    <PlayerGlobalWidget />
-  </teleport>
+  <div :class="{ 'is-miniplayer-view': playerStore.playerMode === 'miniplayer' }">
+    <NavbarCustom v-show="playerStore.playerMode !== 'miniplayer'" />
+    <span v-show="playerStore.playerMode !== 'miniplayer'" style="margin-bottom: 20px;"></span>
+    <div v-show="playerStore.playerMode !== 'miniplayer'">
+      <router-view />
+    </div>
+    <teleport to='body'>
+      <PlayerGlobalWidget />
+    </teleport>
+  </div>
 </template>
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 import NavbarCustom from './presentation/widgets/navbar/NavbarCustom.vue';
 import PlayerGlobalWidget from './presentation/widgets/player/PlayerGlobalWidget.vue';
 import { useUserStore } from '@/stores/user';
 import { useArtistStore } from '@/stores/artist-store';
+import { usePlayerStore } from '@/stores/player-store';
+import { useMiddleClickAutoscroll } from '@/composables/useMiddleClickAutoscroll';
 
 const userStore = useUserStore();
 const artistStore = useArtistStore();
+const playerStore = usePlayerStore();
 const isMaximized = ref(false);
+
+useMiddleClickAutoscroll();
+
+watch(() => playerStore.playerMode, (mode) => {
+  if (mode === 'miniplayer') {
+    document.body.classList.add('is-miniplayer-active');
+  } else {
+    document.body.classList.remove('is-miniplayer-active');
+  }
+}, { immediate: true });
 
 const handleMaximized = () => {
   isMaximized.value = true;
@@ -44,6 +61,12 @@ onMounted(async () => {
     window.electron.ipcRenderer.on('leave-full-screen', handleUnmaximized);
   }
 
+  if (window.electron?.onMiniplayerState) {
+    window.electron.onMiniplayerState((isMini: boolean) => {
+      playerStore.playerMode = isMini ? 'miniplayer' : 'bottom-bar';
+    });
+  }
+
   // Escuchar cambios de pantalla completa estándar
   document.addEventListener('fullscreenchange', () => {
     if (document.fullscreenElement) {
@@ -60,6 +83,9 @@ onUnmounted(() => {
     window.electron.ipcRenderer.removeListener('window-unmaximized', handleUnmaximized);
     window.electron.ipcRenderer.removeListener('enter-full-screen', handleMaximized);
     window.electron.ipcRenderer.removeListener('leave-full-screen', handleUnmaximized);
+  }
+  if (window.electron?.removeMiniplayerStateListener) {
+    window.electron.removeMiniplayerStateListener();
   }
 });
 </script>

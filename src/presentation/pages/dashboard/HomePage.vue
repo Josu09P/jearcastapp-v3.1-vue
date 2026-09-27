@@ -10,7 +10,7 @@
                 </div>
                 <div class="artists-horizontal-scroll">
                     <div v-for="artist in favoriteArtists" :key="artist.channel_id" class="top-artist-item"
-                        @click="goToArtistMix(artist)">
+                        @click="playArtistSongs(artist)" :title="`Escuchar canciones de ${artist.artist_name}`">
                         <div class="top-artist-img-wrapper">
                             <img :src="artist.thumbnail || 'https://ui-avatars.com/api/?name=' + artist.artist_name"
                                 class="top-artist-img">
@@ -154,6 +154,7 @@ import Swal from 'sweetalert2'
 import MixWidget from '@/presentation/widgets/recomendations/MixWidget.vue'
 import DownloadButton from '@/presentation/widgets/DownloadButton.vue'
 import { youtubeScraperService } from '@/data/services/youtube/YouTubeScraperService'
+import { getArtistSongs } from '@/domain/usecases/artists/GetArtistSongsUseCase'
 
 const playerStore = usePlayerStore()
 const userStore = useUserStore()
@@ -162,20 +163,27 @@ const userDataStore = useUserDataStore()
 
 const favoriteArtists = computed(() => artistStore.favoriteArtists)
 
-const goToArtistMix = async (artist: any) => {
+const playArtistSongs = async (artist: any) => {
     loading.value = true
     try {
-        const videos = await youtubeScraperService.searchWithoutToken(`${artist.artist_name} mejores canciones`)
-        if (videos.length > 0) {
-            playerStore.setPlaylist(videos.map((v: any) => ({
-                video_id: v.videoId,
-                video_title: v.title,
-                video_thumbnail: v.thumbnail
-            })), 0)
-            showToast(`Reproduciendo mix de ${artist.artist_name}`)
+        const songs = await getArtistSongs(artist.artist_name, 15)
+        if (songs.length > 0) {
+            playerStore.setPlaylist(songs.map((s) => ({
+                video_id: s.videoId,
+                video_title: s.title,
+                video_thumbnail: s.thumbnail,
+                video_author: s.artist || artist.artist_name
+            })), 0, {
+                type: 'artist',
+                id: artist.channel_id,
+                name: artist.artist_name
+            }, true)
+            showToast(`Reproduciendo canciones de ${artist.artist_name}`)
+        } else {
+            showToast(`No se encontraron canciones individuales de ${artist.artist_name}`, true)
         }
     } catch (error) {
-        showToast('Error al cargar canciones', true)
+        showToast('Error al cargar canciones del artista', true)
     } finally {
         loading.value = false
     }

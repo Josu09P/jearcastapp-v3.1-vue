@@ -1,59 +1,38 @@
-import { youtubeScraperService } from '@/data/services/youtube/YouTubeScraperService'
+import { getArtistSongs } from '@/domain/usecases/artists/GetArtistSongsUseCase'
 import type { MixModel, MixSongModel, ArtistAnalysis } from '@/domain/models/MixModel'
 
 export const createArtistMix = async (
   artistAnalysis: ArtistAnalysis,
 ): Promise<MixModel> => {
   try {
-    let allSongs = [...artistAnalysis.songs]
+    let allSongs: MixSongModel[] = [...artistAnalysis.songs]
 
-    // ✅ Uso de Scraping Ético: No requiere tokens ni API Key
-    // Solo buscar más canciones si tenemos menos de 8
-    if (artistAnalysis.songs.length < 8) {
-      // ✅ Búsqueda optimizada: Evitamos la palabra "mix" para que no traiga listas de 1 hora
-      // Usamos términos que sugieren canciones individuales oficiales.
-      const query = `${artistAnalysis.name} official audio top songs`
-      const searchResults = await youtubeScraperService.searchWithoutToken(query)
-      
+    // Si tenemos menos de 10 canciones del artista en favoritos, complementar con sus pistas de estudio individuales
+    if (artistAnalysis.songs.length < 10) {
+      const needed = 15 - artistAnalysis.songs.length
+      const artistTracks = await getArtistSongs(artistAnalysis.name, Math.max(needed, 10))
+
       const existingIds = new Set(artistAnalysis.songs.map((s) => s.videoId))
-      
-      const newSongs = searchResults
-        .filter((song: any) => {
-          const title = song.title.toLowerCase()
-          const author = song.author.toLowerCase()
-          const artistName = artistAnalysis.name.toLowerCase()
-
-          // ❌ FILTRO DE RECOPILATORIOS: Evitar videos que sean compilaciones largas
-          const isCompilation = title.includes('mix') || 
-                                title.includes('completo') || 
-                                title.includes('álbum') || 
-                                title.includes('album') || 
-                                title.includes('best of') ||
-                                title.includes('grandes éxitos') ||
-                                title.includes('sus mejores') ||
-                                title.includes('compilation')
-
-          // 🔍 VALIDACIÓN DE AUTOR: Intentar que el autor del video coincida o contenga el nombre del artista
-          const isOfficialSource = author.includes(artistName) || artistName.includes(author)
-
-          return !existingIds.has(song.videoId) && !isCompilation && (isOfficialSource || artistAnalysis.songs.length < 3)
-        })
-        .map((song: any) => ({
+      const newSongs: MixSongModel[] = artistTracks
+        .filter((song) => !existingIds.has(song.videoId))
+        .map((song) => ({
           videoId: song.videoId,
           title: song.title,
           thumbnail: song.thumbnail,
-          artist: song.author
+          artist: artistAnalysis.name
         }))
-        
+
       allSongs = [...artistAnalysis.songs, ...newSongs]
     }
 
-    const limitedSongs = allSongs.slice(0, 10)
+    const limitedSongs = allSongs.slice(0, 15)
 
     return {
-      id: `mix_${artistAnalysis.name}_${Date.now()}`,
-      name: `${artistAnalysis.name} Mix`,
-      description: `${artistAnalysis.count} canciones en favoritos`,
+      id: `mix_${artistAnalysis.name.replace(/\s+/g, '_')}_${Date.now()}`,
+      name: `Mix de ${artistAnalysis.name}`,
+      description: artistAnalysis.count > 0 
+        ? `${artistAnalysis.count} en favoritos y canciones recomendadas`
+        : `Lo mejor de ${artistAnalysis.name}`,
       cover: artistAnalysis.songs[0]?.thumbnail || (limitedSongs[0]?.thumbnail as string) || '',
       artist: artistAnalysis.name,
       songs: limitedSongs,

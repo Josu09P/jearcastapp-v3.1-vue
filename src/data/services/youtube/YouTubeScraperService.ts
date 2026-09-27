@@ -9,6 +9,7 @@ export interface ScrapedVideo {
   thumbnail: string
   author: string
   duration?: string
+  durationSeconds?: number
   views?: string
   url?: string
 }

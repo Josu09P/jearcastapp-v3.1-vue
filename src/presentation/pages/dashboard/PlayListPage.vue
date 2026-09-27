@@ -67,10 +67,53 @@ const setupObserver = () => {
 const LOCAL_PLAYLIST_KEY = 'jearcast_selectedPlaylistId'
 const PLAYLIST_IMAGES_KEY = 'jearcast_playlist_images'
 
+// Slider dinámico de portadas por cada tarjeta de playlist
+const cardSliderIndices = ref<Record<string, number>>({})
+let cardSliderInterval: any = null
+
+const startCardSlider = () => {
+    if (cardSliderInterval) clearInterval(cardSliderInterval)
+    cardSliderInterval = setInterval(() => {
+        const thumbsMap = userDataStore.playlistThumbnails
+        if (!thumbsMap) return
+        for (const playlistId in thumbsMap) {
+            // Solo rotar si no tiene imagen fija de cámara
+            if (!playlistImages.value[playlistId]) {
+                const list = thumbsMap[playlistId]
+                if (list && list.length > 1) {
+                    const current = cardSliderIndices.value[playlistId] || 0
+                    cardSliderIndices.value[playlistId] = (current + 1) % list.length
+                }
+            }
+        }
+    }, 3500)
+}
+
+const getPlaylistCover = (playlistId: string): string => {
+    if (playlistId && playlistImages.value[playlistId]) {
+        return playlistImages.value[playlistId]
+    }
+    const thumbs = userDataStore.playlistThumbnails[playlistId]
+    if (thumbs && thumbs.length > 0) {
+        const idx = cardSliderIndices.value[playlistId] || 0
+        return thumbs[idx % thumbs.length]
+    }
+    return IMAGE_PLAYLIST
+}
+
 // Determinar la imagen de la playlist actual para el Hero
 const currentPlaylistImage = computed(() => {
-    if (currentPlaylistId.value && playlistImages.value[currentPlaylistId.value]) {
-        return playlistImages.value[currentPlaylistId.value]
+    if (currentPlaylistId.value) {
+        if (playlistImages.value[currentPlaylistId.value]) {
+            return playlistImages.value[currentPlaylistId.value]
+        }
+        const thumbs = userDataStore.playlistThumbnails[currentPlaylistId.value]
+        if (thumbs && thumbs.length > 0) {
+            return thumbs[0]
+        }
+        if (songs.value.length > 0 && songs.value[0].video_thumbnail) {
+            return songs.value[0].video_thumbnail
+        }
     }
     return musicBg
 })
@@ -379,6 +422,7 @@ watch(songs, async (newSongs) => {
 // ==================== LIFECYCLE ====================
 onMounted(() => {
     loadPlaylistImages()
+    startCardSlider()
 
     const savedId = localStorage.getItem(LOCAL_PLAYLIST_KEY)
     if (savedId) {
@@ -392,6 +436,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+    if (cardSliderInterval) clearInterval(cardSliderInterval)
     if (observer) observer.disconnect()
 })
 </script>
@@ -400,8 +445,8 @@ onUnmounted(() => {
     <DashboardLayout>
         <div class="container-fluid px-0">
             <!-- HERO SECTION CON IMAGEN DE FONDO DINÁMICA -->
-            <div v-if="!showAllPlaylists" class="playlist-hero mb-4"
-                :style="{ backgroundImage: `url(${currentPlaylistImage})` }">
+            <div v-if="!showAllPlaylists" class="playlist-hero mb-4">
+                <div class="hero-bg-layer" :style="{ backgroundImage: `url(${currentPlaylistImage})` }"></div>
                 <div class="hero-overlay">
                     <div class="hero-content px-4">
                         <!--<span class="badge bg-accent mb-2">Tu Playlist</span>-->
@@ -409,12 +454,12 @@ onUnmounted(() => {
                         <div class="d-flex align-items-center gap-3 text-white-50">
                             <span><i class="bi bi-music-note-beamed me-1"></i> {{ songs.length }} Canciones</span>
                         </div>
-                        <div class="mt-4 d-flex gap-2">
+                        <div class="mt-4 d-flex align-items-center gap-2">
                             <button @click="playAll" class="btn btn-accent rounded-pill px-4 py-2 fw-semibold">
                                 <i class="bi bi-play-fill me-1"></i> Reproducir
                             </button>
-                            <button @click="showAllPlaylistsView" class="btn btn-outline-light rounded-pill px-4">
-                                <i class="bi bi-arrow-left me-1"></i> Volver
+                            <button @click="showAllPlaylistsView" class="btn-hero-back" title="Volver a playlists">
+                                <i class="bi bi-arrow-left fs-5"></i>
                             </button>
                         </div>
                     </div>
@@ -430,18 +475,17 @@ onUnmounted(() => {
                 <div class="d-flex gap-2">
                     <!-- Selector de orden (solo visible cuando hay canciones) -->
                     <button v-if="songs.length > 0" @click="toggleSortOption"
-                        class="btn btn-dark btn-sm rounded-pill px-3 filter-button-playlists">
-                        <i :class="sortOption === 'recent' ? 'bi bi-clock-history' : 'bi bi-sort-alpha-down'"
-                            class="me-1" />
-                        {{ sortOption === 'recent' ? 'Recientes' : 'A-Z' }}
+                        class="btn-modern-action">
+                        <i :class="sortOption === 'recent' ? 'bi bi-clock-history' : 'bi bi-sort-alpha-down'"></i>
+                        <span>{{ sortOption === 'recent' ? 'Recientes' : 'A-Z' }}</span>
                     </button>
 
                     <!-- Botón recargar playlists -->
                     <button @click="refreshPlaylists" :disabled="loadingPlaylists"
-                        class="btn btn-outline-light btn-sm rounded-pill px-3 refresh-button-playlists"
-                        title="Refrescar">
-                        <span v-if="loadingPlaylists" class="spinner-border spinner-border-sm me-2"></span>
-                        <i v-else class="bi bi-arrow-clockwise"></i>
+                        class="btn-modern-action"
+                        title="Sincronizar tus playlists">
+                        <i :class="['bi bi-arrow-clockwise', loadingPlaylists ? 'spin-animation' : '']"></i>
+                        <span>Sincronizar</span>
                     </button>
                 </div>
             </div>
@@ -449,11 +493,17 @@ onUnmounted(() => {
             <!-- SECCIÓN DE PLAYLISTS - SOLO si showAllPlaylists es true -->
             <div v-if="showAllPlaylists" class="playlists-grid px-3 mb-4">
                 <div v-for="playlist in playlists" :key="playlist.id" class="playlist-card-wrapper">
-                    <div class="playlist-card" :class="{ 'active': currentPlaylistId === playlist.id }">
+                    <!-- 3 Capas traseras apiladas visibles al ingresar (carta sobre carta) -->
+                    <div class="playlist-card-layer playlist-card-layer-3"></div>
+                    <div class="playlist-card-layer playlist-card-layer-2"></div>
+                    <div class="playlist-card-layer playlist-card-layer-1"></div>
+
+                    <div class="playlist-card" :class="{ 'active': currentPlaylistId === playlist.id }"
+                        @click="loadSongs(playlist.id!, playlist.name)">
 
                         <!-- Imagen de fondo con overlay -->
-                        <div class="playlist-image-wrapper" @click="loadSongs(playlist.id!, playlist.name)">
-                            <img :src="playlistImages[playlist.id!] || IMAGE_PLAYLIST" :alt="playlist.name"
+                        <div class="playlist-image-wrapper">
+                            <img :src="getPlaylistCover(playlist.id!)" :alt="playlist.name"
                                 class="playlist-image" />
 
                             <div class="playlist-overlay">
@@ -468,20 +518,16 @@ onUnmounted(() => {
                                 {{ playlistSongCounts[playlist.id!] || 0 }}
                             </span>
 
-                            <!-- Botón para cambiar imagen -->
-                            <button class="change-image-btn" @click.stop="selectPlaylistImage(playlist.id!)">
-                                <i class="bi bi-camera"></i>
-                            </button>
-
                             <!-- Botón eliminar playlist -->
-                            <button class="delete-playlist-btn" @click.stop="confirmDeletePlaylist(playlist.id!)">
+                            <button class="delete-playlist-btn" @click.stop="confirmDeletePlaylist(playlist.id!)" title="Eliminar playlist">
                                 <i class="bi bi-trash3"></i>
                             </button>
                         </div>
 
-                        <!-- Información de la playlist -->
+                        <!-- Información de la playlist (exactamente igual que en topics) -->
                         <div class="playlist-info">
-                            <h6 class="playlist-name">{{ playlist.name }}</h6>
+                            <h6 class="playlist-name" :title="playlist.name">{{ playlist.name }}</h6>
+                            <p class="playlist-description">{{ playlistSongCounts[playlist.id!] || 0 }} {{ (playlistSongCounts[playlist.id!] || 0) === 1 ? 'canción' : 'canciones' }}</p>
                         </div>
                     </div>
                 </div>
@@ -588,6 +634,254 @@ onUnmounted(() => {
 <style scoped>
 @import url('@/assets/css/playlist-styles.css');
 
+:deep(.playlists-grid),
+.playlists-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)) !important;
+    gap: 1.5rem 1.25rem !important;
+}
+
+@media (min-width: 768px) {
+    :deep(.playlists-grid),
+    .playlists-grid {
+        grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)) !important;
+    }
+}
+
+/* ==================== CAPAS TRASERAS APILADAS (CARTA SOBRE CARTA) ==================== */
+.playlist-card-wrapper {
+    position: relative;
+    padding-top: 14px;
+    padding-right: 14px;
+    cursor: pointer;
+    user-select: none;
+    z-index: 1;
+}
+
+.playlist-card-wrapper:hover {
+    z-index: 15;
+}
+
+.playlist-card-layer {
+    position: absolute;
+    border-radius: 0.8rem;
+    width: calc(100% - 14px);
+    aspect-ratio: 1 / 1;
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Capa 3: La más profunda (4ta carta) - Visible de inmediato al ingresar */
+.playlist-card-layer-3 {
+    top: 0px;
+    right: 0px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    z-index: 0;
+    transform: scale(0.93);
+}
+
+/* Capa 2: Intermedia (3ra carta) - Visible de inmediato al ingresar */
+.playlist-card-layer-2 {
+    top: 6px;
+    right: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    z-index: 1;
+    transform: scale(0.96);
+}
+
+/* Capa 1: Justo detrás de la principal (2da carta) - Visible de inmediato al ingresar */
+.playlist-card-layer-1 {
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 2;
+    transform: scale(0.985);
+}
+
+/* Hover: Capas se abren suavemente sin desarmar las filas */
+.playlist-card-wrapper:hover .playlist-card-layer-3 {
+    top: -3px;
+    right: -3px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.playlist-card-wrapper:hover .playlist-card-layer-2 {
+    top: 3px;
+    right: 3px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.playlist-card-wrapper:hover .playlist-card-layer-1 {
+    top: 8px;
+    right: 8px;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.playlist-card {
+    cursor: pointer;
+    background: transparent;
+    border-radius: 0.8rem;
+    position: relative;
+    z-index: 3;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+}
+
+.playlist-card.active .playlist-image-wrapper {
+    box-shadow: 0 0 0 2px var(--accent-color);
+}
+
+/* ==================== IMAGEN DE LA PLAYLIST ==================== */
+.playlist-image-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1/1;
+    border-radius: 0.8rem;
+    background: #1a1a1a;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2;
+    overflow: hidden;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+}
+
+.playlist-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 0.8rem;
+    filter: none;
+    transition: transform 0.4s ease;
+}
+
+/* ZOOM EN LA IMAGEN AL PASAR EL MOUSE (IGUAL QUE EN TOPICS) */
+.playlist-card:hover .playlist-image {
+    transform: scale(1.08);
+}
+
+/* ==================== OVERLAY CON BLUR Y BOTÓN PLAY ==================== */
+.playlist-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    opacity: 0;
+    border-radius: 0.8rem !important;
+    transition: opacity 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.playlist-card:hover .playlist-overlay {
+    opacity: 1;
+}
+
+.play-button {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: var(--accent-color);
+    color: white;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.play-button:hover {
+    transform: scale(1.1);
+    color: #ffffff;
+}
+
+/* ==================== BADGE DE CONTEO ==================== */
+.song-count-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    z-index: 2;
+}
+
+.delete-playlist-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 3;
+    opacity: 0;
+}
+
+.playlist-card:hover .delete-playlist-btn {
+    opacity: 1;
+}
+
+.delete-playlist-btn:hover {
+    background: rgba(220, 53, 69, 0.85);
+    border-color: rgba(220, 53, 69, 1);
+    color: #ffffff;
+    transform: scale(1.1);
+}
+
+/* ==================== INFORMACIÓN DE LA PLAYLIST (IGUAL QUE EN TOPICS) ==================== */
+.playlist-info {
+    padding: 0 0.25rem;
+}
+
+.playlist-name {
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.playlist-description {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0;
+}
+
 .btn-load-more {
     border: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.03);
@@ -602,31 +896,87 @@ onUnmounted(() => {
     transform: translateY(-2px);
 }
 
+.btn-hero-back {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1.5px solid transparent;
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    outline: none;
+    padding: 0;
+}
+
+.btn-hero-back:hover {
+    background: rgba(255, 255, 255, 0.28);
+    border-color: rgba(255, 255, 255, 0.75);
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35), 0 0 10px rgba(255, 255, 255, 0.25);
+}
+
+.btn-hero-back:active {
+    transform: translateY(0);
+    background: rgba(255, 255, 255, 0.2);
+}
+
 /* ==================== HERO SECTION (music.jpg) ==================== */
 .playlist-hero {
-    height: 300px;
-    background-size: cover;
-    background-position: center;
+    height: 280px;
     position: relative;
     overflow: hidden;
     margin-top: -1.5rem;
     transform: translateZ(0);
+    mask-image: linear-gradient(to bottom, black 0%, black 65%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 65%, transparent 100%);
+}
+
+.hero-bg-layer {
+    position: absolute;
+    inset: -12px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(14px);
+    transform: scale(1.06);
+    mask-image: linear-gradient(to bottom, black 25%, rgba(0, 0, 0, 0.45) 55%, transparent 92%);
+    -webkit-mask-image: linear-gradient(to bottom, black 25%, rgba(0, 0, 0, 0.45) 55%, transparent 92%);
+    z-index: 0;
 }
 
 .hero-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: relative;
     width: 100%;
     height: 100%;
-    /* Aplicando el mismo efecto blur que el HeaderLeft (modo celular) */
-    background: rgba(0, 0, 0, 0.4); 
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.45) 50%, rgba(15, 15, 15, 0.95) 85%, transparent 100%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     display: flex;
-    align-items: flex-end;
-    padding-bottom: 2rem;
+    align-items: center;
+    padding-top: 1rem;
     z-index: 1;
+}
+
+.hero-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: 
+        linear-gradient(to bottom, transparent 30%, rgba(15, 15, 15, 0.85) 75%, transparent 100%),
+        linear-gradient(to right, rgba(15, 15, 15, 0.8) 0%, transparent 12%, transparent 88%, rgba(15, 15, 15, 0.8) 100%);
+    z-index: 1;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 3;
 }
 
 .bg-accent {

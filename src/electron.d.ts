@@ -18,6 +18,7 @@ declare global {
       }) => Promise<any>
       cancelDownload: (downloadId: string) => Promise<boolean>
       getDownloadedFiles: () => Promise<any>
+      getVideoSubtitles?: (videoId: string) => Promise<any>
       onDownloadProgress: (callback: (data: any) => void) => void
       removeDownloadProgressListener: () => void
 
@@ -25,6 +26,12 @@ declare global {
       minimize: () => void
       maximize: () => void
       close: () => void
+      enterMiniplayer?: () => Promise<boolean>
+      leaveMiniplayer?: () => Promise<boolean>
+      toggleMiniplayer?: () => Promise<boolean>
+      isMiniplayer?: () => Promise<boolean>
+      onMiniplayerState?: (callback: (isMini: boolean) => void) => void
+      removeMiniplayerStateListener?: () => void
 
       // Teclas multimedia
       onMediaKey: (callback: (key: string) => void) => void

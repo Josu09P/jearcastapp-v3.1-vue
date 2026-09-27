@@ -29,6 +29,7 @@ export const animations: AnimationOption[] = [
 export const useAnimationStore = defineStore('animation', {
   state: () => ({
     currentAnimationId: localStorage.getItem('selectedAnimation') || 'default',
+    replaceCoverWithAnimation: localStorage.getItem('replaceCoverWithAnimation') === 'true',
   }),
   actions: {
     setAnimation(id: string) {
@@ -36,6 +37,13 @@ export const useAnimationStore = defineStore('animation', {
         this.currentAnimationId = id
         localStorage.setItem('selectedAnimation', id)
       }
+    },
+    setReplaceCoverWithAnimation(val: boolean) {
+      this.replaceCoverWithAnimation = val
+      localStorage.setItem('replaceCoverWithAnimation', val.toString())
+    },
+    toggleReplaceCoverWithAnimation() {
+      this.setReplaceCoverWithAnimation(!this.replaceCoverWithAnimation)
     },
     resetToDefault() {
       this.currentAnimationId = 'default'

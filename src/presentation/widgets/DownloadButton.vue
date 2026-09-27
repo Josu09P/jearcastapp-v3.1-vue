@@ -87,7 +87,7 @@ const showToast = (text: string, isError: boolean = false) => {
         duration: 3000,
         gravity: 'top',
         position: 'right',
-        className: isError ? 'toast-glass bg-danger' : 'toast-glass'
+        className: isError ? 'toast-glass toast-error' : 'toast-glass'
     }).showToast()
 }
 

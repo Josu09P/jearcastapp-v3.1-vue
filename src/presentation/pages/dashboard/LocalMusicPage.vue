@@ -20,10 +20,69 @@ const showToast = (text: string, isError: boolean = false) => {
     }).showToast()
 }
 
+const resolveTrackDuration = (filePath: string): Promise<number> => {
+    return new Promise((resolve) => {
+        try {
+            const audio = new Audio()
+            audio.preload = 'metadata'
+            audio.src = `local-media://get?path=${encodeURIComponent(filePath)}`
+            
+            const cleanup = () => {
+                audio.onloadedmetadata = null
+                audio.onerror = null
+                audio.removeAttribute('src')
+                audio.load()
+            }
+
+            audio.onloadedmetadata = () => {
+                const dur = Math.round(audio.duration) || 0
+                cleanup()
+                resolve(dur)
+            }
+            audio.onerror = () => {
+                cleanup()
+                resolve(0)
+            }
+            setTimeout(() => {
+                cleanup()
+                resolve(0)
+            }, 3000)
+        } catch (e) {
+            resolve(0)
+        }
+    })
+}
+
+const resolveDurations = async () => {
+    for (const track of localMusicStore.tracks) {
+        if (!track.duration || track.duration === 0) {
+            const dur = await resolveTrackDuration(track.path)
+            if (dur > 0) {
+                track.duration = dur
+            }
+        }
+    }
+}
+
+const formatDuration = (seconds?: number): string => {
+    if (!seconds || seconds <= 0) return '—'
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+onMounted(async () => {
+    if (localMusicStore.musicFolder && localMusicStore.tracks.length === 0) {
+        await localMusicStore.rescan()
+    }
+    resolveDurations()
+})
+
 const selectFolder = async () => {
     const success = await localMusicStore.selectFolder()
     if (success) {
         showToast(`✅ Carpeta seleccionada: ${localMusicStore.musicFolder}`)
+        resolveDurations()
     } else {
         showToast('❌ Error al seleccionar la carpeta', true)
     }
@@ -32,6 +91,7 @@ const selectFolder = async () => {
 const rescan = async () => {
     await localMusicStore.rescan()
     showToast(`Escaneo completado: ${localMusicStore.totalTracks} canciones encontradas`)
+    resolveDurations()
 }
 
 const clearFolder = async () => {
@@ -140,13 +200,17 @@ const playTrack = (index: number) => {
                             <span class="number">{{ index + 1 }}</span>
                             <i class="bi bi-play-fill play-icon" @click.stop="playTrack(index)"></i>
                         </div>
-                        <div class="col-title">
-                            <i class="bi bi-file-music"></i>
-                            <span>{{ track.title }}</span>
+                        <div class="col-title d-flex align-items-center gap-3">
+                            <div class="track-thumb-wrapper flex-shrink-0">
+                                <img v-if="track.cover" :src="track.cover" class="track-thumb-img" :alt="track.title" />
+                                <div v-else class="track-thumb-placeholder">
+                                    <i class="bi bi-disc-fill"></i>
+                                </div>
+                            </div>
+                            <span class="track-title-text text-truncate">{{ track.title }}</span>
                         </div>
                         <div class="col-artist">{{ track.artist || '—' }}</div>
-                        <div class="col-duration">{{ track.duration ? `${Math.floor(track.duration /
-                            60)}:${(track.duration % 60).toString().padStart(2, '0')}` : '—' }}</div>
+                        <div class="col-duration">{{ formatDuration(track.duration) }}</div>
                         <div class="col-actions">
                             <button @click.stop="playTrack(index)" class="action-btn" title="Reproducir">
                                 <i class="bi bi-play-circle"></i>
@@ -331,16 +395,59 @@ const playTrack = (index: number) => {
 .col-title {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
+    min-width: 0;
 }
 
-.col-title i {
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 1rem;
+.track-thumb-wrapper {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.col-title span {
+.track-item:hover .track-thumb-wrapper {
+    transform: scale(1.05);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
+}
+
+.track-thumb-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.track-thumb-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03));
+}
+
+.track-thumb-placeholder i {
+    font-size: 1.35rem;
+    color: rgba(255, 255, 255, 0.65);
+    transition: transform 0.3s ease;
+}
+
+.track-item:hover .track-thumb-placeholder i {
+    transform: rotate(25deg);
+    color: var(--accent-color, #1db954);
+}
+
+.track-title-text {
     color: white;
+    font-weight: 500;
+    font-size: 0.92rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

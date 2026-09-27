@@ -54,54 +54,59 @@ export const useApiKeyManager = () => {
   }
 
   const initialize = async (): Promise<boolean> => {
-    // 1. Probar key principal de localStorage
+    // 1. Cargar desde Firestore primero (múltiples keys gestionadas)
+    const hasFirestoreKeys = await loadApiKeysFromFirestore()
+    if (hasFirestoreKeys && apiKeys.value.length > 0) {
+      if (activeApiKeys.value.length === 0) {
+        console.log('[AUTO-ACTIVATE] Todas las API keys estaban inactivas. Activando automáticamente la primera key.')
+        const firstKey = apiKeys.value[0]
+        if (userStore.id) {
+          try {
+            await toggleApiKeyStatus(userStore.id, firstKey)
+            await loadApiKeysFromFirestore()
+          } catch (e) {
+            console.error('Error al auto-activar primera key:', e)
+          }
+        }
+      }
+
+      if (activeApiKeys.value.length > 0) {
+        usingFirestoreKeys.value = true
+        currentApiKeyIndex.value = 0
+        saveApiKeyToLocalStorage(activeApiKeys.value[0].key)
+        console.log('[OK] API Key de Firestore lista para usar (sin gastar cuota en pruebas)')
+        return true
+      }
+    }
+
+    // 2. Usar key de localStorage si existe
     if (userStore.apikeyYoutube) {
-      const works = await testApiKey(userStore.apikeyYoutube)
-      if (works) {
-        console.log('[OK] Usando API Key principal de localStorage')
-        usingFirestoreKeys.value = false
-        currentApiKeyIndex.value = 0
-        apiKeys.value = [
-          {
-            key: userStore.apikeyYoutube,
-            service: 'youtube',
-            isActive: true,
-            created_at: new Date(),
-          },
-        ]
-        return true
-      }
-      console.log('[WARN] Key principal falló, buscando en Firestore...')
+      console.log('[OK] Usando API Key de configuración de usuario')
+      usingFirestoreKeys.value = false
+      currentApiKeyIndex.value = 0
+      apiKeys.value = [
+        {
+          key: userStore.apikeyYoutube,
+          service: 'youtube',
+          isActive: true,
+          created_at: new Date(),
+        },
+      ]
+      return true
     }
 
-    // 2. Cargar desde Firestore
-    const hasKeys = await loadApiKeysFromFirestore()
-    if (hasKeys && activeApiKeys.value.length > 0) {
-      usingFirestoreKeys.value = true
-      // Probar primera key
-      const firstKey = activeApiKeys.value[0]
-      const works = await testApiKey(firstKey.key)
-      if (works) {
-        saveApiKeyToLocalStorage(firstKey.key)
-        currentApiKeyIndex.value = 0
-        console.log('[OK] Key de Firestore funciona, guardada en localStorage')
-        return true
-      } else {
-        await toggleApiKeyStatus(userStore.id!, firstKey)
-        await loadApiKeysFromFirestore()
-      }
-    }
-
-    return activeApiKeys.value.length > 0
+    currentApiKeyIndex.value = -1
+    return false
   }
 
-  const switchToNextKey = async () => {
+  const switchToNextKey = async (): Promise<boolean> => {
     quotaExceeded.value = true
 
     if (usingFirestoreKeys.value) {
       const currentKey = activeApiKeys.value[currentApiKeyIndex.value]
-      if (currentKey) {
-        await toggleApiKeyStatus(userStore.id!, currentKey)
+      if (currentKey && userStore.id) {
+        console.warn(`[FAILOVER] Desactivando key agotada: ${currentKey.key.slice(-4)}`)
+        await toggleApiKeyStatus(userStore.id, currentKey)
       }
       await loadApiKeysFromFirestore()
 
@@ -109,55 +114,68 @@ export const useApiKeyManager = () => {
         currentApiKeyIndex.value = 0
         const newKey = activeApiKeys.value[0]
         saveApiKeyToLocalStorage(newKey.key)
-        console.log(`[RELOAD] Cambiando a nueva API Key`)
+        console.log(`[RELOAD] Conmutando a la siguiente API Key activa`)
+        return true
       } else {
         currentApiKeyIndex.value = -1
         usingFirestoreKeys.value = false
-        console.log('[ERROR] No hay más keys disponibles')
+        console.warn('[FAILOVER] Se agotaron todas las API Keys de Firestore')
+        return false
       }
     } else {
-      console.log('[RELOAD] Key principal falló, cambiando a Firestore...')
+      console.log('[RELOAD] Key local agotada, buscando alternativas en Firestore...')
       const hasKeys = await loadApiKeysFromFirestore()
       if (hasKeys && activeApiKeys.value.length > 0) {
         usingFirestoreKeys.value = true
         currentApiKeyIndex.value = 0
         const newKey = activeApiKeys.value[0]
         saveApiKeyToLocalStorage(newKey.key)
-        console.log(`[RELOAD] Cambiando a key de respaldo`)
+        console.log(`[RELOAD] Conmutado a key de respaldo de Firestore`)
+        return true
       } else {
         currentApiKeyIndex.value = -1
-        console.log('[ERROR] No hay keys disponibles')
+        console.warn('[FAILOVER] No hay más API Keys disponibles')
+        return false
       }
     }
-
-    setTimeout(() => {
-      quotaExceeded.value = false
-    }, 3000)
   }
 
   const getCurrentKey = (): string | null => {
     if (usingFirestoreKeys.value && currentApiKeyIndex.value >= 0) {
-      return activeApiKeys.value[currentApiKeyIndex.value]?.key
+      return activeApiKeys.value[currentApiKeyIndex.value]?.key || null
     }
-    return userStore.apikeyYoutube
+    return userStore.apikeyYoutube || null
   }
 
-  const executeWithFailover = async <T>(fn: (key: string) => Promise<T>): Promise<T> => {
+  const executeWithFailover = async <T>(fn: (key: string) => Promise<T>): Promise<T | null> => {
     if (currentApiKeyIndex.value === -1) {
       const initialized = await initialize()
       if (!initialized) {
-        throw new Error('No hay API Keys disponibles')
+        return null // Sin keys disponibles, permitir fallback a YTDLP
       }
     }
 
+    const currentKey = getCurrentKey()
+    if (!currentKey) return null
+
     try {
-      const currentKey = getCurrentKey()
-      if (!currentKey) throw new Error('No hay API Key disponible')
       return await fn(currentKey)
     } catch (error: any) {
-      if (error.message?.includes('quota') || error.message?.includes('403')) {
-        await switchToNextKey()
-        return executeWithFailover(fn)
+      const errorMsg = error.message?.toLowerCase() || ''
+      const isQuotaError =
+        errorMsg.includes('quota') ||
+        errorMsg.includes('403') ||
+        errorMsg.includes('exceeded')
+
+      if (isQuotaError) {
+        console.warn(`[API Key Manager] Cuota agotada en key actual. Conmutando a la siguiente...`)
+        const hasNext = await switchToNextKey()
+        if (hasNext) {
+          return executeWithFailover(fn)
+        } else {
+          console.warn(`[API Key Manager] Todas las API Keys agotaron su cuota. Activando respaldo YTDLP.`)
+          return null
+        }
       }
       throw error
     }

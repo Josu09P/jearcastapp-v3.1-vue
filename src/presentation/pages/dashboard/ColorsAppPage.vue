@@ -84,6 +84,11 @@ function resetAnimation() {
     animationStore.resetToDefault()
     window.dispatchEvent(new CustomEvent('reload-animation'))
 }
+
+function toggleCoverReplace() {
+    animationStore.toggleReplaceCoverWithAnimation()
+    window.dispatchEvent(new CustomEvent('reload-animation'))
+}
 </script>
 
 <template>
@@ -124,13 +129,35 @@ function resetAnimation() {
                 <header class="section-header">
                     <div class="header-content">
                         <h4 class="title">Reproductor</h4>
-                        <p class="subtitle">Animación de reproducción en modo mini</p>
+                        <p class="subtitle">Animación de reproducción en modo mini y local</p>
                     </div>
                     <button class="reset-button" @click="resetAnimation" v-if="selectedAnimation !== 'default'">
                         <i class="bi bi-arrow-counterclockwise"></i>
                         Restaurar
                     </button>
                 </header>
+
+                <!-- Control para activar o desactivar reemplazo de portada por animación -->
+                <div class="animation-toggle-card mb-4 p-3 d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="toggle-icon-wrap">
+                            <i class="bi bi-disc" style="color: var(--accent-color, #1db954);"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-white mb-1 fw-semibold">Reemplazar portada por animación (Modo Mini y Local)</h6>
+                            <p class="text-white-50 mb-0 small">Muestra la animación interactiva en el reproductor flotante mini y en pantalla completa para música local</p>
+                        </div>
+                    </div>
+                    <div class="form-check form-switch m-0 fs-4">
+                        <input 
+                            class="form-check-input custom-switch cursor-pointer" 
+                            type="checkbox" 
+                            id="replaceCoverSwitch"
+                            :checked="animationStore.replaceCoverWithAnimation"
+                            @change="toggleCoverReplace"
+                        />
+                    </div>
+                </div>
 
                 <div class="animation-grid">
                     <div v-for="anim in animations" :key="anim.id" class="animation-card"
@@ -310,6 +337,35 @@ function resetAnimation() {
     padding: 0.5rem;
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.02);
+}
+
+.animation-toggle-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    backdrop-filter: blur(12px);
+    transition: all 0.25s ease;
+}
+
+.animation-toggle-card:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.toggle-icon-wrap {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+}
+
+.custom-switch:checked {
+    background-color: var(--accent-color, #1db954) !important;
+    border-color: var(--accent-color, #1db954) !important;
 }
 
 /* Responsive */

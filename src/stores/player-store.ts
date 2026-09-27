@@ -11,9 +11,12 @@ export type Track = {
 }
 
 export type PlaybackContext = {
-  type: 'favorites' | 'playlist' | 'recommended'
+  type: 'favorites' | 'playlist' | 'recommended' | 'artist'
   id?: string
+  name?: string
 }
+
+export type PlayerDisplayMode = 'fullscreen' | 'bottom-bar' | 'miniplayer'
 
 export const usePlayerStore = defineStore('player', {
   state: () => ({
@@ -22,10 +25,12 @@ export const usePlayerStore = defineStore('player', {
     isPlaying: false,
     isShuffling: false,
     isFullScreen: false,
+    playerMode: 'fullscreen' as PlayerDisplayMode,
     shuffleHistory: [] as number[], // Historial de índices reproducidos
     shuffleQueue: [] as number[], // Cola de reproducción aleatoria
     playbackContext: null as PlaybackContext | null,
     hasMoreInContext: false,
+    volume: (typeof localStorage !== 'undefined' && localStorage.getItem('audio-volume') ? parseInt(localStorage.getItem('audio-volume')!, 10) : 100),
   }),
 
   getters: {
@@ -41,12 +46,20 @@ export const usePlayerStore = defineStore('player', {
       this.playbackContext = context
       this.hasMoreInContext = hasMore
       this.isPlaying = true
+      this.playerMode = 'fullscreen'
       this.isFullScreen = true
       this.resetShuffleQueue()
     },
 
     setHasMore(hasMore: boolean) {
       this.hasMoreInContext = hasMore
+    },
+
+    setVolume(val: number) {
+      this.volume = Math.max(0, Math.min(100, val))
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('audio-volume', this.volume.toString())
+      }
     },
 
     resetShuffleQueue() {
@@ -85,10 +98,53 @@ export const usePlayerStore = defineStore('player', {
 
     openFullScreen() {
       this.isFullScreen = true
+      this.playerMode = 'fullscreen'
+      if (typeof window !== 'undefined' && window.electron?.leaveMiniplayer) {
+        window.electron.leaveMiniplayer()
+      }
     },
 
     closeFullScreen() {
       this.isFullScreen = false
+      this.playerMode = 'bottom-bar'
+    },
+
+    setPlayerMode(mode: PlayerDisplayMode) {
+      this.playerMode = mode
+      this.isFullScreen = mode === 'fullscreen'
+      if (mode === 'miniplayer') {
+        if (typeof window !== 'undefined' && window.electron?.enterMiniplayer) {
+          window.electron.enterMiniplayer()
+        }
+      } else {
+        if (typeof window !== 'undefined' && window.electron?.leaveMiniplayer) {
+          window.electron.leaveMiniplayer()
+        }
+      }
+    },
+
+    enterMiniplayer() {
+      this.isFullScreen = false
+      this.playerMode = 'miniplayer'
+      if (typeof window !== 'undefined' && window.electron?.enterMiniplayer) {
+        window.electron.enterMiniplayer()
+      }
+    },
+
+    leaveMiniplayer() {
+      this.playerMode = 'bottom-bar'
+      this.isFullScreen = false
+      if (typeof window !== 'undefined' && window.electron?.leaveMiniplayer) {
+        window.electron.leaveMiniplayer()
+      }
+    },
+
+    toggleMiniplayer() {
+      if (this.playerMode === 'miniplayer') {
+        this.leaveMiniplayer()
+      } else {
+        this.enterMiniplayer()
+      }
     },
 
     playIndex(index: number) {

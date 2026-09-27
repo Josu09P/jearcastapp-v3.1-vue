@@ -33,20 +33,24 @@ export const useYouTubePlayer = (playerContainer: Ref<HTMLDivElement | null>) =>
     }
 
     const deactivateBlur = () => {
-        // Solo desactivar si no estamos en la fase final de la canción
-        const timeLeft = duration.value - currentTime.value
-        if (timeLeft > (ENDING_BLUR_OFFSET / 1000) + 1) {
-            isVeilBlurActive.value = false
+        // Solo mantener blur si estamos comprobadamente en los últimos 20 segundos de una pista conocida (>30s)
+        if (duration.value > 30) {
+            const timeLeft = duration.value - currentTime.value
+            if (timeLeft <= (ENDING_BLUR_OFFSET / 1000) && timeLeft > 0) {
+                isVeilBlurActive.value = true
+                clearBlurTimers()
+                return
+            }
         }
+        isVeilBlurActive.value = false
         clearBlurTimers()
     }
 
-    const scheduleBlurRemoval = () => {
+    const scheduleBlurRemoval = (delayMs: number = BLUR_DURATION) => {
         clearBlurTimers()
-        // El conteo solo debe ser efectivo si el video está realmente reproduciéndose
         blurTimer = window.setTimeout(() => {
             deactivateBlur()
-        }, BLUR_DURATION)
+        }, delayMs)
     }
 
     const loadYouTubeAPI = (): Promise<void> => new Promise((resolve) => {
@@ -58,11 +62,9 @@ export const useYouTubePlayer = (playerContainer: Ref<HTMLDivElement | null>) =>
     })
 
     const forceIframeResize = () => {
-        if (!playerContainer.value || !ytPlayer.value) return
-
         const applyResize = () => {
-            if (!playerContainer.value || !ytPlayer.value) return
-            const wrapper = playerContainer.value.parentElement
+            const wrapper = (document.querySelector('.video-wrapper.fullscreen') as HTMLElement) 
+                || (playerContainer.value ? playerContainer.value.closest('.video-wrapper') as HTMLElement : null)
             if (!wrapper) return
 
             const containerWidth = wrapper.offsetWidth
@@ -70,17 +72,23 @@ export const useYouTubePlayer = (playerContainer: Ref<HTMLDivElement | null>) =>
 
             if (containerWidth > 0 && containerHeight > 0) {
                 try {
-                    ytPlayer.value.setSize(containerWidth, containerHeight)
-                    const iframe = playerContainer.value.querySelector('iframe')
-                    if (iframe) {
-                        iframe.style.setProperty('width', '100%', 'important')
-                        iframe.style.setProperty('height', '100%', 'important')
-                        iframe.style.position = 'absolute'
-                        iframe.style.top = '0'
-                        iframe.style.left = '0'
+                    if (ytPlayer.value && typeof ytPlayer.value.setSize === 'function') {
+                        ytPlayer.value.setSize(containerWidth, containerHeight)
                     }
                 } catch (e) {
                     console.warn('Error ajustando tamaño del player:', e)
+                }
+
+                const iframe = (ytPlayer.value?.getIframe?.() || wrapper.querySelector('iframe')) as HTMLIFrameElement | null
+                if (iframe) {
+                    iframe.style.setProperty('width', '100%', 'important')
+                    iframe.style.setProperty('height', '100%', 'important')
+                    iframe.style.position = 'absolute'
+                    iframe.style.top = '0'
+                    iframe.style.left = '0'
+                    iframe.style.right = '0'
+                    iframe.style.bottom = '0'
+                    iframe.style.objectFit = 'contain'
                 }
             }
         }
@@ -110,27 +118,19 @@ export const useYouTubePlayer = (playerContainer: Ref<HTMLDivElement | null>) =>
         playerStore.pause()
         activateBlur()
 
-        if ([2, 5, 101, 150].includes(errorCode)) {
-            console.warn(`[WARN] Error de restricción (${errorCode}). Intentando Audio Directo...`)
-            // Intentamos recuperar silenciosamente
-            const success = await retryCallback(currentStoreId)
-            
-            // VERIFICACIÓN CRÍTICA: ¿Seguimos en la misma canción tras el await?
-            if (playerStore.currentTrack?.video_id !== currentStoreId) {
-                console.warn('⚠️ [YT-ERROR] La canción cambió durante la recuperación. Cancelando salto automático.')
-                return
-            }
+        console.warn(`[WARN] Error de YouTube (${errorCode}) para video ${currentStoreId}. Intentando rescate por Audio Directo...`)
+        const success = await retryCallback(currentStoreId)
+        
+        // VERIFICACIÓN CRÍTICA: ¿Seguimos en la misma canción tras el await?
+        if (playerStore.currentTrack?.video_id !== currentStoreId) {
+            console.warn('⚠️ [YT-ERROR] La canción cambió durante la recuperación. Cancelando salto automático.')
+            return
+        }
 
-            if (!success) {
-                // Solo si el retry (audio local) también falla, saltamos
-                playerStore.next()
-            }
-        } else {
-            // Errores no relacionados con copyright (red, etc.)
-            // También verificamos aquí por seguridad
-            if (playerStore.currentTrack?.video_id === currentStoreId) {
-                playerStore.next()
-            }
+        if (!success) {
+            console.warn('❌ [YT-ERROR] Falló la recuperación por audio directo. Saltando a la siguiente canción...')
+            // Solo si el retry (audio local) también falla, saltamos
+            playerStore.next()
         }
     }
 

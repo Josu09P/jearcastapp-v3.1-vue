@@ -41,6 +41,17 @@ body.is-maximized .container-all {
   border: none !important;
 }
 
+/* Cuando el miniplayer flotante está activo, hacer transparente #app para lucir los bordes redondeados sobre el escritorio */
+body.is-miniplayer-active,
+body.is-miniplayer-active #app,
+body.is-miniplayer-active .container-all {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+
 
 .text-accent {
   color: var(--accent-color);
@@ -65,33 +76,51 @@ body.is-maximized .container-all {
 }
 
 /*==============================================
-    GLOBAL & SCROLLBAR RESET
+    GLOBAL & ELEGANT SCROLLBAR SYSTEM
 ================================================*/
-*::-webkit-scrollbar {
-  display: none;
-  width: 0 !important;
-  height: 0 !important;
-  background: transparent !important;
-}
-
 html, body {
   overflow: overlay;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+/* Scrollbar estilizada visible en el lateral derecho */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(255, 255, 255, 0.7);
 }
 
 .container-all {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
   overflow-x: hidden;
   overflow-y: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
   width: 100%;
   height: 100vh;
-}
-
-.container-all::-webkit-scrollbar {
-  display: none;
 }
 
 .container-all {
@@ -100,6 +129,31 @@ html, body {
   padding-right: 6px !important;
   padding-bottom: 6px !important;
   background: var(--main-bg-color);
+}
+
+/* Indicador flotante circular para autoscroll con botón central */
+.autoscroll-circle-indicator {
+  position: fixed;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(20, 20, 26, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  pointer-events: none;
+  z-index: 999999;
+  animation: pulseIndicator 0.2s ease-out;
+}
+
+@keyframes pulseIndicator {
+  from { transform: scale(0.7); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 /* =========================================
@@ -122,6 +176,16 @@ html, body {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+}
+
+.toast-glass.toast-error,
+.toast-glass.bg-danger {
+  background: rgba(220, 38, 38, 0.25) !important;
+  border: 1px solid rgba(248, 113, 113, 0.3) !important;
+  backdrop-filter: blur(16px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(160%) !important;
+  color: #fecaca !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 15px rgba(239, 68, 68, 0.15) !important;
 }
 
 /* =========================================
